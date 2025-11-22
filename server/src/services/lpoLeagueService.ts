@@ -54,6 +54,12 @@ export class LPOLeagueService {
         // 이미 삭제된 경우 무시
       }
 
+      // 플레이어 팀 먼저 조회 (삭제 전에)
+      const playerTeams = await pool.query(
+        `SELECT id, name FROM teams WHERE user_id IS NOT NULL`
+      );
+      console.log(`Found ${playerTeams.length} player teams:`, playerTeams.map((t: any) => t.name));
+
       // 기존 AI 팀 및 LPO 리그 삭제 (완전 초기화)
       console.log('Cleaning up existing LPO data...');
 
@@ -62,6 +68,11 @@ export class LPOLeagueService {
         `DELETE FROM players WHERE id IN (
           SELECT player_id FROM player_ownership WHERE team_id IN (SELECT id FROM teams WHERE is_ai = true)
         )`
+      );
+
+      // 플레이어 팀의 리그 참가 기록 삭제 (새로 등록할 예정)
+      await pool.query(
+        `DELETE FROM league_participants WHERE team_id IN (SELECT id FROM teams WHERE user_id IS NOT NULL)`
       );
 
       // AI 팀의 리그 참가 기록 삭제
@@ -120,12 +131,6 @@ export class LPOLeagueService {
       }
 
       // 기존 플레이어 팀을 LPO 2 LEAGUE에 등록
-      const playerTeams = await pool.query(
-        `SELECT id, name FROM teams WHERE user_id IS NOT NULL`
-      );
-
-      console.log(`Found ${playerTeams.length} player teams:`, playerTeams.map((t: any) => t.name));
-
       if (playerTeams.length > 0) {
         console.log(`Registering ${playerTeams.length} player teams to LPO 2 LEAGUE...`);
 
