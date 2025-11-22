@@ -117,11 +117,7 @@ router.post('/login', async (req, res) => {
       [user.id]
     );
 
-    if (teams.length === 0) {
-      return res.status(404).json({ error: 'Team not found' });
-    }
-
-    const teamId = teams[0].id;
+    const teamId = teams.length > 0 ? teams[0].id : null;
 
     // 마지막 로그인 업데이트
     await pool.query(
@@ -130,7 +126,7 @@ router.post('/login', async (req, res) => {
     );
 
     const token = jwt.sign(
-      { userId: user.id, teamId },
+      { userId: user.id, teamId, isAdmin: user.is_admin || false },
       process.env.JWT_SECRET || 'secret',
       { expiresIn: '7d' }
     );
