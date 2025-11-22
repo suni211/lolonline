@@ -18,13 +18,24 @@
   position: relative;
 }
 
-.current-date {
-  font-size: 1rem;
-  color: rgba(255, 255, 255, 0.8);
+.game-time {
+  text-align: right;
   background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1.25rem;
   border-radius: 8px;
   border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.game-date {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 0.25rem;
+}
+
+.next-month {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .league-banner {

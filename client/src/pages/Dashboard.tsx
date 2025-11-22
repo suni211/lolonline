@@ -27,16 +27,34 @@ export default function Dashboard() {
   const [teamStats, setTeamStats] = useState<TeamStats | null>(null);
   const [recentMatches, setRecentMatches] = useState<any[]>([]);
   const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [gameDate, setGameDate] = useState({ year: 2025, month: 1 });
   const [leagueInfo, setLeagueInfo] = useState<LeagueInfo | null>(null);
+
+  // 게임 시작 시간 (서버 시작 또는 고정 시점)
+  const GAME_START_TIME = new Date('2025-01-01T00:00:00').getTime();
+  // 6시간(실제) = 1달(게임)
+  const REAL_HOURS_PER_GAME_MONTH = 6;
+  const MS_PER_GAME_MONTH = REAL_HOURS_PER_GAME_MONTH * 60 * 60 * 1000;
+
+  const calculateGameDate = () => {
+    const now = Date.now();
+    const elapsed = now - GAME_START_TIME;
+    const totalMonths = Math.floor(elapsed / MS_PER_GAME_MONTH);
+
+    const year = 2025 + Math.floor(totalMonths / 12);
+    const month = (totalMonths % 12) + 1;
+
+    return { year, month };
+  };
 
   useEffect(() => {
     fetchDashboardData();
 
-    // 실시간 날짜 업데이트 (1초마다)
+    // 게임 날짜 업데이트 (1분마다 체크)
+    setGameDate(calculateGameDate());
     const timer = setInterval(() => {
-      setCurrentDate(new Date());
-    }, 1000);
+      setGameDate(calculateGameDate());
+    }, 60000);
 
     return () => clearInterval(timer);
   }, []);
@@ -67,24 +85,29 @@ export default function Dashboard() {
     }
   };
 
-  const formatDate = (date: Date) => {
-    const options: Intl.DateTimeFormatOptions = {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      weekday: 'long',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    };
-    return date.toLocaleDateString('ko-KR', options);
+  const getMonthName = (month: number) => {
+    const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+    return months[month - 1];
+  };
+
+  const getTimeUntilNextMonth = () => {
+    const now = Date.now();
+    const elapsed = now - GAME_START_TIME;
+    const currentMonthProgress = elapsed % MS_PER_GAME_MONTH;
+    const remaining = MS_PER_GAME_MONTH - currentMonthProgress;
+    const hours = Math.floor(remaining / (60 * 60 * 1000));
+    const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+    return `${hours}시간 ${minutes}분`;
   };
 
   return (
     <div className="dashboard">
       <div className="dashboard-header">
         <h1 className="page-title">대시보드</h1>
-        <div className="current-date">{formatDate(currentDate)}</div>
+        <div className="game-time">
+          <div className="game-date">{gameDate.year}년 {getMonthName(gameDate.month)}</div>
+          <div className="next-month">다음 달까지 {getTimeUntilNextMonth()}</div>
+        </div>
       </div>
 
       {/* 리그 정보 */}

@@ -24,6 +24,7 @@ import { initializeSeasonSystem } from './services/seasonService.js';
 import { initializeMatchSimulation } from './services/matchSimulationService.js';
 import { initializeInjurySystem } from './services/injuryService.js';
 import { initializeConditionRecovery } from './services/conditionService.js';
+import { initializeLeagueMatchService } from './services/leagueMatchService.js';
 
 dotenv.config();
 
@@ -91,6 +92,7 @@ async function startServer() {
     initializeInjurySystem();
     initializeConditionRecovery();
     initializeFacilityRevenue();
+    initializeLeagueMatchService();
     
     httpServer.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT}`);

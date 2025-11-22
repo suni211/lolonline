@@ -154,7 +154,7 @@ router.get('/leagues', authenticateToken, adminMiddleware, async (req: AuthReque
   }
 });
 
-// 새 시즌 리그 생성 (EAST, WEST)
+// 새 시즌 리그 생성 (EAST, WEST) + 자동 스케줄 생성
 router.post('/leagues/create-season', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
   try {
     const { season_number } = req.body;
@@ -183,6 +183,96 @@ router.post('/leagues/create-season', authenticateToken, adminMiddleware, async 
   } catch (error) {
     console.error('Create season error:', error);
     res.status(500).json({ error: '시즌 생성 실패' });
+  }
+});
+
+// 리그 스케줄 자동 생성 및 시작
+router.post('/leagues/:leagueId/start', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const leagueId = parseInt(req.params.leagueId);
+
+    // 리그 참가팀 조회
+    const teams = await pool.query(
+      `SELECT team_id FROM league_standings WHERE league_id = ?`,
+      [leagueId]
+    );
+
+    if (teams.length < 2) {
+      return res.status(400).json({ error: '최소 2팀이 필요합니다' });
+    }
+
+    const teamIds = teams.map((t: any) => t.team_id);
+
+    // 라운드 로빈 스케줄 생성 (각 팀이 다른 모든 팀과 홈/어웨이 1번씩)
+    const matches: { home: number; away: number; round: number }[] = [];
+    let round = 1;
+
+    // 모든 팀 조합 생성
+    for (let i = 0; i < teamIds.length; i++) {
+      for (let j = i + 1; j < teamIds.length; j++) {
+        // 홈 경기
+        matches.push({ home: teamIds[i], away: teamIds[j], round });
+        round++;
+        // 어웨이 경기
+        matches.push({ home: teamIds[j], away: teamIds[i], round });
+        round++;
+      }
+    }
+
+    // 게임 시간 기준으로 스케줄 생성 (6시간 = 1달, 하루에 여러 경기)
+    const GAME_START = new Date('2025-01-01T00:00:00').getTime();
+    const MS_PER_GAME_MONTH = 6 * 60 * 60 * 1000;
+    const MS_PER_GAME_DAY = MS_PER_GAME_MONTH / 30;
+
+    // 경기 간격: 게임 내 2일마다 1경기
+    const matchInterval = MS_PER_GAME_DAY * 2;
+
+    for (let i = 0; i < matches.length; i++) {
+      const match = matches[i];
+      const scheduledTime = new Date(GAME_START + (i * matchInterval));
+
+      await pool.query(
+        `INSERT INTO league_matches (league_id, home_team_id, away_team_id, round, scheduled_at, status)
+         VALUES (?, ?, ?, ?, ?, 'SCHEDULED')`,
+        [leagueId, match.home, match.away, match.round, scheduledTime]
+      );
+    }
+
+    // 리그 상태 업데이트
+    await pool.query(`UPDATE leagues SET status = 'IN_PROGRESS' WHERE id = ?`, [leagueId]);
+
+    res.json({
+      success: true,
+      message: `${matches.length}개의 경기가 스케줄되었습니다`,
+      total_matches: matches.length
+    });
+  } catch (error) {
+    console.error('Start league error:', error);
+    res.status(500).json({ error: '리그 시작 실패' });
+  }
+});
+
+// 리그 스케줄 조회
+router.get('/leagues/:leagueId/schedule', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const leagueId = parseInt(req.params.leagueId);
+
+    const matches = await pool.query(
+      `SELECT lm.*,
+              ht.name as home_team_name,
+              at.name as away_team_name
+       FROM league_matches lm
+       JOIN teams ht ON lm.home_team_id = ht.id
+       JOIN teams at ON lm.away_team_id = at.id
+       WHERE lm.league_id = ?
+       ORDER BY lm.scheduled_at`,
+      [leagueId]
+    );
+
+    res.json(matches);
+  } catch (error) {
+    console.error('Get schedule error:', error);
+    res.status(500).json({ error: '스케줄 조회 실패' });
   }
 });
 

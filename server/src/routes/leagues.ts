@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../database/db.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import LeagueMatchService from '../services/leagueMatchService.js';
 
 const router = express.Router();
 
@@ -162,6 +163,101 @@ router.get('/:leagueId/leaderboard', async (req, res) => {
   } catch (error: any) {
     console.error('Get leaderboard error:', error);
     res.status(500).json({ error: 'Failed to get leaderboard' });
+  }
+});
+
+// 리그 경기 목록 조회
+router.get('/:leagueId/matches', async (req, res) => {
+  try {
+    const leagueId = parseInt(req.params.leagueId);
+    const { status } = req.query;
+
+    let query = `
+      SELECT lm.*,
+             ht.name as home_team_name,
+             at.name as away_team_name
+      FROM league_matches lm
+      JOIN teams ht ON lm.home_team_id = ht.id
+      JOIN teams at ON lm.away_team_id = at.id
+      WHERE lm.league_id = ?
+    `;
+    const params: any[] = [leagueId];
+
+    if (status) {
+      query += ' AND lm.status = ?';
+      params.push(status);
+    }
+
+    query += ' ORDER BY lm.scheduled_at';
+
+    const matches = await pool.query(query, params);
+    res.json(matches);
+  } catch (error) {
+    console.error('Get league matches error:', error);
+    res.status(500).json({ error: '경기 목록 조회 실패' });
+  }
+});
+
+// 경기 상세 (관전용)
+router.get('/matches/:matchId', async (req, res) => {
+  try {
+    const matchId = parseInt(req.params.matchId);
+    const matchDetails = await LeagueMatchService.getMatchDetails(matchId);
+
+    if (!matchDetails) {
+      return res.status(404).json({ error: '경기를 찾을 수 없습니다' });
+    }
+
+    res.json(matchDetails);
+  } catch (error) {
+    console.error('Get match details error:', error);
+    res.status(500).json({ error: '경기 상세 조회 실패' });
+  }
+});
+
+// 전체 예정된 경기 조회
+router.get('/all-matches/upcoming', async (req, res) => {
+  try {
+    const matches = await pool.query(
+      `SELECT lm.*,
+              ht.name as home_team_name,
+              at.name as away_team_name,
+              l.name as league_name
+       FROM league_matches lm
+       JOIN teams ht ON lm.home_team_id = ht.id
+       JOIN teams at ON lm.away_team_id = at.id
+       JOIN leagues l ON lm.league_id = l.id
+       WHERE lm.status = 'SCHEDULED'
+       ORDER BY lm.scheduled_at
+       LIMIT 20`
+    );
+    res.json(matches);
+  } catch (error) {
+    console.error('Get upcoming matches error:', error);
+    res.status(500).json({ error: '예정 경기 조회 실패' });
+  }
+});
+
+// 최근 경기 결과 조회
+router.get('/all-matches/recent', async (req, res) => {
+  try {
+    const matches = await pool.query(
+      `SELECT lm.*,
+              ht.name as home_team_name,
+              at.name as away_team_name,
+              l.name as league_name
+       FROM league_matches lm
+       JOIN teams ht ON lm.home_team_id = ht.id
+       JOIN teams at ON lm.away_team_id = at.id
+       JOIN leagues l ON lm.league_id = l.id
+       WHERE lm.status = 'FINISHED'
+       ORDER BY lm.finished_at DESC
+       LIMIT 20`
+    );
+    res.json(matches);
+  } catch (error) {
+    console.error('Get recent matches error:', error);
+    res.status(500).json({ error: '최근 경기 조회 실패' });
   }
 });
 
