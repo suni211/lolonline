@@ -63,8 +63,11 @@ export default function Players() {
     try {
       const response = await axios.get('/api/players/my');
       setPlayers(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch players:', error);
+      if (error.response?.status === 500) {
+        alert('선수 목록을 불러올 수 없습니다. 팀을 먼저 생성해주세요.');
+      }
     }
   };
 
