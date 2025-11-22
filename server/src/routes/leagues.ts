@@ -12,14 +12,14 @@ router.get('/my-standing', authenticateToken, async (req: AuthRequest, res) => {
 
     // 현재 활성 리그에서 내 팀 순위 조회
     const standing = await pool.query(
-      `SELECT l.id, l.name, l.region, l.season, l.status,
-              ls.wins, ls.losses, ls.points,
-              (SELECT COUNT(*) + 1 FROM league_standings ls2
-               WHERE ls2.league_id = ls.league_id AND ls2.points > ls.points) as team_rank,
-              (SELECT COUNT(*) FROM league_standings WHERE league_id = ls.league_id) as total_teams
-       FROM league_standings ls
-       JOIN leagues l ON ls.league_id = l.id
-       WHERE ls.team_id = ? AND l.status = 'ACTIVE'
+      `SELECT l.id, l.name, l.region, l.season, l.status, l.current_month,
+              lp.wins, lp.losses, lp.draws, (lp.wins * 3 + lp.draws) as points,
+              (SELECT COUNT(*) + 1 FROM league_participants lp2
+               WHERE lp2.league_id = lp.league_id AND (lp2.wins * 3 + lp2.draws) > (lp.wins * 3 + lp.draws)) as team_rank,
+              (SELECT COUNT(*) FROM league_participants WHERE league_id = lp.league_id) as total_teams
+       FROM league_participants lp
+       JOIN leagues l ON lp.league_id = l.id
+       WHERE lp.team_id = ? AND l.status IN ('ACTIVE', 'REGULAR', 'PLAYOFF')
        LIMIT 1`,
       [teamId]
     );
