@@ -153,13 +153,17 @@ npm run dev:server
 npm run dev:client
 ```
 
-3. 프로덕션 빌드
+3. 프로덕션 빌드 및 실행
 ```bash
-# 클라이언트 빌드
+# 전체 빌드 (서버 + 클라이언트)
 npm run build
 
-# 서버 시작
+# 서버와 클라이언트 동시 실행
 npm start
+
+# 또는 개별 실행
+npm run start:server  # 서버만
+npm run start:client  # 클라이언트만
 ```
 
 ## 데이터베이스 스키마
