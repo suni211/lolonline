@@ -63,7 +63,11 @@ export default function Matches() {
 
   useEffect(() => {
     fetchMatches();
-    const newSocket = io('http://localhost:5000');
+    // 프로덕션에서는 현재 도메인 사용, 개발에서는 localhost
+    const socketUrl = window.location.hostname === 'localhost'
+      ? 'http://localhost:5000'
+      : window.location.origin;
+    const newSocket = io(socketUrl);
     setSocket(newSocket);
 
     newSocket.on('match_started', (data) => {
