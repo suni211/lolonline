@@ -9,6 +9,15 @@ interface League {
   season: number;
   status: string;
   team_count?: number;
+  current_month?: number;
+}
+
+interface LPOStatus {
+  initialized: boolean;
+  leagues: League[];
+  totalTeams: number;
+  aiTeams: number;
+  playerTeams: number;
 }
 
 interface User {
@@ -24,6 +33,7 @@ interface Team {
   id: number;
   name: string;
   league: string;
+  is_ai?: boolean;
 }
 
 interface Player {
@@ -44,13 +54,7 @@ export default function Admin() {
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'leagues' | 'users' | 'players'>('leagues');
   const [uploadingPlayerId, setUploadingPlayerId] = useState<number | null>(null);
-
-  // 시즌 생성 폼
-  const [newSeason, setNewSeason] = useState({
-    season: 1,
-    eastName: 'EAST 리그',
-    westName: 'WEST 리그'
-  });
+  const [lpoStatus, setLpoStatus] = useState<LPOStatus | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -59,16 +63,18 @@ export default function Admin() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [leaguesRes, usersRes, teamsRes, playersRes] = await Promise.all([
+      const [leaguesRes, usersRes, teamsRes, playersRes, lpoStatusRes] = await Promise.all([
         axios.get('/api/leagues'),
         axios.get('/api/admin/users'),
         axios.get('/api/admin/teams'),
-        axios.get('/api/admin/players')
+        axios.get('/api/admin/players'),
+        axios.get('/api/admin/lpo/status').catch(() => ({ data: null }))
       ]);
       setLeagues(leaguesRes.data);
       setUsers(usersRes.data);
       setTeams(teamsRes.data);
       setPlayers(playersRes.data);
+      setLpoStatus(lpoStatusRes.data);
     } catch (error: any) {
       setMessage(error.response?.data?.error || '데이터 로드 실패');
     } finally {
@@ -106,14 +112,29 @@ export default function Admin() {
     }
   };
 
-  const createSeason = async () => {
+  const initializeLPO = async () => {
+    if (!confirm('LPO 리그를 초기화하시겠습니까? 이 작업은 기존 리그 데이터를 덮어씁니다.')) return;
     try {
       setLoading(true);
-      await axios.post('/api/admin/leagues/create-season', newSeason);
-      setMessage(`시즌 ${newSeason.season} 생성 완료`);
+      await axios.post('/api/admin/lpo/initialize');
+      setMessage('LPO 리그 초기화 완료! 3개 티어 리그와 32개 AI 팀이 생성되었습니다.');
       fetchData();
     } catch (error: any) {
-      setMessage(error.response?.data?.error || '시즌 생성 실패');
+      setMessage(error.response?.data?.error || 'LPO 초기화 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startNextSeason = async () => {
+    if (!confirm('다음 시즌을 시작하시겠습니까? 승강 결과가 반영됩니다.')) return;
+    try {
+      setLoading(true);
+      const res = await axios.post('/api/admin/lpo/next-season');
+      setMessage(`시즌 ${res.data.newSeason} 시작! 승강 처리 완료.`);
+      fetchData();
+    } catch (error: any) {
+      setMessage(error.response?.data?.error || '다음 시즌 시작 실패');
     } finally {
       setLoading(false);
     }
@@ -166,34 +187,12 @@ export default function Admin() {
     }
   };
 
-  const autoAssignTeams = async () => {
-    try {
-      setLoading(true);
-      // EAST와 WEST 리그에 팀 자동 배정
-      const eastLeague = leagues.find(l => l.region === 'EAST' && l.status === 'UPCOMING');
-      const westLeague = leagues.find(l => l.region === 'WEST' && l.status === 'UPCOMING');
-
-      if (!eastLeague || !westLeague) {
-        setMessage('UPCOMING 상태의 EAST/WEST 리그가 필요합니다');
-        return;
-      }
-
-      const eastTeams = teams.filter(t => t.league === 'EAST');
-      const westTeams = teams.filter(t => t.league === 'WEST');
-
-      for (const team of eastTeams) {
-        await axios.post(`/api/admin/leagues/${eastLeague.id}/register-team`, { teamId: team.id });
-      }
-      for (const team of westTeams) {
-        await axios.post(`/api/admin/leagues/${westLeague.id}/register-team`, { teamId: team.id });
-      }
-
-      setMessage(`EAST ${eastTeams.length}팀, WEST ${westTeams.length}팀 배정 완료`);
-      fetchData();
-    } catch (error: any) {
-      setMessage(error.response?.data?.error || '자동 배정 실패');
-    } finally {
-      setLoading(false);
+  const getTierName = (tier: string) => {
+    switch (tier) {
+      case 'SUPER': return 'LPO SUPER LEAGUE';
+      case 'FIRST': return 'LPO 1 LEAGUE';
+      case 'SECOND': return 'LPO 2 LEAGUE';
+      default: return tier;
     }
   };
 
@@ -236,41 +235,31 @@ export default function Admin() {
 
       {activeTab === 'leagues' && (
         <div className="admin-section">
-          <h2>시즌 생성</h2>
-          <div className="form-row">
-            <div className="form-group">
-              <label>시즌</label>
-              <input
-                type="number"
-                value={newSeason.season}
-                onChange={(e) => setNewSeason({ ...newSeason, season: parseInt(e.target.value) })}
-              />
+          <h2>LPO 리그 관리</h2>
+
+          {lpoStatus && (
+            <div className="lpo-status-box">
+              <h3>LPO 상태</h3>
+              <div className="status-info">
+                <p><strong>초기화:</strong> {lpoStatus.initialized ? '완료' : '미완료'}</p>
+                <p><strong>전체 팀:</strong> {lpoStatus.totalTeams}개</p>
+                <p><strong>AI 팀:</strong> {lpoStatus.aiTeams}개</p>
+                <p><strong>플레이어 팀:</strong> {lpoStatus.playerTeams}개</p>
+              </div>
             </div>
-            <div className="form-group">
-              <label>EAST 리그명</label>
-              <input
-                type="text"
-                value={newSeason.eastName}
-                onChange={(e) => setNewSeason({ ...newSeason, eastName: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label>WEST 리그명</label>
-              <input
-                type="text"
-                value={newSeason.westName}
-                onChange={(e) => setNewSeason({ ...newSeason, westName: e.target.value })}
-              />
-            </div>
-            <button onClick={createSeason} disabled={loading}>
-              시즌 생성
-            </button>
-          </div>
+          )}
 
           <div className="action-buttons">
-            <button onClick={autoAssignTeams} disabled={loading}>
-              팀 자동 배정
-            </button>
+            {!lpoStatus?.initialized && (
+              <button onClick={initializeLPO} disabled={loading} className="primary">
+                LPO 리그 초기화
+              </button>
+            )}
+            {lpoStatus?.initialized && (
+              <button onClick={startNextSeason} disabled={loading} className="primary">
+                다음 시즌 시작
+              </button>
+            )}
             <button onClick={resetGameTime} className="secondary">
               게임 시간 초기화
             </button>
@@ -282,7 +271,7 @@ export default function Admin() {
               <tr>
                 <th>ID</th>
                 <th>이름</th>
-                <th>지역</th>
+                <th>티어</th>
                 <th>시즌</th>
                 <th>상태</th>
                 <th>팀 수</th>
@@ -294,7 +283,7 @@ export default function Admin() {
                 <tr key={league.id}>
                   <td>{league.id}</td>
                   <td>{league.name}</td>
-                  <td>{league.region}</td>
+                  <td>{getTierName(league.region)}</td>
                   <td>{league.season}</td>
                   <td>
                     <span className={`status-badge ${league.status.toLowerCase()}`}>
@@ -320,15 +309,17 @@ export default function Admin() {
               <tr>
                 <th>ID</th>
                 <th>팀명</th>
-                <th>리그</th>
+                <th>티어</th>
+                <th>유형</th>
               </tr>
             </thead>
             <tbody>
               {teams.map((team) => (
-                <tr key={team.id}>
+                <tr key={team.id} className={team.is_ai ? 'ai-team-row' : ''}>
                   <td>{team.id}</td>
                   <td>{team.name}</td>
-                  <td>{team.league}</td>
+                  <td>{getTierName(team.league)}</td>
+                  <td>{team.is_ai ? <span className="ai-badge">AI</span> : <span className="player-badge">플레이어</span>}</td>
                 </tr>
               ))}
             </tbody>

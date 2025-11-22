@@ -181,7 +181,7 @@ router.delete('/users/:userId', authenticateToken, adminMiddleware, async (req: 
 router.get('/teams', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
   try {
     const teams = await pool.query(
-      `SELECT id, name, league FROM teams ORDER BY league, name`
+      `SELECT id, name, league, is_ai FROM teams ORDER BY league, name`
     );
     res.json(teams);
   } catch (error) {
