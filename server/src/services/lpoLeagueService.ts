@@ -61,9 +61,11 @@ export class LPOLeagueService {
       // 기존 AI 팀 및 LPO 리그 삭제 (완전 초기화)
       console.log('Cleaning up existing LPO data...');
 
-      // AI 팀의 선수들 삭제
+      // AI 팀의 선수 소유권 삭제 및 선수 삭제
       await pool.query(
-        `DELETE FROM players WHERE team_id IN (SELECT id FROM teams WHERE is_ai = true)`
+        `DELETE FROM players WHERE id IN (
+          SELECT player_id FROM player_ownership WHERE team_id IN (SELECT id FROM teams WHERE is_ai = true)
+        )`
       );
 
       // AI 팀의 리그 참가 기록 삭제
