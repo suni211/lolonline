@@ -4,18 +4,6 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import './CreateTeam.css';
 
-// 프리셋 색상
-const presetColors = [
-  { name: '블루', color: '#1E3A8A' },
-  { name: '레드', color: '#DC2626' },
-  { name: '그린', color: '#16A34A' },
-  { name: '퍼플', color: '#7C3AED' },
-  { name: '오렌지', color: '#EA580C' },
-  { name: '핑크', color: '#DB2777' },
-  { name: '시안', color: '#0891B2' },
-  { name: '골드', color: '#CA8A04' },
-];
-
 export default function CreateTeam() {
   const [teamName, setTeamName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
