@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS teams (
     gold BIGINT DEFAULT 10000000,
     diamond INT DEFAULT 100,
     fan_count BIGINT DEFAULT 1000,
+    fan_morale INT DEFAULT 50 CHECK (fan_morale >= 0 AND fan_morale <= 100),
+    ticket_price INT DEFAULT 1000 CHECK (ticket_price >= 500 AND ticket_price <= 50000),
     is_ai BOOLEAN DEFAULT FALSE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,

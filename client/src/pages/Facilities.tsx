@@ -12,6 +12,12 @@ interface Facility {
   maintenance_cost: number;
 }
 
+interface TeamInfo {
+  fan_count: number;
+  fan_morale: number;
+  ticket_price: number;
+}
+
 const facilityTypes = {
   'TRAINING': { name: '훈련 시설', icon: '🏋️', description: '선수 훈련 효과 증가' },
   'MEDICAL': { name: '의료 시설', icon: '🏥', description: '컨디션 회복 속도 증가' },
@@ -30,9 +36,12 @@ const facilityTypes = {
 export default function Facilities() {
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [loading, setLoading] = useState(false);
+  const [teamInfo, setTeamInfo] = useState<TeamInfo | null>(null);
+  const [ticketPrice, setTicketPrice] = useState(1000);
 
   useEffect(() => {
     fetchFacilities();
+    fetchTeamInfo();
   }, []);
 
   const fetchFacilities = async () => {
@@ -42,6 +51,40 @@ export default function Facilities() {
     } catch (error) {
       console.error('Failed to fetch facilities:', error);
     }
+  };
+
+  const fetchTeamInfo = async () => {
+    try {
+      const response = await axios.get('/api/teams');
+      setTeamInfo({
+        fan_count: response.data.fan_count || 1000,
+        fan_morale: response.data.fan_morale || 50,
+        ticket_price: response.data.ticket_price || 1000
+      });
+      setTicketPrice(response.data.ticket_price || 1000);
+    } catch (error) {
+      console.error('Failed to fetch team info:', error);
+    }
+  };
+
+  const updateTicketPrice = async () => {
+    try {
+      setLoading(true);
+      await axios.put('/api/teams/ticket-price', { ticket_price: ticketPrice });
+      soundManager.playSound('upgrade_success');
+      alert('입장료가 설정되었습니다');
+      fetchTeamInfo();
+    } catch (error: any) {
+      alert(error.response?.data?.error || '입장료 설정 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 경기장 수용 인원 계산 (1레벨 300명, 10레벨 45000명)
+  const getStadiumCapacity = (level: number): number => {
+    if (level <= 0) return 0;
+    return Math.floor(300 * Math.pow(1.75, level - 1));
   };
 
   const handleUpgrade = async (facilityType: string) => {
@@ -64,11 +107,83 @@ export default function Facilities() {
     return facilityTypes[type as keyof typeof facilityTypes] || { name: type, icon: '🏢', description: '' };
   };
 
+  const stadiumLevel = facilities.find(f => f.facility_type === 'STADIUM')?.level || 0;
+  const stadiumCapacity = getStadiumCapacity(stadiumLevel);
+
   return (
     <div className="facilities-page">
       <div className="page-header">
         <h1 className="page-title">구단 경영</h1>
       </div>
+
+      {/* 팬 정보 및 입장료 설정 */}
+      {teamInfo && (
+        <div className="fan-management-section">
+          <h2>팬 관리</h2>
+          <div className="fan-info-grid">
+            <div className="fan-info-card">
+              <div className="fan-info-icon">👥</div>
+              <div className="fan-info-content">
+                <span className="fan-info-label">총 팬 수</span>
+                <span className="fan-info-value">{teamInfo.fan_count.toLocaleString()}명</span>
+              </div>
+            </div>
+            <div className="fan-info-card">
+              <div className="fan-info-icon">❤️</div>
+              <div className="fan-info-content">
+                <span className="fan-info-label">팬 민심</span>
+                <span className={`fan-info-value ${teamInfo.fan_morale >= 70 ? 'high' : teamInfo.fan_morale >= 40 ? 'medium' : 'low'}`}>
+                  {teamInfo.fan_morale}%
+                </span>
+              </div>
+              <div className="morale-bar">
+                <div
+                  className={`morale-fill ${teamInfo.fan_morale >= 70 ? 'high' : teamInfo.fan_morale >= 40 ? 'medium' : 'low'}`}
+                  style={{ width: `${teamInfo.fan_morale}%` }}
+                />
+              </div>
+            </div>
+            <div className="fan-info-card">
+              <div className="fan-info-icon">🏟️</div>
+              <div className="fan-info-content">
+                <span className="fan-info-label">경기장 수용 인원</span>
+                <span className="fan-info-value">
+                  {stadiumLevel > 0 ? `${stadiumCapacity.toLocaleString()}명` : '경기장 없음'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="ticket-price-section">
+            <h3>입장료 설정</h3>
+            <p className="ticket-info">입장료가 높으면 수익이 증가하지만 관중이 줄어듭니다. 민심이 낮으면 관중이 더 줄어듭니다.</p>
+            <div className="ticket-price-control">
+              <input
+                type="range"
+                min="500"
+                max="50000"
+                step="500"
+                value={ticketPrice}
+                onChange={(e) => setTicketPrice(Number(e.target.value))}
+              />
+              <div className="ticket-price-display">
+                <span className="current-price">{ticketPrice.toLocaleString()}원</span>
+                <button
+                  onClick={updateTicketPrice}
+                  disabled={loading || ticketPrice === teamInfo.ticket_price}
+                  className="btn-primary"
+                >
+                  {loading ? '저장 중...' : '저장'}
+                </button>
+              </div>
+            </div>
+            <div className="ticket-price-guide">
+              <span>500원 (저가)</span>
+              <span>50,000원 (고가)</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="facilities-grid">
         {Object.keys(facilityTypes).map((type) => {

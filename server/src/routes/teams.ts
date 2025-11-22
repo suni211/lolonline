@@ -212,6 +212,35 @@ router.put('/', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
+// 입장료 설정
+router.put('/ticket-price', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    if (!req.teamId) {
+      return res.status(400).json({ error: '팀이 없습니다' });
+    }
+
+    const { ticket_price } = req.body;
+
+    // 입장료 범위 검증 (500원 ~ 50,000원)
+    if (!ticket_price || ticket_price < 500 || ticket_price > 50000) {
+      return res.status(400).json({ error: '입장료는 500원에서 50,000원 사이여야 합니다' });
+    }
+
+    await pool.query(
+      'UPDATE teams SET ticket_price = ? WHERE id = ?',
+      [ticket_price, req.teamId]
+    );
+
+    res.json({
+      message: '입장료가 설정되었습니다',
+      ticket_price
+    });
+  } catch (error: any) {
+    console.error('Update ticket price error:', error);
+    res.status(500).json({ error: '입장료 설정에 실패했습니다' });
+  }
+});
+
 // 팀 로고 업로드
 router.post('/logo', authenticateToken, uploadLogo.single('logo'), async (req: AuthRequest, res) => {
   try {

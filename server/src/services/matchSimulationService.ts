@@ -731,6 +731,13 @@ async function getExpMultiplier(teamId: number): Promise<number> {
   }
 }
 
+// 경기장 수용 인원 계산 (1레벨 300명, 10레벨 45000명)
+function getStadiumCapacity(level: number): number {
+  if (level <= 0) return 0;
+  // 300 * 1.75^(level-1): 1레벨=300, 10레벨≈46000
+  return Math.floor(300 * Math.pow(1.75, level - 1));
+}
+
 // 리그 경기 보상 지급 (입장료 수익)
 async function giveLeagueMatchRewards(match: any, winnerTeamId: number, loserTeamId: number, homeScore: number, awayScore: number) {
   try {
@@ -760,23 +767,32 @@ async function giveLeagueMatchRewards(match: any, winnerTeamId: number, loserTea
       return;
     }
 
-    // 팬 수 조회
+    // 팬 수, 민심, 입장료 조회
     const teams = await pool.query(
-      'SELECT fan_count FROM teams WHERE id = ?',
+      'SELECT fan_count, fan_morale, ticket_price FROM teams WHERE id = ?',
       [homeTeamId]
     );
 
     const fanCount = teams.length > 0 ? (teams[0].fan_count || 1000) : 1000;
+    const fanMorale = teams.length > 0 ? (teams[0].fan_morale || 50) : 50;
+    const ticketPrice = teams.length > 0 ? (teams[0].ticket_price || 1000) : 1000;
 
     // 입장료 수익 계산
-    // 경기장 수용 인원: 레벨 * 5000명
-    // 관중 수: 팬 수의 10~30% (랜덤)
-    const stadiumCapacity = stadiumLevel * 5000;
-    const attendanceRate = 0.1 + Math.random() * 0.2; // 10~30%
+    // 경기장 수용 인원: 레벨별 증가 (1레벨 300명, 10레벨 45000명)
+    const stadiumCapacity = getStadiumCapacity(stadiumLevel);
+
+    // 관중 동원율: 기본 10~30% + 민심 보정
+    // 민심 0: 관중 50% 감소, 민심 50: 기본, 민심 100: 관중 50% 증가
+    const basePotential = 0.1 + Math.random() * 0.2; // 10~30%
+    const moraleMultiplier = 0.5 + (fanMorale / 100); // 0.5 ~ 1.5
+
+    // 입장료가 높으면 관중 감소 (기본 1000원 기준)
+    const priceMultiplier = Math.max(0.3, 1 - (ticketPrice - 1000) / 10000); // 높은 가격 = 낮은 관중
+
+    const attendanceRate = basePotential * moraleMultiplier * priceMultiplier;
     const attendance = Math.min(Math.floor(fanCount * attendanceRate), stadiumCapacity);
 
-    // 입장료: 관중 수 * 티켓 가격 (1000원)
-    const ticketPrice = 1000;
+    // 입장료 수익
     const ticketRevenue = attendance * ticketPrice;
 
     // 승리 보너스
@@ -813,22 +829,45 @@ async function giveLeagueMatchRewards(match: any, winnerTeamId: number, loserTea
       [awayGold, match.away_team_id]
     );
 
-    // 팬 수 증가 (승리 시)
+    // 팬 수 및 민심 변화
     if (homeScore > awayScore) {
+      // 홈팀 승리: 팬 증가, 민심 상승
       const fanIncrease = Math.floor(attendance * 0.05); // 관중의 5%가 새 팬
+      const moraleIncrease = Math.floor(3 + Math.random() * 5); // 3~7 증가
       await pool.query(
-        'UPDATE teams SET fan_count = fan_count + ? WHERE id = ?',
-        [fanIncrease, homeTeamId]
+        'UPDATE teams SET fan_count = fan_count + ?, fan_morale = LEAST(100, fan_morale + ?) WHERE id = ?',
+        [fanIncrease, moraleIncrease, homeTeamId]
+      );
+      // 원정팀 패배: 민심 하락
+      const moraleDrop = Math.floor(2 + Math.random() * 4); // 2~5 감소
+      await pool.query(
+        'UPDATE teams SET fan_morale = GREATEST(0, fan_morale - ?) WHERE id = ?',
+        [moraleDrop, match.away_team_id]
       );
     } else if (awayScore > homeScore) {
-      const fanIncrease = Math.floor(100 + Math.random() * 200); // 원정 승리 시 소량 증가
+      // 원정팀 승리: 팬 증가, 민심 상승
+      const fanIncrease = Math.floor(100 + Math.random() * 200);
+      const moraleIncrease = Math.floor(3 + Math.random() * 5);
       await pool.query(
-        'UPDATE teams SET fan_count = fan_count + ? WHERE id = ?',
-        [fanIncrease, match.away_team_id]
+        'UPDATE teams SET fan_count = fan_count + ?, fan_morale = LEAST(100, fan_morale + ?) WHERE id = ?',
+        [fanIncrease, moraleIncrease, match.away_team_id]
+      );
+      // 홈팀 패배: 민심 크게 하락 (홈에서 지면 더 실망)
+      const moraleDrop = Math.floor(4 + Math.random() * 6); // 4~9 감소
+      await pool.query(
+        'UPDATE teams SET fan_morale = GREATEST(0, fan_morale - ?) WHERE id = ?',
+        [moraleDrop, homeTeamId]
+      );
+    } else {
+      // 무승부: 민심 소폭 변화
+      const moraleChange = Math.floor(Math.random() * 3) - 1; // -1 ~ 1
+      await pool.query(
+        'UPDATE teams SET fan_morale = LEAST(100, GREATEST(0, fan_morale + ?)) WHERE id IN (?, ?)',
+        [moraleChange, homeTeamId, match.away_team_id]
       );
     }
 
-    console.log(`League match rewards: Home ${homeTeamId} +${homeGold}G (${attendance} attendance), Away ${match.away_team_id} +${awayGold}G`);
+    console.log(`League match rewards: Home ${homeTeamId} +${homeGold}G (${attendance} attendance, capacity: ${stadiumCapacity}), Away ${match.away_team_id} +${awayGold}G`);
   } catch (error) {
     console.error('Error giving league match rewards:', error);
   }

@@ -167,3 +167,168 @@
   font-style: italic;
 }
 
+/* 팬 관리 섹션 */
+.fan-management-section {
+  background: linear-gradient(135deg, #111 0%, #1a1a1a 100%);
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.fan-management-section h2 {
+  color: var(--white);
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+}
+
+.fan-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.fan-info-card {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.fan-info-icon {
+  font-size: 2rem;
+}
+
+.fan-info-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.fan-info-label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.fan-info-value {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--white);
+}
+
+.fan-info-value.high {
+  color: #34d399;
+}
+
+.fan-info-value.medium {
+  color: #fbbf24;
+}
+
+.fan-info-value.low {
+  color: #f87171;
+}
+
+.morale-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  margin-top: 0.5rem;
+  overflow: hidden;
+}
+
+.morale-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.morale-fill.high {
+  background: #34d399;
+}
+
+.morale-fill.medium {
+  background: #fbbf24;
+}
+
+.morale-fill.low {
+  background: #f87171;
+}
+
+/* 입장료 설정 */
+.ticket-price-section {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.ticket-price-section h3 {
+  color: var(--white);
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+}
+
+.ticket-info {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+  margin: 0 0 1rem 0;
+}
+
+.ticket-price-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ticket-price-control input[type="range"] {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.ticket-price-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary-blue);
+  cursor: pointer;
+  border: 2px solid var(--white);
+}
+
+.ticket-price-control input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary-blue);
+  cursor: pointer;
+  border: 2px solid var(--white);
+}
+
+.ticket-price-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.current-price {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #fbbf24;
+}
+
+.ticket-price-guide {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
