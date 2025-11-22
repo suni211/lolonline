@@ -4,6 +4,36 @@ import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// 내 팀의 리그 순위 조회
+router.get('/my-standing', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const teamId = req.teamId;
+
+    // 현재 활성 리그에서 내 팀 순위 조회
+    const standing = await pool.query(
+      `SELECT l.id, l.name, l.region, l.season, l.status,
+              ls.wins, ls.losses, ls.points,
+              (SELECT COUNT(*) + 1 FROM league_standings ls2
+               WHERE ls2.league_id = ls.league_id AND ls2.points > ls.points) as team_rank,
+              (SELECT COUNT(*) FROM league_standings WHERE league_id = ls.league_id) as total_teams
+       FROM league_standings ls
+       JOIN leagues l ON ls.league_id = l.id
+       WHERE ls.team_id = ? AND l.status = 'ACTIVE'
+       LIMIT 1`,
+      [teamId]
+    );
+
+    if (standing.length === 0) {
+      return res.status(404).json({ error: '참가 중인 리그가 없습니다' });
+    }
+
+    res.json(standing[0]);
+  } catch (error: any) {
+    console.error('Get my standing error:', error);
+    res.status(500).json({ error: '리그 순위 조회 실패' });
+  }
+});
+
 // 리그 목록
 router.get('/', async (req, res) => {
   try {

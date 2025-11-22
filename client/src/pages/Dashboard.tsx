@@ -9,14 +9,36 @@ interface TeamStats {
   total_overall: number;
 }
 
+interface LeagueInfo {
+  id: number;
+  name: string;
+  region: string;
+  season: number;
+  status: string;
+  team_rank?: number;
+  total_teams?: number;
+  wins?: number;
+  losses?: number;
+  points?: number;
+}
+
 export default function Dashboard() {
   const { team } = useAuth();
   const [teamStats, setTeamStats] = useState<TeamStats | null>(null);
   const [recentMatches, setRecentMatches] = useState<any[]>([]);
   const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [leagueInfo, setLeagueInfo] = useState<LeagueInfo | null>(null);
 
   useEffect(() => {
     fetchDashboardData();
+
+    // 실시간 날짜 업데이트 (1초마다)
+    const timer = setInterval(() => {
+      setCurrentDate(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
   }, []);
 
   const fetchDashboardData = async () => {
@@ -32,15 +54,74 @@ export default function Dashboard() {
       // 예정된 경기
       const upcomingRes = await axios.get('/api/matches?status=SCHEDULED&limit=5');
       setUpcomingMatches(upcomingRes.data);
+
+      // 리그 정보
+      try {
+        const leagueRes = await axios.get('/api/leagues/my-standing');
+        setLeagueInfo(leagueRes.data);
+      } catch {
+        // 리그에 참가하지 않은 경우
+      }
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
     }
   };
 
+  const formatDate = (date: Date) => {
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    };
+    return date.toLocaleDateString('ko-KR', options);
+  };
+
   return (
     <div className="dashboard">
-      <h1 className="page-title">대시보드</h1>
-      
+      <div className="dashboard-header">
+        <h1 className="page-title">대시보드</h1>
+        <div className="current-date">{formatDate(currentDate)}</div>
+      </div>
+
+      {/* 리그 정보 */}
+      {leagueInfo && (
+        <div className="league-banner">
+          <div className="league-info">
+            <h2>{leagueInfo.name}</h2>
+            <span className="season-badge">시즌 {leagueInfo.season}</span>
+          </div>
+          <div className="league-stats">
+            <div className="league-stat">
+              <span className="label">순위</span>
+              <span className="value">{leagueInfo.team_rank || '-'} / {leagueInfo.total_teams || '-'}</span>
+            </div>
+            <div className="league-stat">
+              <span className="label">승</span>
+              <span className="value">{leagueInfo.wins || 0}</span>
+            </div>
+            <div className="league-stat">
+              <span className="label">패</span>
+              <span className="value">{leagueInfo.losses || 0}</span>
+            </div>
+            <div className="league-stat">
+              <span className="label">포인트</span>
+              <span className="value">{leagueInfo.points || 0}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!leagueInfo && (
+        <div className="no-league-banner">
+          <p>현재 참가 중인 리그가 없습니다</p>
+          <p className="sub-text">리그 시즌이 시작되면 자동으로 배정됩니다</p>
+        </div>
+      )}
+
       {team && (
         <div className="stats-grid">
           <div className="stat-card card-enter">
@@ -49,11 +130,11 @@ export default function Dashboard() {
             <p className="stat-label">{team.league} LEAGUE</p>
           </div>
           <div className="stat-card card-enter-delay-1">
-            <h3>보유 골드</h3>
-            <p className="stat-value">{team.gold.toLocaleString()}</p>
+            <h3>보유 자금</h3>
+            <p className="stat-value">{team.gold.toLocaleString()}원</p>
           </div>
           <div className="stat-card card-enter-delay-2">
-            <h3>보유 다이아몬드</h3>
+            <h3>에너지</h3>
             <p className="stat-value">{team.diamond}</p>
           </div>
           {teamStats && (

@@ -2,13 +2,97 @@
   max-width: 1200px;
 }
 
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
 .page-title {
   font-size: 2rem;
-  margin-bottom: 2rem;
+  margin: 0;
   color: var(--white);
   text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
-  animation: fadeIn 0.5s ease-out, pulse 3s ease-in-out infinite;
+  animation: fadeIn 0.5s ease-out;
   position: relative;
+}
+
+.current-date {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.8);
+  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.league-banner {
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+  animation: fadeIn 0.5s ease-out;
+}
+
+.league-info h2 {
+  margin: 0 0 0.5rem 0;
+  color: white;
+  font-size: 1.5rem;
+}
+
+.season-badge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: white;
+}
+
+.league-stats {
+  display: flex;
+  gap: 2rem;
+}
+
+.league-stat {
+  text-align: center;
+}
+
+.league-stat .label {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 0.25rem;
+}
+
+.league-stat .value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: white;
+}
+
+.no-league-banner {
+  background: linear-gradient(135deg, #333 0%, #444 100%);
+  padding: 2rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  text-align: center;
+  border: 1px dashed #555;
+}
+
+.no-league-banner p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.no-league-banner .sub-text {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 0.5rem;
 }
 
 .stats-grid {
