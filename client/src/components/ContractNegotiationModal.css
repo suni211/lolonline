@@ -18,9 +18,11 @@
   border: 2px solid #3b82f6;
   border-radius: 16px;
   width: 90%;
-  max-width: 600px;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-width: 500px;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   color: white;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(59, 130, 246, 0.4);
   animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -75,10 +77,12 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-.modal-content {
+.contract-negotiation-modal .modal-content {
   padding: 20px;
   position: relative;
   z-index: 1;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .error-message {

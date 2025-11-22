@@ -18,6 +18,7 @@ import coachRoutes from './routes/coaches.js';
 import facilityRoutes, { initializeFacilityRevenue } from './routes/facilities.js';
 import sponsorRoutes from './routes/sponsors.js';
 import eventRoutes from './routes/events.js';
+import adminRoutes from './routes/admin.js';
 import { initializeDatabase } from './database/init.js';
 import { initializeSeasonSystem } from './services/seasonService.js';
 import { initializeMatchSimulation } from './services/matchSimulationService.js';
@@ -57,6 +58,7 @@ app.use('/api/combinations', combinationRoutes);
 app.use('/api/training', trainingRoutes);
 app.use('/api/sponsors', sponsorRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Socket.IO 연결
 io.on('connection', (socket) => {

@@ -213,7 +213,7 @@ export default function ContractNegotiationModal({
               <div className="form-section">
                 <h3>계약 조건 제안</h3>
                 <div className="form-group">
-                  <label>연봉 (골드)</label>
+                  <label>연봉 (원)</label>
                   <input
                     type="number"
                     value={annualSalary}
@@ -222,12 +222,12 @@ export default function ContractNegotiationModal({
                     className="form-input"
                   />
                   <div className="form-hint">
-                    기준 연봉: {baseSalary.toLocaleString()} 골드
+                    기준 연봉: {baseSalary.toLocaleString()}원
                     {annualSalary < baseSalary * 0.8 && (
-                      <span className="warning"> (낮은 제안입니다)</span>
+                      <span className="warning"> (낮은 제안)</span>
                     )}
                     {annualSalary > baseSalary * 1.2 && (
-                      <span className="success"> (매우 좋은 제안입니다)</span>
+                      <span className="success"> (좋은 제안)</span>
                     )}
                   </div>
                 </div>
@@ -248,7 +248,7 @@ export default function ContractNegotiationModal({
                 </div>
 
                 <div className="form-group">
-                  <label>계약금 (골드, 선택사항)</label>
+                  <label>계약금 (원)</label>
                   <input
                     type="number"
                     value={signingBonus}
@@ -260,7 +260,7 @@ export default function ContractNegotiationModal({
 
                 {requiresTransferFee && (
                   <div className="form-group transfer-fee-group">
-                    <label>이적료 (골드) *필수</label>
+                    <label>이적료 (원) *필수</label>
                     <input
                       type="number"
                       value={transferFee}
@@ -270,26 +270,26 @@ export default function ContractNegotiationModal({
                       required
                     />
                     <div className="form-hint">
-                      기준 이적료: {baseTransferFee.toLocaleString()} 골드
+                      기준 이적료: {baseTransferFee.toLocaleString()}원
                       {transferFee < baseTransferFee * 0.8 && (
-                        <span className="warning"> (낮은 이적료입니다)</span>
+                        <span className="warning"> (낮음)</span>
                       )}
                       {transferFee > baseTransferFee * 1.2 && (
-                        <span className="success"> (매우 좋은 이적료입니다)</span>
+                        <span className="success"> (좋음)</span>
                       )}
                     </div>
                     <div className="transfer-fee-notice">
-                      <p>⚠️ 이 선수는 다른 팀에 소속되어 있습니다. 이적료를 지불해야 합니다.</p>
+                      <p>이 선수는 다른 팀 소속입니다</p>
                     </div>
                   </div>
                 )}
 
                 <div className="cost-summary">
                   <h4>총 비용</h4>
-                  <p className="total-cost">{totalCost.toLocaleString()} 골드</p>
+                  <p className="total-cost">{totalCost.toLocaleString()}원</p>
                   <p className="cost-breakdown">
-                    (연봉 {annualSalary.toLocaleString()} × {contractYears}년 + 계약금 {signingBonus.toLocaleString()}
-                    {requiresTransferFee && ` + 이적료 ${transferFee.toLocaleString()}`})
+                    연봉 {annualSalary.toLocaleString()} × {contractYears}년 + 계약금 {signingBonus.toLocaleString()}
+                    {requiresTransferFee && ` + 이적료 ${transferFee.toLocaleString()}`}
                   </p>
                 </div>
 
@@ -317,12 +317,12 @@ export default function ContractNegotiationModal({
           {negotiation && negotiation.status === 'ACCEPTED' && (
             <div className="negotiation-status">
               <div className="status-accepted">
-                <h3>✅ 제안이 수락되었습니다!</h3>
+                <h3>제안 수락됨</h3>
                 <div className="accepted-details">
-                  <p><strong>연봉:</strong> {negotiation.annual_salary.toLocaleString()} 골드</p>
-                  <p><strong>계약 기간:</strong> {negotiation.contract_years}년</p>
-                  <p><strong>계약금:</strong> {negotiation.signing_bonus.toLocaleString()} 골드</p>
-                  <p><strong>총 비용:</strong> {(negotiation.annual_salary * negotiation.contract_years + negotiation.signing_bonus).toLocaleString()} 골드</p>
+                  <p>연봉: {negotiation.annual_salary.toLocaleString()}원</p>
+                  <p>기간: {negotiation.contract_years}년</p>
+                  <p>계약금: {negotiation.signing_bonus.toLocaleString()}원</p>
+                  <p>총: {(negotiation.annual_salary * negotiation.contract_years + negotiation.signing_bonus).toLocaleString()}원</p>
                 </div>
                 <button onClick={handleAccept} className="btn-primary btn-full">
                   계약 확정
@@ -334,10 +334,10 @@ export default function ContractNegotiationModal({
           {negotiation && negotiation.status === 'REJECTED' && (
             <div className="negotiation-status">
               <div className="status-rejected">
-                <h3>❌ 제안이 거절되었습니다</h3>
-                <p>더 나은 조건으로 재제안하시겠습니까?</p>
+                <h3>제안 거절됨</h3>
+                <p>더 나은 조건으로 재제안하세요</p>
                 <div className="form-group">
-                  <label>연봉 (골드)</label>
+                  <label>연봉 (원)</label>
                   <input
                     type="number"
                     value={annualSalary}
@@ -347,7 +347,7 @@ export default function ContractNegotiationModal({
                   />
                 </div>
                 <div className="form-group">
-                  <label>계약 기간 (년)</label>
+                  <label>기간</label>
                   <select
                     value={contractYears}
                     onChange={(e) => setContractYears(parseInt(e.target.value))}
@@ -361,7 +361,7 @@ export default function ContractNegotiationModal({
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>계약금 (골드)</label>
+                  <label>계약금 (원)</label>
                   <input
                     type="number"
                     value={signingBonus}
@@ -380,13 +380,13 @@ export default function ContractNegotiationModal({
           {negotiation && negotiation.status === 'COUNTER_OFFER' && (
             <div className="negotiation-status">
               <div className="status-counter">
-                <h3>💰 AI가 카운터 오퍼를 제시했습니다</h3>
+                <h3>카운터 오퍼</h3>
                 <div className="counter-offer-details">
-                  <p><strong>제안 연봉:</strong> {negotiation.ai_counter_salary?.toLocaleString()} 골드</p>
-                  <p><strong>제안 계약 기간:</strong> {negotiation.ai_counter_years}년</p>
-                  <p><strong>제안 계약금:</strong> {negotiation.ai_counter_bonus?.toLocaleString()} 골드</p>
+                  <p>연봉: {negotiation.ai_counter_salary?.toLocaleString()}원</p>
+                  <p>기간: {negotiation.ai_counter_years}년</p>
+                  <p>계약금: {negotiation.ai_counter_bonus?.toLocaleString()}원</p>
                   <p className="total-cost">
-                    <strong>총 비용:</strong> {((negotiation.ai_counter_salary || 0) * (negotiation.ai_counter_years || 0) + (negotiation.ai_counter_bonus || 0)).toLocaleString()} 골드
+                    총: {((negotiation.ai_counter_salary || 0) * (negotiation.ai_counter_years || 0) + (negotiation.ai_counter_bonus || 0)).toLocaleString()}원
                   </p>
                 </div>
                 <div className="counter-actions">
