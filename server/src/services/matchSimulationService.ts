@@ -638,16 +638,20 @@ async function finishMatch(match: any, matchData: any, io: Server) {
     if (match.match_type === 'FRIENDLY') {
       // 친선전 보상 - 골드 + 소량 경험치
       await giveFriendlyMatchRewards(match, winnerTeamId, loserTeamId, homeScore, awayScore);
+      // 경험치 지급 (친선전은 적은 양)
+      await giveMatchExperience(match.id, winnerTeamId, true, 0.5);
+      if (homeScore !== awayScore) {
+        await giveMatchExperience(match.id, loserTeamId, false, 0.5);
+      }
     } else {
-      // 리그전 보상 - 랜덤 선수 카드
+      // 리그전 보상 - 입장료 수익 + 랜덤 선수 카드
+      await giveLeagueMatchRewards(match, winnerTeamId, loserTeamId, homeScore, awayScore);
       await giveMatchRewards(match, winnerTeamId);
-    }
-
-    // 경험치 지급 (친선전은 적은 양)
-    const expMultiplier = match.match_type === 'FRIENDLY' ? 0.5 : 1.0;
-    await giveMatchExperience(match.id, winnerTeamId, true, expMultiplier);
-    if (homeScore !== awayScore) {
-      await giveMatchExperience(match.id, loserTeamId, false, expMultiplier);
+      // 경험치 지급 (팬 수에 비례)
+      const homeExpMultiplier = await getExpMultiplier(match.home_team_id);
+      const awayExpMultiplier = await getExpMultiplier(match.away_team_id);
+      await giveMatchExperience(match.id, match.home_team_id, match.home_team_id === winnerTeamId, homeExpMultiplier);
+      await giveMatchExperience(match.id, match.away_team_id, match.away_team_id === winnerTeamId, awayExpMultiplier);
     }
 
     // 경기 후 부상 체크 (모든 출전 선수)
@@ -704,6 +708,129 @@ async function giveMatchRewards(match: any, winnerTeamId: number) {
     );
   } catch (error) {
     console.error('Error giving match rewards:', error);
+  }
+}
+
+// 경험치 배율 계산 (팬 수 기반)
+async function getExpMultiplier(teamId: number): Promise<number> {
+  try {
+    const teams = await pool.query(
+      'SELECT fan_count FROM teams WHERE id = ?',
+      [teamId]
+    );
+
+    if (teams.length === 0) return 1.0;
+
+    const fanCount = teams[0].fan_count || 1000;
+    // 팬 수에 따른 배율: 1000명 = 1.0, 10000명 = 1.5, 100000명 = 2.0
+    const multiplier = 1.0 + Math.log10(fanCount / 1000) * 0.5;
+    return Math.max(1.0, Math.min(3.0, multiplier)); // 1.0 ~ 3.0 사이
+  } catch (error) {
+    console.error('Error getting exp multiplier:', error);
+    return 1.0;
+  }
+}
+
+// 리그 경기 보상 지급 (입장료 수익)
+async function giveLeagueMatchRewards(match: any, winnerTeamId: number, loserTeamId: number, homeScore: number, awayScore: number) {
+  try {
+    // 홈팀만 입장료 수익을 받음 (홈 경기)
+    const homeTeamId = match.home_team_id;
+
+    // 경기장 레벨 조회
+    const stadiums = await pool.query(
+      `SELECT level FROM team_facilities
+       WHERE team_id = ? AND facility_type = 'STADIUM'`,
+      [homeTeamId]
+    );
+
+    const stadiumLevel = stadiums.length > 0 ? stadiums[0].level : 0;
+
+    if (stadiumLevel === 0) {
+      // 경기장이 없으면 입장료 수익 없음
+      console.log(`Team ${homeTeamId} has no stadium - no ticket revenue`);
+
+      // 승리 보너스만 지급
+      const winBonus = 30000;
+      if (homeScore > awayScore) {
+        await pool.query('UPDATE teams SET gold = gold + ? WHERE id = ?', [winBonus, homeTeamId]);
+      } else if (awayScore > homeScore) {
+        await pool.query('UPDATE teams SET gold = gold + ? WHERE id = ?', [winBonus, match.away_team_id]);
+      }
+      return;
+    }
+
+    // 팬 수 조회
+    const teams = await pool.query(
+      'SELECT fan_count FROM teams WHERE id = ?',
+      [homeTeamId]
+    );
+
+    const fanCount = teams.length > 0 ? (teams[0].fan_count || 1000) : 1000;
+
+    // 입장료 수익 계산
+    // 경기장 수용 인원: 레벨 * 5000명
+    // 관중 수: 팬 수의 10~30% (랜덤)
+    const stadiumCapacity = stadiumLevel * 5000;
+    const attendanceRate = 0.1 + Math.random() * 0.2; // 10~30%
+    const attendance = Math.min(Math.floor(fanCount * attendanceRate), stadiumCapacity);
+
+    // 입장료: 관중 수 * 티켓 가격 (1000원)
+    const ticketPrice = 1000;
+    const ticketRevenue = attendance * ticketPrice;
+
+    // 승리 보너스
+    const winBonus = 50000;
+    const loseBonus = 10000;
+
+    // 홈팀 수익 지급
+    let homeGold = ticketRevenue;
+    if (homeScore > awayScore) {
+      homeGold += winBonus;
+    } else if (awayScore > homeScore) {
+      homeGold += loseBonus;
+    } else {
+      homeGold += 20000; // 무승부
+    }
+
+    await pool.query(
+      'UPDATE teams SET gold = gold + ? WHERE id = ?',
+      [homeGold, homeTeamId]
+    );
+
+    // 원정팀 승리/패배 보너스만
+    let awayGold = 0;
+    if (awayScore > homeScore) {
+      awayGold = winBonus;
+    } else if (homeScore > awayScore) {
+      awayGold = loseBonus;
+    } else {
+      awayGold = 20000;
+    }
+
+    await pool.query(
+      'UPDATE teams SET gold = gold + ? WHERE id = ?',
+      [awayGold, match.away_team_id]
+    );
+
+    // 팬 수 증가 (승리 시)
+    if (homeScore > awayScore) {
+      const fanIncrease = Math.floor(attendance * 0.05); // 관중의 5%가 새 팬
+      await pool.query(
+        'UPDATE teams SET fan_count = fan_count + ? WHERE id = ?',
+        [fanIncrease, homeTeamId]
+      );
+    } else if (awayScore > homeScore) {
+      const fanIncrease = Math.floor(100 + Math.random() * 200); // 원정 승리 시 소량 증가
+      await pool.query(
+        'UPDATE teams SET fan_count = fan_count + ? WHERE id = ?',
+        [fanIncrease, match.away_team_id]
+      );
+    }
+
+    console.log(`League match rewards: Home ${homeTeamId} +${homeGold}G (${attendance} attendance), Away ${match.away_team_id} +${awayGold}G`);
+  } catch (error) {
+    console.error('Error giving league match rewards:', error);
   }
 }
 
