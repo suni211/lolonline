@@ -127,7 +127,7 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
 
     if (leagueResult.length > 0) {
       await pool.query(
-        'INSERT INTO league_teams (league_id, team_id) VALUES (?, ?)',
+        'INSERT INTO league_participants (league_id, team_id) VALUES (?, ?)',
         [leagueResult[0].id, teamId]
       );
     }
