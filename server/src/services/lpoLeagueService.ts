@@ -331,12 +331,18 @@ export class LPOLeagueService {
       const REAL_MS_PER_GAME_WEEK = 90 * 60 * 1000; // 90분
 
       const now = Date.now();
+      console.log(`League ${leagueId}: Generating ${matches.length} matches...`);
+
       for (let i = 0; i < matches.length; i++) {
         const match = matches[i];
         // 각 경기는 1주(게임) 간격 = 1.5시간(현실) 간격
         const scheduledAt = new Date(now + (i + 1) * REAL_MS_PER_GAME_WEEK);
         // MySQL 형식으로 변환
         const scheduledAtStr = scheduledAt.toISOString().slice(0, 19).replace('T', ' ');
+
+        if (i === 0) {
+          console.log(`First match scheduled at: ${scheduledAtStr}`);
+        }
 
         await pool.query(
           `INSERT INTO matches (league_id, home_team_id, away_team_id, scheduled_at, status)
@@ -345,7 +351,7 @@ export class LPOLeagueService {
         );
       }
 
-      console.log(`League ${leagueId}: Generated ${matches.length} matches`);
+      console.log(`League ${leagueId}: Generated ${matches.length} matches successfully`);
     } catch (error) {
       console.error(`Failed to generate schedule for league ${leagueId}:`, error);
       throw error;
