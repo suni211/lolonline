@@ -12,9 +12,12 @@ import tradeRoutes from './routes/trades';
 import missionRoutes from './routes/missions';
 import friendlyMatchRoutes from './routes/friendlyMatches';
 import combinationRoutes from './routes/combinations';
+import trainingRoutes from './routes/training';
 import { initializeDatabase } from './database/init';
 import { initializeSeasonSystem } from './services/seasonService';
 import { initializeMatchSimulation } from './services/matchSimulationService';
+import { initializeInjurySystem } from './services/injuryService';
+import { initializeConditionRecovery } from './services/conditionService';
 
 dotenv.config();
 
@@ -40,6 +43,7 @@ app.use('/api/trades', tradeRoutes);
 app.use('/api/missions', missionRoutes);
 app.use('/api/friendly-matches', friendlyMatchRoutes);
 app.use('/api/combinations', combinationRoutes);
+app.use('/api/training', trainingRoutes);
 
 // Socket.IO 연결
 io.on('connection', (socket) => {
@@ -69,6 +73,8 @@ async function startServer() {
     await initializeDatabase();
     await initializeSeasonSystem();
     await initializeMatchSimulation(io);
+    initializeInjurySystem();
+    initializeConditionRecovery();
     
     httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

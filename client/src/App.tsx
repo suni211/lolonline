@@ -8,6 +8,7 @@ import Leagues from './pages/Leagues';
 import Trades from './pages/Trades';
 import Missions from './pages/Missions';
 import TeamManagement from './pages/TeamManagement';
+import Training from './pages/Training';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -33,6 +34,7 @@ function App() {
             <Route path="trades" element={<Trades />} />
             <Route path="missions" element={<Missions />} />
             <Route path="team" element={<TeamManagement />} />
+            <Route path="training" element={<Training />} />
           </Route>
         </Routes>
       </Router>

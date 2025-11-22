@@ -9,6 +9,7 @@ export default function Layout() {
   const navItems = [
     { path: '/dashboard', label: '대시보드' },
     { path: '/players', label: '선수 관리' },
+    { path: '/training', label: '훈련' },
     { path: '/matches', label: '경기' },
     { path: '/leagues', label: '리그' },
     { path: '/trades', label: '이적 시장' },

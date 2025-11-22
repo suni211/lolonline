@@ -2,6 +2,7 @@ import { Server } from 'socket.io';
 import pool from '../database/db';
 import cron from 'node-cron';
 import { giveMatchExperience } from './playerService';
+import { checkInjuryAfterMatch, getInjuryPenalty } from './injuryService';
 
 const matchEvents = [
   '선수가 라인에서 CS를 먹고 있습니다.',
@@ -93,15 +94,28 @@ async function startMatch(match: any, io: Server) {
       away_players: awayPlayers
     });
 
+    // 부상 선수는 경기 출전 불가
+    const availableHomePlayers = homePlayers.filter((p: any) => p.injury_status === 'NONE');
+    const availableAwayPlayers = awayPlayers.filter((p: any) => p.injury_status === 'NONE');
+
+    if (availableHomePlayers.length < 5 || availableAwayPlayers.length < 5) {
+      // 경기 취소 (부상 선수로 인해 최소 인원 부족)
+      await pool.query(
+        'UPDATE matches SET status = "FINISHED", home_score = 0, away_score = 0, finished_at = NOW() WHERE id = ?',
+        [match.id]
+      );
+      return;
+    }
+
     // 경기 통계 초기화
-    for (const player of homePlayers) {
+    for (const player of availableHomePlayers) {
       await pool.query(
         `INSERT INTO match_stats (match_id, player_id, team_id, kills, deaths, assists, gold_earned, damage_dealt, vision_score)
          VALUES (?, ?, ?, 0, 0, 0, 0, 0, 0)`,
         [match.id, player.id, match.home_team_id]
       );
     }
-    for (const player of awayPlayers) {
+    for (const player of availableAwayPlayers) {
       await pool.query(
         `INSERT INTO match_stats (match_id, player_id, team_id, kills, deaths, assists, gold_earned, damage_dealt, vision_score)
          VALUES (?, ?, ?, 0, 0, 0, 0, 0, 0)`,
@@ -219,7 +233,7 @@ async function calculateTeamOverall(teamId: number): Promise<number> {
   const players = await pool.query(
     `SELECT p.* FROM players p
      INNER JOIN player_ownership po ON p.id = po.player_id
-     WHERE po.team_id = ? AND po.is_starter = true`,
+     WHERE po.team_id = ? AND po.is_starter = true AND p.injury_status = 'NONE'`,
     [teamId]
   );
 
@@ -228,7 +242,9 @@ async function calculateTeamOverall(teamId: number): Promise<number> {
     const overall = player.mental + player.teamfight + player.focus + player.laning;
     // 컨디션 반영
     const adjustedOverall = overall * (player.condition / 100);
-    totalOverall += adjustedOverall;
+    // 부상 페널티 반영
+    const injuryPenalty = getInjuryPenalty(player.injury_status);
+    totalOverall += adjustedOverall * injuryPenalty;
   }
 
   return totalOverall;
@@ -304,6 +320,18 @@ async function finishMatch(match: any, matchData: any, io: Server) {
     await giveMatchExperience(match.id, winnerTeamId, true);
     if (homeScore !== awayScore) {
       await giveMatchExperience(match.id, loserTeamId, false);
+    }
+
+    // 경기 후 부상 체크 (모든 출전 선수)
+    const allPlayers = await pool.query(
+      `SELECT p.id FROM players p
+       INNER JOIN match_stats ms ON p.id = ms.player_id
+       WHERE ms.match_id = ?`,
+      [match.id]
+    );
+
+    for (const player of allPlayers) {
+      await checkInjuryAfterMatch(player.id, 1.0);
     }
 
     // 순위 업데이트 (리그 경기만)

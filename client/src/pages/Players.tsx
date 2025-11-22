@@ -18,6 +18,8 @@ interface Player {
   stat_points: number;
   condition: number;
   uniform_level: number;
+  injury_status: string;
+  injury_recovery_days: number;
   is_starter: boolean;
   is_benched: boolean;
   overall: number;
@@ -219,6 +221,12 @@ export default function Players() {
                   <p>레벨: {player.level} | 경험치: {player.exp}/{player.exp_to_next}</p>
                   <p>스탯 포인트: {player.stat_points} | 컨디션: {player.condition}%</p>
                   <p>유니폼 강화: +{player.uniform_level}</p>
+                  {player.injury_status !== 'NONE' && (
+                    <p className="injury-status">
+                      부상: {player.injury_status === 'MINOR' ? '경미' : player.injury_status === 'MODERATE' ? '중상' : '중증'} 
+                      ({player.injury_recovery_days}일 남음)
+                    </p>
+                  )}
                 </div>
                 <div className="player-actions">
                   <button

@@ -45,7 +45,9 @@ CREATE TABLE IF NOT EXISTS players (
     contract_expires_at DATETIME,
     uniform_level INT DEFAULT 0 CHECK (uniform_level >= 0 AND uniform_level <= 10),
     uniform_expires_at DATETIME,
-    awakening_level INT DEFAULT 0 CHECK (awakening_level >= 0 AND awakening_level <= 3),
+    injury_status ENUM('NONE', 'MINOR', 'MODERATE', 'SEVERE') DEFAULT 'NONE',
+    injury_recovery_days INT DEFAULT 0,
+    injury_started_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_position (position),
     INDEX idx_overall (mental, teamfight, focus, laning)
@@ -72,6 +74,20 @@ CREATE TABLE IF NOT EXISTS player_skills (
     skill_level INT DEFAULT 1 CHECK (skill_level >= 1 AND skill_level <= 10),
     skill_points INT DEFAULT 0,
     FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
+);
+
+-- 선수 훈련 기록 테이블
+CREATE TABLE IF NOT EXISTS player_training (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    player_id INT NOT NULL,
+    team_id INT NOT NULL,
+    training_type ENUM('INDIVIDUAL', 'TEAM') NOT NULL,
+    stat_type ENUM('MENTAL', 'TEAMFIGHT', 'FOCUS', 'LANING') NOT NULL,
+    exp_gained INT DEFAULT 0,
+    stat_increase INT DEFAULT 0,
+    trained_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
 );
 
 -- 장비 테이블

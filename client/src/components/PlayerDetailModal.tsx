@@ -17,6 +17,8 @@ interface Player {
   stat_points: number;
   condition: number;
   uniform_level: number;
+  injury_status: string;
+  injury_recovery_days: number;
 }
 
 interface PlayerDetailModalProps {
@@ -143,6 +145,16 @@ export default function PlayerDetailModal({ player, onClose, onUpdate }: PlayerD
               <span>유니폼 강화:</span>
               <span>+{player.uniform_level} / 10</span>
             </div>
+            {player.injury_status !== 'NONE' && (
+              <div className="info-row injury-row">
+                <span>부상 상태:</span>
+                <span className="injury-badge">
+                  {player.injury_status === 'MINOR' ? '경미' : 
+                   player.injury_status === 'MODERATE' ? '중상' : '중증'} 
+                  ({player.injury_recovery_days}일 남음)
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="stats-section">

@@ -162,3 +162,13 @@
   color: rgba(255, 255, 255, 0.8);
 }
 
+.injury-row {
+  background-color: rgba(239, 68, 68, 0.2);
+  border-left: 3px solid #EF4444;
+}
+
+.injury-badge {
+  color: #EF4444;
+  font-weight: 600;
+}
+

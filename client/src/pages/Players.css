@@ -241,6 +241,11 @@
   line-height: 1.6;
 }
 
+.injury-status {
+  color: #EF4444;
+  font-weight: 600;
+}
+
 .player-actions {
   display: flex;
   gap: 0.5rem;
