@@ -120,26 +120,40 @@ router.post('/scout', authenticateToken, async (req: AuthRequest, res) => {
     const positions = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
     const position = positions[Math.floor(Math.random() * positions.length)];
     
+    // 포지션별 스탯 특화
+    const positionStats: Record<string, { mental: number; teamfight: number; focus: number; laning: number }> = {
+      'TOP': { mental: 0.2, teamfight: 0.3, focus: 0.25, laning: 0.25 },
+      'JUNGLE': { mental: 0.25, teamfight: 0.3, focus: 0.3, laning: 0.15 },
+      'MID': { mental: 0.2, teamfight: 0.25, focus: 0.3, laning: 0.25 },
+      'ADC': { mental: 0.15, teamfight: 0.35, focus: 0.25, laning: 0.25 },
+      'SUPPORT': { mental: 0.3, teamfight: 0.25, focus: 0.25, laning: 0.2 }
+    };
+
     // 오버롤 200-600 사이 랜덤
     const baseOverall = 200 + Math.floor(Math.random() * 400);
-    const mental = Math.floor(baseOverall * 0.25) + Math.floor(Math.random() * 50);
-    const teamfight = Math.floor(baseOverall * 0.25) + Math.floor(Math.random() * 50);
-    const focus = Math.floor(baseOverall * 0.25) + Math.floor(Math.random() * 50);
+    const statWeights = positionStats[position];
+    const mental = Math.floor(baseOverall * statWeights.mental) + Math.floor(Math.random() * 30);
+    const teamfight = Math.floor(baseOverall * statWeights.teamfight) + Math.floor(Math.random() * 30);
+    const focus = Math.floor(baseOverall * statWeights.focus) + Math.floor(Math.random() * 30);
     const laning = baseOverall - mental - teamfight - focus;
 
-    const playerNames = [
-      'Faker', 'Uzi', 'TheShy', 'Rookie', 'Caps', 'Perkz', 'Doublelift', 'Bjergsen',
-      'Knight', 'JackeyLove', '369', 'Tian', 'Doinb', 'Crisp', 'Nuguri', 'Canyon',
-      'ShowMaker', 'Ghost', 'BeryL', 'Chovy', 'Deft', 'Keria', 'Zeus', 'Oner', 'Gumayusi'
-    ];
+    // 국적 리스트 (주요 리그 국가만)
+    const nationalities = ['KR', 'CN', 'EU', 'NA', 'VN', 'TW', 'JP', 'BR', 'TR', 'RU', 'PH', 'ID', 'TH', 'MY', 'SG', 'FR', 'DE', 'ES', 'DK', 'PL', 'SE', 'NO', 'FI', 'IT', 'GB', 'CA', 'AU', 'MX', 'AR', 'CL'];
+    const nationality = nationalities[Math.floor(Math.random() * nationalities.length)];
 
-    const name = playerNames[Math.floor(Math.random() * playerNames.length)] + 
-                 Math.floor(Math.random() * 1000).toString();
+    // 기본 선수 이름 (나중에 확장 가능)
+    const baseNames = [
+      'Faker', 'Chovy', 'Deft', 'Keria', 'Zeus', 'Oner', 'Gumayusi', 'ShowMaker', 'Canyon',
+      'BeryL', 'Nuguri', 'TheShy', 'Rookie', 'Uzi', 'Caps', 'Perkz', 'Doublelift', 'Bjergsen'
+    ];
+    
+    const baseName = baseNames[Math.floor(Math.random() * baseNames.length)];
+    const name = baseName + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
 
     const result = await pool.query(
-      `INSERT INTO players (name, position, mental, teamfight, focus, laning, level, exp_to_next) 
-       VALUES (?, ?, ?, ?, ?, ?, 1, 100)`,
-      [name, position, Math.min(mental, 300), Math.min(teamfight, 300), Math.min(focus, 300), Math.min(laning, 300)]
+      `INSERT INTO players (name, nationality, position, mental, teamfight, focus, laning, level, exp_to_next) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1, 100)`,
+      [name, nationality, position, Math.min(mental, 300), Math.min(teamfight, 300), Math.min(focus, 300), Math.min(laning, 300)]
     );
 
     const playerId = result.insertId;

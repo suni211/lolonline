@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS teams (
 CREATE TABLE IF NOT EXISTS players (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(100) NOT NULL,
+    nationality VARCHAR(50) NOT NULL DEFAULT 'KR',
     position ENUM('TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT') NOT NULL,
     mental INT DEFAULT 1 CHECK (mental >= 1 AND mental <= 300),
     teamfight INT DEFAULT 1 CHECK (teamfight >= 1 AND teamfight <= 300),

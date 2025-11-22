@@ -6,6 +6,7 @@ import './PlayerDetailModal.css';
 interface Player {
   id: number;
   name: string;
+  nationality: string;
   position: string;
   mental: number;
   teamfight: number;

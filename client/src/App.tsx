@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import Login from './pages/Login';
+import CreateTeam from './pages/CreateTeam';
 import Dashboard from './pages/Dashboard';
 import Players from './pages/Players';
 import Matches from './pages/Matches';
@@ -18,6 +19,14 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route
+            path="/create-team"
+            element={
+              <ProtectedRoute requireTeam={false}>
+                <CreateTeam />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/"
             element={

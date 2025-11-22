@@ -7,6 +7,7 @@ import './Players.css';
 interface Player {
   id: number;
   name: string;
+  nationality: string;
   position: string;
   mental: number;
   teamfight: number;
@@ -192,8 +193,15 @@ export default function Players() {
             {filteredPlayers.map((player) => (
               <div key={player.id} className="player-card" onClick={() => setSelectedPlayer(player)}>
                 <div className="player-header">
-                  <h3>{player.name}</h3>
-                  <span className={`position-badge ${player.position}`}>{player.position}</span>
+                  <div className="player-header">
+                    <h3>{player.name}</h3>
+                    <div className="player-meta">
+                      <span className="nationality-flag" title={getNationalityName(player.nationality || 'KR')}>
+                        {getNationalityFlag(player.nationality || 'KR')}
+                      </span>
+                      <span className={`position-badge ${player.position}`}>{player.position}</span>
+                    </div>
+                  </div>
                 </div>
                 <div className="player-stats">
                   <div className="stat-row">
@@ -310,8 +318,15 @@ export default function Players() {
             {searchResults.map((player) => (
               <div key={player.id} className="player-card">
                 <div className="player-header">
-                  <h3>{player.name}</h3>
-                  <span className={`position-badge ${player.position}`}>{player.position}</span>
+                  <div className="player-header">
+                    <h3>{player.name}</h3>
+                    <div className="player-meta">
+                      <span className="nationality-flag" title={getNationalityName(player.nationality || 'KR')}>
+                        {getNationalityFlag(player.nationality || 'KR')}
+                      </span>
+                      <span className={`position-badge ${player.position}`}>{player.position}</span>
+                    </div>
+                  </div>
                 </div>
                 <div className="player-stats">
                   <div className="stat-row overall">

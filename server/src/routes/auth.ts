@@ -68,39 +68,14 @@ router.post('/register', async (req, res) => {
 
     const userId = result.insertId;
 
-    // 팀 자동 생성
-    const teamName = `${username}'s Team`;
-    const league = Math.random() > 0.5 ? 'EAST' : 'WEST';
-    
-    const teamResult = await pool.query(
-      `INSERT INTO teams (user_id, name, league, gold, diamond) 
-       VALUES (?, ?, ?, 100000, 100)`,
-      [userId, teamName, league]
-    );
-
-    const teamId = teamResult.insertId;
-
-    // 리그 참가
-    const leagueResult = await pool.query(
-      'SELECT id FROM leagues WHERE region = ? AND season = (SELECT MAX(season) FROM leagues WHERE region = ?)',
-      [league, league]
-    );
-
-    if (leagueResult.length > 0) {
-      await pool.query(
-        'INSERT INTO league_participants (league_id, team_id) VALUES (?, ?)',
-        [leagueResult[0].id, teamId]
-      );
-    }
-
-    // JWT 토큰 생성
+    // JWT 토큰 생성 (팀이 없으므로 teamId는 null)
     const token = jwt.sign(
-      { userId, teamId },
+      { userId },
       process.env.JWT_SECRET || 'secret',
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
-    res.json({ token, userId, teamId });
+    res.json({ token, userId, message: '회원가입 성공', needsTeam: true });
   } catch (error: any) {
     console.error('Registration error:', error);
     // 데이터베이스 에러 상세 정보

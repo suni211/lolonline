@@ -56,6 +56,17 @@ export async function initializeDatabase() {
         console.error('Error adding registration_ip column:', error);
       }
     }
+
+    // players 테이블에 nationality 컬럼 추가 (기존 테이블 업데이트)
+    try {
+      await pool.query('ALTER TABLE players ADD COLUMN nationality VARCHAR(50) DEFAULT "KR"');
+      console.log('Added nationality column to players table');
+    } catch (error: any) {
+      // 컬럼이 이미 존재하는 경우 무시
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        console.error('Error adding nationality column:', error);
+      }
+    }
     
     console.log('Database initialized successfully');
     

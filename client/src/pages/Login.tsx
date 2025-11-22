@@ -19,12 +19,14 @@ export default function Login() {
     try {
       if (isLogin) {
         await login(username, password);
+        navigate('/dashboard');
       } else {
         await register(username, password, email);
+        // 회원가입 후 팀이 없으면 팀 생성 페이지로 이동
+        navigate('/create-team');
       }
-      navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error || '로그인에 실패했습니다.');
+      setError(err.response?.data?.error || (isLogin ? '로그인에 실패했습니다.' : '회원가입에 실패했습니다.'));
     }
   };
 
