@@ -58,7 +58,8 @@ export class LPOLeagueService {
       const playerTeams = await pool.query(
         `SELECT id, name FROM teams WHERE user_id IS NOT NULL`
       );
-      console.log(`Found ${playerTeams.length} player teams:`, playerTeams.map((t: any) => t.name));
+      const teamNames = playerTeams.map((t: any) => t.name);
+      console.log(`Found ${playerTeams.length} player teams: [${teamNames.join(', ')}]`);
 
       // 기존 AI 팀 및 LPO 리그 삭제 (완전 초기화)
       console.log('Cleaning up existing LPO data...');
