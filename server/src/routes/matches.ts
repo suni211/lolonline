@@ -11,7 +11,11 @@ router.get('/', async (req, res) => {
     const { league_id, status, match_type } = req.query;
 
     let query = `
-      SELECT m.*,
+      SELECT m.id, m.league_id, m.home_team_id, m.away_team_id, m.match_type, m.round,
+             m.status, m.home_score, m.away_score, m.match_data,
+             DATE_FORMAT(m.scheduled_at, '%Y-%m-%d %H:%i:%s') as scheduled_at,
+             DATE_FORMAT(m.started_at, '%Y-%m-%d %H:%i:%s') as started_at,
+             DATE_FORMAT(m.finished_at, '%Y-%m-%d %H:%i:%s') as finished_at,
              ht.name as home_team_name, ht.logo_url as home_team_logo,
              at.name as away_team_name, at.logo_url as away_team_logo,
              l.name as league_name
