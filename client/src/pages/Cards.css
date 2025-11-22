@@ -654,6 +654,33 @@
   color: #51cf66;
 }
 
+.color-info .color-league {
+  font-size: 11px;
+  color: #888;
+}
+
+.teamcolor-info {
+  background: #2a2a3e;
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.teamcolor-info p {
+  color: #aaa;
+  font-size: 14px;
+  margin: 0;
+}
+
+.color-options-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
 .no-colors {
   text-align: center;
   color: #888;

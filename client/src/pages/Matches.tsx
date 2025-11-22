@@ -3,6 +3,14 @@ import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
 import './Matches.css';
 
+// 날짜 포맷 헬퍼 함수
+const formatDate = (dateString: string | null | undefined): string => {
+  if (!dateString) return '-';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '-';
+  return date.toLocaleString('ko-KR');
+};
+
 interface Match {
   id: number;
   home_team_name: string;
@@ -198,7 +206,7 @@ export default function Matches() {
                 )}
                 {match.status === 'SCHEDULED' && (
                   <span className="scheduled-time">
-                    {new Date(match.scheduled_at).toLocaleString('ko-KR')}
+                    {formatDate(match.scheduled_at)}
                   </span>
                 )}
               </div>

@@ -43,10 +43,9 @@ interface Chemistry {
 }
 
 interface TeamColor {
-  id: number;
-  name: string;
+  team_name: string;
+  league: string;
   color_code: string;
-  stat_bonus: number;
 }
 
 interface TeamColorBonus {
@@ -69,8 +68,6 @@ export default function Cards() {
   const [filter, setFilter] = useState<string>('all');
   const [teamColors, setTeamColors] = useState<TeamColor[]>([]);
   const [teamColorBonus, setTeamColorBonus] = useState<TeamColorBonus | null>(null);
-  const [newColorName, setNewColorName] = useState('');
-  const [newColorCode, setNewColorCode] = useState('#4a4aff');
   const [selectedCardForColor, setSelectedCardForColor] = useState<number | null>(null);
 
   useEffect(() => {
@@ -126,30 +123,10 @@ export default function Cards() {
     }
   };
 
-  const createTeamColor = async () => {
-    if (!newColorName.trim()) {
-      alert('팀컬러 이름을 입력해주세요');
-      return;
-    }
-
-    try {
-      await axios.post('/api/packs/team-colors', {
-        name: newColorName,
-        colorCode: newColorCode
-      });
-      setNewColorName('');
-      await fetchTeamColors();
-      await refreshTeam();
-      alert('팀컬러가 생성되었습니다!');
-    } catch (error: any) {
-      alert(error.response?.data?.error || '팀컬러 생성 실패');
-    }
-  };
-
-  const applyTeamColor = async (cardId: number, teamColorId: number | null) => {
+  const applyTeamColor = async (cardId: number, teamColorName: string | null) => {
     try {
       await axios.post(`/api/packs/cards/${cardId}/team-color`, {
-        teamColorId
+        teamColorName
       });
       await fetchCards();
       await fetchTeamColorBonus();
@@ -383,7 +360,7 @@ export default function Cards() {
                   <div className="contract-badge">계약됨 (S{card.contract_season})</div>
                 )}
                 {(card as any).team_color_name && (
-                  <div className="card-team-color" style={{ borderColor: teamColors.find(c => c.id === (card as any).team_color_id)?.color_code || '#fff' }}>
+                  <div className="card-team-color" style={{ borderColor: teamColors.find(c => c.team_name === (card as any).team_color_name)?.color_code || '#fff' }}>
                     {(card as any).team_color_name}
                   </div>
                 )}
@@ -456,55 +433,37 @@ export default function Cards() {
 
       {activeTab === 'teamcolor' && (
         <div className="teamcolor-section">
-          <h2>팀컬러 관리</h2>
+          <h2>팀컬러 (프로팀)</h2>
 
-          <div className="create-color-form">
-            <h3>새 팀컬러 생성 (5,000,000원)</h3>
-            <div className="form-row">
-              <input
-                type="text"
-                placeholder="팀컬러 이름"
-                value={newColorName}
-                onChange={(e) => setNewColorName(e.target.value)}
-                className="color-name-input"
-              />
-              <input
-                type="color"
-                value={newColorCode}
-                onChange={(e) => setNewColorCode(e.target.value)}
-                className="color-picker"
-              />
-              <button onClick={createTeamColor} className="create-color-btn">
-                생성
-              </button>
-            </div>
+          <div className="teamcolor-info">
+            <p>카드에 프로팀 컬러를 적용하면 같은 팀 3명 이상일 때 +5 보너스!</p>
           </div>
 
           <div className="my-colors">
-            <h3>내 팀컬러</h3>
+            <h3>프로팀 목록</h3>
             {teamColors.length > 0 ? (
               <div className="colors-grid">
                 {teamColors.map(color => (
-                  <div key={color.id} className="color-item">
+                  <div key={color.team_name} className="color-item">
                     <div
                       className="color-preview"
                       style={{ backgroundColor: color.color_code }}
                     />
                     <div className="color-info">
-                      <span className="color-name">{color.name}</span>
-                      <span className="color-bonus">+{color.stat_bonus} 보너스</span>
+                      <span className="color-name">{color.team_name}</span>
+                      <span className="color-league">{color.league}</span>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="no-colors">팀컬러가 없습니다. 새로 생성해보세요!</p>
+              <p className="no-colors">프로팀 데이터를 불러오는 중...</p>
             )}
           </div>
 
           {teamColorBonus && (
             <div className="color-bonus-info">
-              <h3>팀컬러 보너스 (3명 이상 동일 팀컬러)</h3>
+              <h3>팀컬러 보너스 (3명 이상 동일 팀)</h3>
               <div className="bonus-detail">
                 <span>총 보너스: +{teamColorBonus.teamColorBonus.totalBonus}</span>
                 <p>{teamColorBonus.teamColorBonus.details}</p>
@@ -518,7 +477,7 @@ export default function Cards() {
         <div className="color-select-overlay" onClick={() => setSelectedCardForColor(null)}>
           <div className="color-select-modal" onClick={e => e.stopPropagation()}>
             <h3>팀컬러 선택</h3>
-            <div className="color-options">
+            <div className="color-options-scroll">
               <button
                 className="color-option none"
                 onClick={() => applyTeamColor(selectedCardForColor, null)}
@@ -527,16 +486,16 @@ export default function Cards() {
               </button>
               {teamColors.map(color => (
                 <button
-                  key={color.id}
+                  key={color.team_name}
                   className="color-option"
                   style={{ borderColor: color.color_code }}
-                  onClick={() => applyTeamColor(selectedCardForColor, color.id)}
+                  onClick={() => applyTeamColor(selectedCardForColor, color.team_name)}
                 >
                   <div
                     className="option-preview"
                     style={{ backgroundColor: color.color_code }}
                   />
-                  {color.name}
+                  {color.team_name}
                 </button>
               ))}
             </div>

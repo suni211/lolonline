@@ -234,78 +234,76 @@ router.get('/pro-players', async (req, res) => {
   }
 });
 
-// 팀컬러 목록 조회
-router.get('/team-colors', authenticateToken, async (req: AuthRequest, res) => {
+// 프로팀 컬러 목록 조회 (T1, GEN 등)
+router.get('/team-colors', async (req, res) => {
   try {
-    const teamId = req.teamId;
-
-    if (!teamId) {
-      return res.status(401).json({ error: '팀 정보가 필요합니다' });
-    }
-
-    const colors = await pool.query(
-      'SELECT * FROM team_colors WHERE team_id = ? AND is_active = true ORDER BY created_at DESC',
-      [teamId]
+    // pro_players 테이블에서 고유한 팀 목록 가져오기
+    const teams = await pool.query(
+      `SELECT DISTINCT team as team_name, league FROM pro_players WHERE is_active = true ORDER BY league, team`
     );
 
-    res.json(colors);
+    // 팀별 색상 매핑
+    const teamColors: { [key: string]: string } = {
+      'T1': '#E2012D',
+      'Gen.G': '#AA8A00',
+      'DRX': '#5A8DFF',
+      'KT Rolster': '#FF0000',
+      'Dplus KIA': '#00A651',
+      'Hanwha Life': '#FF6B00',
+      'Kwangdong Freecs': '#00D1C1',
+      'Nongshim RedForce': '#D31145',
+      'OK BRION': '#6B5CE7',
+      'FearX': '#FFD700',
+      'G2 Esports': '#1D1D1B',
+      'Fnatic': '#FF5900',
+      'MAD Lions': '#0A2240',
+      'Team Vitality': '#FFEE00',
+      'Rogue': '#1E3A5F',
+      'SK Gaming': '#0089CF',
+      'Team BDS': '#1A1A1A',
+      'Excel Esports': '#47D1E8',
+      'Astralis': '#FF0000',
+      'Team Heretics': '#FF2D55',
+      'JD Gaming': '#C8102E',
+      'Top Esports': '#FF0000',
+      'Bilibili Gaming': '#00A1D6',
+      'Weibo Gaming': '#FF8200',
+      'LNG Esports': '#00A3E0',
+      'EDward Gaming': '#000000',
+      'Royal Never Give Up': '#B4975A',
+      'FunPlus Phoenix': '#FF0000',
+      'Rare Atom': '#FF6B6B',
+      'Anyone\'s Legend': '#7B68EE',
+      'Cloud9': '#00AEEF',
+      'Team Liquid': '#0D3B66',
+      '100 Thieves': '#FF0000',
+      'FlyQuest': '#21825B',
+      'NRG': '#38B6FF',
+      'Evil Geniuses': '#0A0A0A',
+      'Dignitas': '#FFCC00',
+      'Golden Guardians': '#F0B90B',
+      'TSM': '#FFFFFF',
+      'Immortals': '#00D4AA'
+    };
+
+    const result = teams.map((t: any) => ({
+      team_name: t.team_name,
+      league: t.league,
+      color_code: teamColors[t.team_name] || '#888888'
+    }));
+
+    res.json(result);
   } catch (error) {
     console.error('Get team colors error:', error);
     res.status(500).json({ error: '팀컬러 목록 조회 실패' });
   }
 });
 
-// 팀컬러 생성
-router.post('/team-colors', authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const teamId = req.teamId;
-    const { name, colorCode } = req.body;
-
-    if (!teamId) {
-      return res.status(401).json({ error: '팀 정보가 필요합니다' });
-    }
-
-    if (!name || !colorCode) {
-      return res.status(400).json({ error: '이름과 색상 코드가 필요합니다' });
-    }
-
-    // 팀컬러 생성 비용 (5백만 골드)
-    const cost = 5000000;
-
-    const team = await pool.query('SELECT gold FROM teams WHERE id = ?', [teamId]);
-    if (team.length === 0 || team[0].gold < cost) {
-      return res.status(400).json({ error: '골드가 부족합니다 (5,000,000원 필요)' });
-    }
-
-    // 골드 차감
-    await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [cost, teamId]);
-
-    // 팀컬러 생성
-    const result = await pool.query(
-      'INSERT INTO team_colors (team_id, name, color_code) VALUES (?, ?, ?)',
-      [teamId, name, colorCode]
-    );
-
-    res.json({
-      success: true,
-      teamColor: {
-        id: result.insertId,
-        name,
-        color_code: colorCode,
-        stat_bonus: 5
-      }
-    });
-  } catch (error) {
-    console.error('Create team color error:', error);
-    res.status(500).json({ error: '팀컬러 생성 실패' });
-  }
-});
-
-// 카드에 팀컬러 적용
+// 카드에 팀컬러 적용 (프로팀 이름으로)
 router.post('/cards/:cardId/team-color', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { cardId } = req.params;
-    const { teamColorId } = req.body;
+    const { teamColorName } = req.body; // 프로팀 이름 (T1, Gen.G 등)
     const teamId = req.teamId;
 
     if (!teamId) {
@@ -322,26 +320,16 @@ router.post('/cards/:cardId/team-color', authenticateToken, async (req: AuthRequ
       return res.status(404).json({ error: '카드를 찾을 수 없습니다' });
     }
 
-    if (teamColorId) {
-      // 팀컬러 확인
-      const colors = await pool.query(
-        'SELECT * FROM team_colors WHERE id = ? AND team_id = ?',
-        [teamColorId, teamId]
-      );
-
-      if (colors.length === 0) {
-        return res.status(404).json({ error: '팀컬러를 찾을 수 없습니다' });
-      }
-
-      // 팀컬러 적용
+    if (teamColorName) {
+      // 팀컬러 적용 (프로팀 이름 저장)
       await pool.query(
-        'UPDATE player_cards SET team_color_id = ?, team_color_name = ? WHERE id = ?',
-        [teamColorId, colors[0].name, cardId]
+        'UPDATE player_cards SET team_color_name = ? WHERE id = ?',
+        [teamColorName, cardId]
       );
     } else {
       // 팀컬러 해제
       await pool.query(
-        'UPDATE player_cards SET team_color_id = NULL, team_color_name = NULL WHERE id = ?',
+        'UPDATE player_cards SET team_color_name = NULL WHERE id = ?',
         [cardId]
       );
     }
@@ -364,31 +352,29 @@ router.get('/team-color-bonus', authenticateToken, async (req: AuthRequest, res)
 
     // 스타터 카드들의 팀컬러 확인
     const starters = await pool.query(
-      `SELECT pc.*, tc.stat_bonus
+      `SELECT pc.*, pp.name, pp.team as pro_team, pp.position
        FROM player_cards pc
-       LEFT JOIN team_colors tc ON pc.team_color_id = tc.id
+       JOIN pro_players pp ON pc.pro_player_id = pp.id
        WHERE pc.team_id = ? AND pc.is_starter = true`,
       [teamId]
     );
 
-    // 같은 팀컬러를 가진 카드 수 계산
-    const colorCounts: { [key: number]: number } = {};
+    // 같은 팀컬러(프로팀)를 가진 카드 수 계산
+    const colorCounts: { [key: string]: number } = {};
     let totalBonus = 0;
 
     starters.forEach((card: any) => {
-      if (card.team_color_id) {
-        colorCounts[card.team_color_id] = (colorCounts[card.team_color_id] || 0) + 1;
+      if (card.team_color_name) {
+        colorCounts[card.team_color_name] = (colorCounts[card.team_color_name] || 0) + 1;
       }
     });
 
-    // 같은 팀컬러 3명 이상: 추가 보너스
+    // 같은 팀컬러 3명 이상: +5 보너스
     const bonusDetails: string[] = [];
-    Object.entries(colorCounts).forEach(([colorId, count]) => {
-      const starter = starters.find((s: any) => s.team_color_id === parseInt(colorId));
-      if (count >= 3 && starter) {
-        const bonus = starter.stat_bonus || 5;
-        totalBonus += bonus;
-        bonusDetails.push(`${starter.team_color_name} (${count}명): +${bonus}`);
+    Object.entries(colorCounts).forEach(([colorName, count]) => {
+      if (count >= 3) {
+        totalBonus += 5;
+        bonusDetails.push(`${colorName} (${count}명): +5`);
       }
     });
 
@@ -396,7 +382,7 @@ router.get('/team-color-bonus', authenticateToken, async (req: AuthRequest, res)
       starters,
       teamColorBonus: {
         totalBonus,
-        details: bonusDetails.join(', ') || '팀컬러 보너스 없음'
+        details: bonusDetails.join(', ') || '팀컬러 보너스 없음 (같은 팀 3명 이상 필요)'
       }
     });
   } catch (error) {

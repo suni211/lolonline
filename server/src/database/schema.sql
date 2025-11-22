@@ -542,16 +542,13 @@ CREATE TABLE IF NOT EXISTS pack_openings (
     FOREIGN KEY (player_card_id) REFERENCES player_cards(id) ON DELETE CASCADE
 );
 
--- 팀컬러 테이블
-CREATE TABLE IF NOT EXISTS team_colors (
+-- 프로팀 컬러 테이블 (T1, GEN, DRX 등)
+CREATE TABLE IF NOT EXISTS pro_team_colors (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    team_id INT NOT NULL,
-    name VARCHAR(100) NOT NULL,
+    team_name VARCHAR(100) NOT NULL UNIQUE,
     color_code VARCHAR(7) NOT NULL DEFAULT '#FFFFFF',
-    stat_bonus INT DEFAULT 5,
-    is_active BOOLEAN DEFAULT TRUE,
+    league VARCHAR(50) NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
-    INDEX idx_team_color (team_id)
+    INDEX idx_pro_team_name (team_name)
 );
 
