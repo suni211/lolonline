@@ -14,7 +14,8 @@ module.exports = {
         NODE_ENV: 'production'
       },
       error_file: '/home/ine158lovely/.pm2/logs/server-error.log',
-      out_file: '/home/ine158lovely/.pm2/logs/server-out.log'
+      out_file: '/home/ine158lovely/.pm2/logs/server-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     },
     {
       name: 'client',
@@ -29,7 +30,8 @@ module.exports = {
         NODE_ENV: 'production'
       },
       error_file: '/home/ine158lovely/.pm2/logs/client-error.log',
-      out_file: '/home/ine158lovely/.pm2/logs/client-out.log'
+      out_file: '/home/ine158lovely/.pm2/logs/client-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     }
   ]
 };
