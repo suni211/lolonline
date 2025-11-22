@@ -44,6 +44,16 @@ export class LPOLeagueService {
     try {
       console.log('Initializing LPO League system...');
 
+      // teams 테이블의 user_id를 nullable로 변경 (AI 팀용)
+      await pool.query(`ALTER TABLE teams MODIFY COLUMN user_id INT NULL`);
+
+      // unique_user_team 제약 조건 삭제 (AI 팀은 user_id가 NULL이므로)
+      try {
+        await pool.query(`ALTER TABLE teams DROP INDEX unique_user_team`);
+      } catch (e) {
+        // 이미 삭제된 경우 무시
+      }
+
       // 기존 AI 팀 및 LPO 리그 삭제 (완전 초기화)
       console.log('Cleaning up existing LPO data...');
 
