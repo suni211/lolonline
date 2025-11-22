@@ -7,9 +7,9 @@ interface Pack {
   id: number;
   name: string;
   description: string;
-  price: number;
+  price_gold: number;
   card_count: number;
-  card_type: string;
+  pack_type: string;
 }
 
 interface PlayerCard {
@@ -273,18 +273,18 @@ export default function Cards() {
           <h2>선수팩 구매</h2>
           <div className="packs-grid">
             {packs.map(pack => (
-              <div key={pack.id} className={`pack-item ${pack.card_type.toLowerCase()}`}>
+              <div key={pack.id} className={`pack-item ${pack.pack_type.toLowerCase()}`}>
                 <div className="pack-icon">
-                  {pack.card_type === 'NORMAL' ? '📦' : '⭐'}
+                  {pack.pack_type === 'NORMAL' ? '📦' : '⭐'}
                 </div>
                 <h3>{pack.name}</h3>
                 <p className="pack-desc">{pack.description}</p>
-                <p className="pack-info">{pack.card_count}장 카드</p>
-                <p className="pack-price">{pack.price.toLocaleString()}원</p>
+                <p className="pack-info">랜덤 선수 1명</p>
+                <p className="pack-price">{pack.price_gold.toLocaleString()}원</p>
                 <button
                   className="open-btn"
-                  onClick={() => openPack(pack.id, pack.price)}
-                  disabled={loading || !team || team.gold < pack.price}
+                  onClick={() => openPack(pack.id, pack.price_gold)}
+                  disabled={loading || !team || team.gold < pack.price_gold}
                 >
                   {loading ? '개봉 중...' : '개봉하기'}
                 </button>
