@@ -469,3 +469,72 @@ CREATE TABLE IF NOT EXISTS leaderboards (
 -- idx_players_overall은 표현식 인덱스를 지원하지 않으므로 제거 (이미 idx_overall 복합 인덱스가 있음)
 -- 인덱스는 init.ts에서 중복 체크 후 생성
 
+-- 프로 선수 테이블 (실제 선수 데이터)
+CREATE TABLE IF NOT EXISTS pro_players (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    team VARCHAR(100) NOT NULL,
+    position ENUM('TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT') NOT NULL,
+    league VARCHAR(50) NOT NULL,
+    nationality VARCHAR(50) NOT NULL DEFAULT 'KR',
+    base_ovr INT NOT NULL CHECK (base_ovr >= 1 AND base_ovr <= 100),
+    card_type ENUM('NORMAL', 'SEASON') DEFAULT 'NORMAL',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_pro_team (team),
+    INDEX idx_pro_league (league),
+    INDEX idx_pro_position (position)
+);
+
+-- 선수 카드 테이블 (뽑은 카드)
+CREATE TABLE IF NOT EXISTS player_cards (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    pro_player_id INT NOT NULL,
+    team_id INT,
+    card_type ENUM('NORMAL', 'SEASON') DEFAULT 'NORMAL',
+    -- 스탯 (1~200)
+    mental INT DEFAULT 1 CHECK (mental >= 1 AND mental <= 200),
+    teamfight INT DEFAULT 1 CHECK (teamfight >= 1 AND teamfight <= 200),
+    focus INT DEFAULT 1 CHECK (focus >= 1 AND focus <= 200),
+    laning INT DEFAULT 1 CHECK (laning >= 1 AND laning <= 200),
+    -- 계산된 OVR
+    ovr INT DEFAULT 1,
+    -- 팀컬러
+    team_color_id INT,
+    team_color_name VARCHAR(100),
+    -- 스타터 여부
+    is_starter BOOLEAN DEFAULT FALSE,
+    -- 성장
+    level INT DEFAULT 1,
+    exp INT DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (pro_player_id) REFERENCES pro_players(id) ON DELETE CASCADE,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL,
+    INDEX idx_card_team (team_id),
+    INDEX idx_card_ovr (ovr)
+);
+
+-- 선수팩 테이블
+CREATE TABLE IF NOT EXISTS player_packs (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    price_gold BIGINT DEFAULT 0,
+    price_diamond INT DEFAULT 0,
+    description TEXT,
+    pack_type ENUM('NORMAL', 'PREMIUM', 'LEGEND') DEFAULT 'NORMAL',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 팩 개봉 기록 테이블
+CREATE TABLE IF NOT EXISTS pack_openings (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    team_id INT NOT NULL,
+    pack_id INT NOT NULL,
+    player_card_id INT NOT NULL,
+    opened_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (pack_id) REFERENCES player_packs(id) ON DELETE CASCADE,
+    FOREIGN KEY (player_card_id) REFERENCES player_cards(id) ON DELETE CASCADE
+);
+
