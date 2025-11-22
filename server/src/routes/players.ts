@@ -435,5 +435,26 @@ router.put('/:playerId/lineup', authenticateToken, async (req: AuthRequest, res)
   }
 });
 
+// 선수 컨디션 히스토리
+router.get('/:id/condition-history', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const history = await pool.query(
+      `SELECT condition_value, recorded_at
+       FROM player_condition_history
+       WHERE player_id = ?
+       ORDER BY recorded_at DESC
+       LIMIT 30`,
+      [id]
+    );
+
+    res.json(history);
+  } catch (error: any) {
+    console.error('Get condition history error:', error);
+    res.status(500).json({ error: 'Failed to get condition history' });
+  }
+});
+
 export default router;
 
