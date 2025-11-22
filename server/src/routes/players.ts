@@ -7,6 +7,10 @@ const router = express.Router();
 // 내 선수 목록
 router.get('/my', authenticateToken, async (req: AuthRequest, res) => {
   try {
+    if (!req.teamId) {
+      return res.json([]);
+    }
+
     const { position, sort_by, order } = req.query;
 
     let query = `
