@@ -128,7 +128,7 @@ router.post('/users/:userId/reset', authenticateToken, adminMiddleware, async (r
 
     // 팀 리소스 초기화
     await pool.query(
-      `UPDATE teams SET gold = 100000, diamond = 100, fan_count = 1000 WHERE id = ?`,
+      `UPDATE teams SET gold = 1000, diamond = 100, fan_count = 1000 WHERE id = ?`,
       [teamId]
     );
 

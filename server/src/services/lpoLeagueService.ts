@@ -125,7 +125,7 @@ export class LPOLeagueService {
           // AI 팀 생성 (user_id는 NULL)
           const teamResult = await pool.query(
             `INSERT INTO teams (user_id, name, league, is_ai, gold, diamond, fan_count)
-             VALUES (NULL, ?, ?, true, 100000, 100, 1000)`,
+             VALUES (NULL, ?, ?, true, 1000, 100, 1000)`,
             [teamName, tierInfo.tier]
           );
 
