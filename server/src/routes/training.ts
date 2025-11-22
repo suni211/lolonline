@@ -4,39 +4,36 @@ import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// 개별 훈련
+// 개별 훈련 (카드 기반)
 router.post('/individual', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { player_id, stat_type } = req.body;
 
     if (!player_id || !stat_type) {
-      return res.status(400).json({ error: 'Player ID and stat type required' });
+      return res.status(400).json({ error: 'Card ID and stat type required' });
     }
 
     if (!['MENTAL', 'TEAMFIGHT', 'FOCUS', 'LANING'].includes(stat_type)) {
       return res.status(400).json({ error: 'Invalid stat type' });
     }
 
-    // 선수 소유 확인
-    const ownership = await pool.query(
-      'SELECT * FROM player_ownership WHERE player_id = ? AND team_id = ?',
+    // 카드 소유권 확인
+    const cards = await pool.query(
+      `SELECT pc.*, pp.name FROM player_cards pc
+       JOIN pro_players pp ON pc.pro_player_id = pp.id
+       WHERE pc.id = ? AND pc.team_id = ?`,
       [player_id, req.teamId]
     );
 
-    if (ownership.length === 0) {
-      return res.status(404).json({ error: 'Player not found or not owned' });
+    if (cards.length === 0) {
+      return res.status(404).json({ error: 'Card not found or not owned' });
     }
 
-    // 부상 확인
-    const players = await pool.query('SELECT * FROM players WHERE id = ?', [player_id]);
-    if (players.length === 0) {
-      return res.status(404).json({ error: 'Player not found' });
-    }
+    const card = cards[0];
 
-    const player = players[0];
-
-    if (player.injury_status !== 'NONE') {
-      return res.status(400).json({ error: 'Injured players cannot train' });
+    // 계약되지 않은 카드는 훈련 불가
+    if (!card.is_contracted) {
+      return res.status(400).json({ error: '계약된 선수만 훈련할 수 있습니다' });
     }
 
     // 훈련 시설 레벨 확인
@@ -46,7 +43,7 @@ router.post('/individual', authenticateToken, async (req: AuthRequest, res) => {
     );
 
     const trainingLevel = facilities.length > 0 ? facilities[0].level : 0;
-    
+
     // 훈련 비용 계산 (기본 500 골드, 시설 레벨당 100 골드 감소)
     const baseCost = 500;
     const cost = Math.max(100, baseCost - (trainingLevel * 100));
@@ -61,57 +58,41 @@ router.post('/individual', authenticateToken, async (req: AuthRequest, res) => {
     await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [cost, req.teamId]);
 
     // 훈련 효과 계산
-    const baseExp = 20 + (trainingLevel * 5); // 기본 20, 시설 레벨당 +5
     const baseStatIncrease = 1 + Math.floor(trainingLevel / 2); // 시설 레벨 2당 +1
-
-    // 경험치 증가
-    const newExp = player.exp + baseExp;
-    let remainingExp = newExp;
-    let newLevel = player.level;
-    let newExpToNext = player.exp_to_next;
-    let newStatPoints = player.stat_points;
-
-    // 레벨업 체크
-    while (remainingExp >= newExpToNext && newLevel < 100) {
-      remainingExp -= newExpToNext;
-      newLevel++;
-      newExpToNext = Math.floor(newExpToNext * 1.5);
-      newStatPoints += 5;
-    }
 
     // 스탯 증가 (한계 확인)
     const statField = stat_type.toLowerCase();
-    const currentStat = player[statField as keyof typeof player] as number;
-    const maxStat = 300;
+    const currentStat = card[statField as keyof typeof card] as number;
+    const maxStat = 200;
     const actualStatIncrease = Math.min(baseStatIncrease, maxStat - currentStat);
 
     if (actualStatIncrease > 0) {
+      // 스탯 증가 및 OVR 재계산
       await pool.query(
-        `UPDATE players 
-         SET exp = ?, exp_to_next = ?, level = ?, stat_points = ?,
-             ${statField} = LEAST(${statField} + ?, 300)
+        `UPDATE player_cards
+         SET ${statField} = LEAST(${statField} + ?, 200),
+             ovr = ROUND((mental + teamfight + focus + laning + ?) / 4)
          WHERE id = ?`,
-        [remainingExp, newExpToNext, newLevel, newStatPoints, actualStatIncrease, player_id]
+        [actualStatIncrease, statField === 'mental' ? actualStatIncrease : (statField === 'teamfight' ? actualStatIncrease : (statField === 'focus' ? actualStatIncrease : actualStatIncrease)), player_id]
       );
-    } else {
-      await pool.query(
-        `UPDATE players 
-         SET exp = ?, exp_to_next = ?, level = ?, stat_points = ?
-         WHERE id = ?`,
-        [remainingExp, newExpToNext, newLevel, newStatPoints, player_id]
-      );
+
+      // OVR 정확히 재계산
+      const newStats = await pool.query('SELECT mental, teamfight, focus, laning FROM player_cards WHERE id = ?', [player_id]);
+      if (newStats.length > 0) {
+        const newOvr = Math.round((newStats[0].mental + newStats[0].teamfight + newStats[0].focus + newStats[0].laning) / 4);
+        await pool.query('UPDATE player_cards SET ovr = ? WHERE id = ?', [newOvr, player_id]);
+      }
     }
 
     // 훈련 기록
     await pool.query(
       `INSERT INTO player_training (player_id, team_id, training_type, stat_type, exp_gained, stat_increase)
-       VALUES (?, ?, 'INDIVIDUAL', ?, ?, ?)`,
-      [player_id, req.teamId, stat_type, baseExp, actualStatIncrease]
+       VALUES (?, ?, 'INDIVIDUAL', ?, 0, ?)`,
+      [player_id, req.teamId, stat_type, actualStatIncrease]
     );
 
     res.json({
       message: 'Training completed',
-      exp_gained: baseExp,
       stat_increase: actualStatIncrease,
       cost
     });
@@ -121,7 +102,7 @@ router.post('/individual', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
-// 팀 훈련
+// 팀 훈련 (카드 기반)
 router.post('/team', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { stat_type } = req.body;
@@ -130,16 +111,16 @@ router.post('/team', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Valid stat type required' });
     }
 
-    // 스타터 선수들 가져오기
-    const players = await pool.query(
-      `SELECT p.* FROM players p
-       INNER JOIN player_ownership po ON p.id = po.player_id
-       WHERE po.team_id = ? AND po.is_starter = true AND p.injury_status = 'NONE'`,
+    // 스타터 카드들 가져오기 (계약된 카드만)
+    const cards = await pool.query(
+      `SELECT pc.*, pp.name FROM player_cards pc
+       JOIN pro_players pp ON pc.pro_player_id = pp.id
+       WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true`,
       [req.teamId]
     );
 
-    if (players.length === 0) {
-      return res.status(400).json({ error: 'No available players for team training' });
+    if (cards.length === 0) {
+      return res.status(400).json({ error: '훈련할 스타터가 없습니다' });
     }
 
     // 훈련 시설 레벨 확인
@@ -149,11 +130,11 @@ router.post('/team', authenticateToken, async (req: AuthRequest, res) => {
     );
 
     const trainingLevel = facilities.length > 0 ? facilities[0].level : 0;
-    
+
     // 팀 훈련 비용 (선수 수 * 300 골드, 시설 레벨당 50 골드 감소)
     const baseCostPerPlayer = 300;
     const costPerPlayer = Math.max(100, baseCostPerPlayer - (trainingLevel * 50));
-    const totalCost = costPerPlayer * players.length;
+    const totalCost = costPerPlayer * cards.length;
 
     // 골드 확인
     const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);
@@ -164,74 +145,46 @@ router.post('/team', authenticateToken, async (req: AuthRequest, res) => {
     // 골드 차감
     await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [totalCost, req.teamId]);
 
-    // 팀 훈련 효과 (개별 훈련보다 약간 낮지만 모든 선수에게 적용)
-    const baseExp = 15 + (trainingLevel * 3);
+    // 팀 훈련 효과
     const baseStatIncrease = Math.floor(1 + trainingLevel / 3);
 
-    let totalExpGained = 0;
     let totalStatIncrease = 0;
 
-    for (const player of players) {
-      // 경험치 증가
-      const newExp = player.exp + baseExp;
-      let remainingExp = newExp;
-      let newLevel = player.level;
-      let newExpToNext = player.exp_to_next;
-      let newStatPoints = player.stat_points;
-
-      // 레벨업 체크
-      while (remainingExp >= newExpToNext && newLevel < 100) {
-        remainingExp -= newExpToNext;
-        newLevel++;
-        newExpToNext = Math.floor(newExpToNext * 1.5);
-        newStatPoints += 5;
-      }
-
+    for (const card of cards) {
       // 스탯 증가
       const statField = stat_type.toLowerCase();
-      const currentStat = player[statField as keyof typeof player] as number;
-      const actualStatIncrease = Math.min(baseStatIncrease, 300 - currentStat);
+      const currentStat = card[statField as keyof typeof card] as number;
+      const actualStatIncrease = Math.min(baseStatIncrease, 200 - currentStat);
 
       if (actualStatIncrease > 0) {
         await pool.query(
-          `UPDATE players 
-           SET exp = ?, exp_to_next = ?, level = ?, stat_points = ?,
-               ${statField} = LEAST(${statField} + ?, 300)
+          `UPDATE player_cards
+           SET ${statField} = LEAST(${statField} + ?, 200)
            WHERE id = ?`,
-          [remainingExp, newExpToNext, newLevel, newStatPoints, actualStatIncrease, player.id]
+          [actualStatIncrease, card.id]
         );
-      } else {
-        await pool.query(
-          `UPDATE players 
-           SET exp = ?, exp_to_next = ?, level = ?, stat_points = ?
-           WHERE id = ?`,
-          [remainingExp, newExpToNext, newLevel, newStatPoints, player.id]
-        );
+
+        // OVR 재계산
+        const newStats = await pool.query('SELECT mental, teamfight, focus, laning FROM player_cards WHERE id = ?', [card.id]);
+        if (newStats.length > 0) {
+          const newOvr = Math.round((newStats[0].mental + newStats[0].teamfight + newStats[0].focus + newStats[0].laning) / 4);
+          await pool.query('UPDATE player_cards SET ovr = ? WHERE id = ?', [newOvr, card.id]);
+        }
       }
 
       // 훈련 기록
       await pool.query(
         `INSERT INTO player_training (player_id, team_id, training_type, stat_type, exp_gained, stat_increase)
-         VALUES (?, ?, 'TEAM', ?, ?, ?)`,
-        [player.id, req.teamId, stat_type, baseExp, actualStatIncrease]
+         VALUES (?, ?, 'TEAM', ?, 0, ?)`,
+        [card.id, req.teamId, stat_type, actualStatIncrease]
       );
 
-      totalExpGained += baseExp;
       totalStatIncrease += actualStatIncrease;
     }
 
-    // 팀 시너지 증가 (만족도 증가)
-    await pool.query(
-      `UPDATE players 
-       SET satisfaction = LEAST(satisfaction + 2, 100)
-       WHERE id IN (${players.map(() => '?').join(',')})`,
-      players.map((p: any) => p.id)
-    );
-
     res.json({
       message: 'Team training completed',
-      players_trained: players.length,
-      total_exp_gained: totalExpGained,
+      players_trained: cards.length,
       total_stat_increase: totalStatIncrease,
       cost: totalCost
     });
@@ -241,15 +194,16 @@ router.post('/team', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
-// 훈련 기록 조회
+// 훈련 기록 조회 (카드 기반)
 router.get('/history', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { player_id, limit } = req.query;
 
     let query = `
-      SELECT pt.*, p.name as player_name
+      SELECT pt.*, pp.name as player_name
       FROM player_training pt
-      INNER JOIN players p ON pt.player_id = p.id
+      LEFT JOIN player_cards pc ON pt.player_id = pc.id
+      LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
       WHERE pt.team_id = ?
     `;
 

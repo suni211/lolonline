@@ -458,24 +458,25 @@ export class ProPlayerService {
         [teamId, packId, cardResult.insertId]
       );
 
-      // 결과 반환
+      // 결과 반환 (프론트엔드 형식에 맞춤)
       return {
-        card_id: cardResult.insertId,
-        player: {
+        cards: [{
+          id: cardResult.insertId,
+          pro_player_id: randomPlayer.id,
           name: randomPlayer.name,
           team: randomPlayer.team,
           position: randomPlayer.position,
           league: randomPlayer.league,
           nationality: randomPlayer.nationality,
-        },
-        stats: {
           mental,
           teamfight,
           focus,
           laning,
           ovr,
-        },
-        card_type: 'NORMAL',
+          card_type: 'NORMAL',
+          is_starter: false,
+          is_contracted: false,
+        }]
       };
     } catch (error) {
       console.error('Failed to open pack:', error);

@@ -2,17 +2,22 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import './Training.css';
 
-interface Player {
+interface PlayerCard {
   id: number;
+  pro_player_id: number;
   name: string;
+  team: string;
   position: string;
+  league: string;
+  nationality: string;
   mental: number;
   teamfight: number;
   focus: number;
   laning: number;
-  level: number;
-  injury_status: string;
-  overall: number;
+  ovr: number;
+  card_type: string;
+  is_starter: boolean;
+  is_contracted: boolean;
 }
 
 interface TrainingHistory {
@@ -26,22 +31,22 @@ interface TrainingHistory {
 }
 
 export default function Training() {
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
+  const [cards, setCards] = useState<PlayerCard[]>([]);
+  const [selectedCard, setSelectedCard] = useState<number | null>(null);
   const [selectedStat, setSelectedStat] = useState<'MENTAL' | 'TEAMFIGHT' | 'FOCUS' | 'LANING'>('MENTAL');
   const [trainingHistory, setTrainingHistory] = useState<TrainingHistory[]>([]);
 
   useEffect(() => {
-    fetchPlayers();
+    fetchCards();
     fetchTrainingHistory();
   }, []);
 
-  const fetchPlayers = async () => {
+  const fetchCards = async () => {
     try {
-      const response = await axios.get('/api/players/my');
-      setPlayers(response.data);
+      const response = await axios.get('/api/packs/my-cards');
+      setCards(response.data);
     } catch (error) {
-      console.error('Failed to fetch players:', error);
+      console.error('Failed to fetch cards:', error);
     }
   };
 
@@ -55,46 +60,42 @@ export default function Training() {
   };
 
   const handleIndividualTraining = async () => {
-    if (!selectedPlayer) {
-      alert('선수를 선택해주세요.');
+    if (!selectedCard) {
+      alert('선수 카드를 선택해주세요.');
       return;
     }
 
     try {
       await axios.post('/api/training/individual', {
-        player_id: selectedPlayer,
+        player_id: selectedCard,
         stat_type: selectedStat
       });
       alert('훈련 완료!');
-      fetchPlayers();
+      fetchCards();
       fetchTrainingHistory();
-      window.location.reload();
     } catch (error: any) {
       alert(error.response?.data?.error || '훈련 실패');
     }
   };
 
   const handleTeamTraining = async () => {
-    if (!confirm('팀 전체를 훈련시키시겠습니까?')) return;
+    if (!confirm('스타터 전체를 훈련시키시겠습니까?')) return;
 
     try {
       await axios.post('/api/training/team', {
         stat_type: selectedStat
       });
       alert('팀 훈련 완료!');
-      fetchPlayers();
+      fetchCards();
       fetchTrainingHistory();
-      window.location.reload();
     } catch (error: any) {
       alert(error.response?.data?.error || '훈련 실패');
     }
   };
 
-  const availablePlayers = players.filter(p => p.injury_status === 'NONE');
-  const starterPlayers = availablePlayers.filter(p => {
-    const player = players.find(pl => pl.id === p.id);
-    return player && (player as any).is_starter;
-  });
+  // 계약된 카드만 훈련 가능
+  const contractedCards = cards.filter(c => c.is_contracted);
+  const starterCards = contractedCards.filter(c => c.is_starter);
 
   return (
     <div className="training-page">
@@ -105,16 +106,16 @@ export default function Training() {
           <h2>개별 훈련</h2>
           <div className="training-form">
             <div className="form-group">
-              <label>선수 선택</label>
+              <label>선수 카드 선택 (계약된 카드만)</label>
               <select
-                value={selectedPlayer || ''}
-                onChange={(e) => setSelectedPlayer(parseInt(e.target.value) || null)}
+                value={selectedCard || ''}
+                onChange={(e) => setSelectedCard(parseInt(e.target.value) || null)}
                 className="form-select"
               >
                 <option value="">선수 선택</option>
-                {availablePlayers.map((player) => (
-                  <option key={player.id} value={player.id}>
-                    {player.name} ({player.position}) - 오버롤: {player.overall}
+                {contractedCards.map((card) => (
+                  <option key={card.id} value={card.id}>
+                    {card.name} ({card.position}) - OVR: {card.ovr}
                   </option>
                 ))}
               </select>
@@ -128,26 +129,26 @@ export default function Training() {
                 className="form-select"
               >
                 <option value="MENTAL">멘탈</option>
-                <option value="TEAMFIGHT">한타력</option>
+                <option value="TEAMFIGHT">팀파이트</option>
                 <option value="FOCUS">집중력</option>
                 <option value="LANING">라인전</option>
               </select>
             </div>
 
-            {selectedPlayer && (
+            {selectedCard && (
               <div className="player-preview">
-                <h3>선수 정보</h3>
+                <h3>카드 정보</h3>
                 {(() => {
-                  const player = players.find(p => p.id === selectedPlayer);
-                  if (!player) return null;
+                  const card = cards.find(c => c.id === selectedCard);
+                  if (!card) return null;
                   return (
                     <div className="preview-stats">
-                      <p>현재 {selectedStat === 'MENTAL' ? '멘탈' : selectedStat === 'TEAMFIGHT' ? '한타력' : selectedStat === 'FOCUS' ? '집중력' : '라인전'}: {
-                        selectedStat === 'MENTAL' ? player.mental :
-                        selectedStat === 'TEAMFIGHT' ? player.teamfight :
-                        selectedStat === 'FOCUS' ? player.focus :
-                        player.laning
-                      } / 300</p>
+                      <p>현재 {selectedStat === 'MENTAL' ? '멘탈' : selectedStat === 'TEAMFIGHT' ? '팀파이트' : selectedStat === 'FOCUS' ? '집중력' : '라인전'}: {
+                        selectedStat === 'MENTAL' ? card.mental :
+                        selectedStat === 'TEAMFIGHT' ? card.teamfight :
+                        selectedStat === 'FOCUS' ? card.focus :
+                        card.laning
+                      } / 200</p>
                     </div>
                   );
                 })()}
@@ -157,7 +158,7 @@ export default function Training() {
             <button
               onClick={handleIndividualTraining}
               className="btn-primary"
-              disabled={!selectedPlayer}
+              disabled={!selectedCard}
             >
               개별 훈련 시작
             </button>
@@ -175,23 +176,23 @@ export default function Training() {
                 className="form-select"
               >
                 <option value="MENTAL">멘탈</option>
-                <option value="TEAMFIGHT">한타력</option>
+                <option value="TEAMFIGHT">팀파이트</option>
                 <option value="FOCUS">집중력</option>
                 <option value="LANING">라인전</option>
               </select>
             </div>
 
             <div className="team-info">
-              <p>스타터 선수: {starterPlayers.length}명</p>
-              <p>훈련 가능 선수: {availablePlayers.length}명</p>
+              <p>스타터: {starterCards.length}명</p>
+              <p>계약된 카드: {contractedCards.length}장</p>
             </div>
 
             <button
               onClick={handleTeamTraining}
               className="btn-primary"
-              disabled={starterPlayers.length < 5}
+              disabled={starterCards.length === 0}
             >
-              팀 훈련 시작 (스타터 {starterPlayers.length}명)
+              팀 훈련 시작 (스타터 {starterCards.length}명)
             </button>
           </div>
         </div>
@@ -219,7 +220,7 @@ export default function Training() {
                     <td>{history.training_type === 'INDIVIDUAL' ? '개별' : '팀'}</td>
                     <td>
                       {history.stat_type === 'MENTAL' ? '멘탈' :
-                       history.stat_type === 'TEAMFIGHT' ? '한타력' :
+                       history.stat_type === 'TEAMFIGHT' ? '팀파이트' :
                        history.stat_type === 'FOCUS' ? '집중력' : '라인전'}
                     </td>
                     <td>+{history.exp_gained}</td>
