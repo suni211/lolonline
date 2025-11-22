@@ -241,7 +241,7 @@ async function calculateTeamOverall(teamId: number): Promise<number> {
   for (const player of players) {
     const overall = player.mental + player.teamfight + player.focus + player.laning;
     // 컨디션 반영
-    const adjustedOverall = overall * (player.condition / 100);
+    const adjustedOverall = overall * ((player as any).condition / 100);
     // 부상 페널티 반영
     const injuryPenalty = getInjuryPenalty(player.injury_status);
     totalOverall += adjustedOverall * injuryPenalty;

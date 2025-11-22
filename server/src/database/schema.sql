@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS players (
     exp INT DEFAULT 0,
     exp_to_next INT DEFAULT 100,
     stat_points INT DEFAULT 0,
-    condition INT DEFAULT 100 CHECK (condition >= 0 AND condition <= 100),
+    `condition` INT DEFAULT 100 CHECK (`condition` >= 0 AND `condition` <= 100),
     satisfaction INT DEFAULT 50 CHECK (satisfaction >= 0 AND satisfaction <= 100),
     contract_fee BIGINT DEFAULT 0,
     contract_expires_at DATETIME,

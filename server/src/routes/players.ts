@@ -411,7 +411,7 @@ router.post('/:playerId/uniform/upgrade', authenticateToken, async (req: AuthReq
          SET uniform_level = ?,
              uniform_expires_at = ?,
              contract_fee = 0,
-             condition = LEAST(condition + 10, 100)
+             `condition` = LEAST(`condition` + 10, 100)
          WHERE id = ?`,
         [newLevel, expiresAt, playerId]
       );

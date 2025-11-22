@@ -62,7 +62,7 @@ export async function checkInjuryAfterMatch(playerId: number, matchIntensity: nu
     const player = players[0];
 
     // 컨디션이 낮을수록 부상 확률 증가
-    const baseInjuryChance = (100 - player.condition) * 0.01 * matchIntensity;
+    const baseInjuryChance = (100 - (player as any).condition) * 0.01 * matchIntensity;
     const injuryChance = Math.min(0.15, baseInjuryChance); // 최대 15%
 
     if (Math.random() < injuryChance) {
@@ -89,7 +89,7 @@ export async function checkInjuryAfterMatch(playerId: number, matchIntensity: nu
          SET injury_status = ?, 
              injury_recovery_days = ?, 
              injury_started_at = NOW(),
-             condition = GREATEST(condition - 20, 0)
+             `condition` = GREATEST(`condition` - 20, 0)
          WHERE id = ?`,
         [injuryType, recoveryDays, playerId]
       );

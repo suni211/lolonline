@@ -19,7 +19,7 @@ async function processConditionRecovery() {
       `SELECT p.*, po.team_id 
        FROM players p
        INNER JOIN player_ownership po ON p.id = po.player_id
-       WHERE p.condition < 100 AND p.injury_status = 'NONE'`
+       WHERE p.`condition` < 100 AND p.injury_status = 'NONE'`
     );
 
     for (const player of players) {
@@ -34,10 +34,10 @@ async function processConditionRecovery() {
       // 기본 회복량: 1%, 의료 시설 레벨당 추가 0.5%
       const recoveryAmount = 1 + (medicalLevel * 0.5);
       
-      const newCondition = Math.min(100, player.condition + recoveryAmount);
+      const newCondition = Math.min(100, (player as any).condition + recoveryAmount);
 
       await pool.query(
-        'UPDATE players SET condition = ? WHERE id = ?',
+        'UPDATE players SET `condition` = ? WHERE id = ?',
         [newCondition, player.id]
       );
     }
