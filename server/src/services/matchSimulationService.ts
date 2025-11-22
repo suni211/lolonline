@@ -51,13 +51,7 @@ async function processScheduledMatches(io: Server) {
 
 async function startMatch(match: any, io: Server) {
   try {
-    // 경기 상태를 LIVE로 변경
-    await pool.query(
-      'UPDATE matches SET status = "LIVE", started_at = NOW() WHERE id = ?',
-      [match.id]
-    );
-
-    // 팀 선수 정보 가져오기
+    // 팀 선수 정보 가져오기 (스타터 체크)
     const homePlayers = await pool.query(
       `SELECT p.* FROM players p
        INNER JOIN player_ownership po ON p.id = po.player_id
@@ -72,6 +66,54 @@ async function startMatch(match: any, io: Server) {
        WHERE po.team_id = ? AND po.is_starter = true
        ORDER BY p.position`,
       [match.away_team_id]
+    );
+
+    // 스타터 5명 체크 - 기권패 처리
+    const homeStarterCount = homePlayers.length;
+    const awayStarterCount = awayPlayers.length;
+
+    if (homeStarterCount < 5 || awayStarterCount < 5) {
+      // 기권패 처리
+      let homeScore = 0;
+      let awayScore = 0;
+
+      if (homeStarterCount < 5 && awayStarterCount < 5) {
+        // 양팀 모두 기권 - 무승부
+        homeScore = 0;
+        awayScore = 0;
+      } else if (homeStarterCount < 5) {
+        // 홈팀 기권패
+        homeScore = 0;
+        awayScore = 2;
+      } else {
+        // 원정팀 기권패
+        homeScore = 2;
+        awayScore = 0;
+      }
+
+      await pool.query(
+        `UPDATE matches SET status = 'FINISHED', home_score = ?, away_score = ?,
+         started_at = NOW(), finished_at = NOW(),
+         match_data = '{"forfeit": true, "reason": "스타터 미선발로 인한 기권패"}'
+         WHERE id = ?`,
+        [homeScore, awayScore, match.id]
+      );
+
+      io.to(`match_${match.id}`).emit('match_finished', {
+        match_id: match.id,
+        home_score: homeScore,
+        away_score: awayScore,
+        forfeit: true
+      });
+
+      console.log(`Match ${match.id} ended by forfeit: Home ${homeScore} - ${awayScore} Away`);
+      return;
+    }
+
+    // 경기 상태를 LIVE로 변경
+    await pool.query(
+      'UPDATE matches SET status = "LIVE", started_at = NOW() WHERE id = ?',
+      [match.id]
     );
 
     // 경기 데이터 초기화
