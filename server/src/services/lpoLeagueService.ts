@@ -50,7 +50,7 @@ export class LPOLeagueService {
 
       if (aiUser.length === 0) {
         const result = await pool.query(
-          'INSERT INTO users (username, password, email) VALUES (?, ?, ?)',
+          'INSERT INTO users (username, password_hash, email) VALUES (?, ?, ?)',
           ['AI_SYSTEM', 'not_a_real_password', 'ai@system.local']
         );
         aiUserId = result.insertId;
