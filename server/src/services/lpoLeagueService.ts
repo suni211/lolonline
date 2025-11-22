@@ -229,11 +229,16 @@ export class LPOLeagueService {
         }
       }
 
-      // 경기 일정 생성 (현재 시간부터 1시간 간격)
+      // 경기 일정 생성
+      // 게임 시간: 6시간(현실) = 1달(게임) = 4주
+      // 1주(게임) = 1.5시간(현실) = 90분
+      const REAL_MS_PER_GAME_WEEK = 90 * 60 * 1000; // 90분
+
       const now = new Date();
       for (let i = 0; i < matches.length; i++) {
         const match = matches[i];
-        const scheduledAt = new Date(now.getTime() + (i + 1) * 60 * 60 * 1000); // 1시간 간격
+        // 각 경기는 1주(게임) 간격 = 1.5시간(현실) 간격
+        const scheduledAt = new Date(now.getTime() + (i + 1) * REAL_MS_PER_GAME_WEEK);
 
         await pool.query(
           `INSERT INTO league_matches (league_id, home_team_id, away_team_id, scheduled_at, status)

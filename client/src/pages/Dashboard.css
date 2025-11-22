@@ -254,6 +254,24 @@
   color: rgba(255, 255, 255, 0.6);
 }
 
+.match-time-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.match-game-time {
+  font-size: 0.9rem;
+  color: var(--light-blue);
+  font-weight: 600;
+}
+
+.match-real-time {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
 .empty-message {
   color: rgba(255, 255, 255, 0.5);
   text-align: center;

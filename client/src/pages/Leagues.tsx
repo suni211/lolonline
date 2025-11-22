@@ -10,6 +10,24 @@ const formatDate = (dateString: string | null | undefined): string => {
   return date.toLocaleString('ko-KR');
 };
 
+// 게임 시간 변환 함수
+const getGameTime = (dateString: string | null | undefined): string => {
+  if (!dateString) return '-';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '-';
+
+  const gameStartTime = parseInt(localStorage.getItem('gameStartTime') || Date.now().toString());
+  const MS_PER_GAME_MONTH = 6 * 60 * 60 * 1000;
+  const elapsed = date.getTime() - gameStartTime;
+  const totalMonths = Math.floor(elapsed / MS_PER_GAME_MONTH);
+
+  const year = 2025 + Math.floor(totalMonths / 12);
+  const month = (totalMonths % 12) + 1;
+  const weekInMonth = Math.floor((elapsed % MS_PER_GAME_MONTH) / (MS_PER_GAME_MONTH / 4)) + 1;
+
+  return `${year}년 ${month}월 ${weekInMonth}주차`;
+};
+
 interface League {
   id: number;
   name: string;
@@ -250,9 +268,10 @@ export default function Leagues() {
                         {match.away_team_name}
                       </span>
                     </div>
-                    <span className="match-time">
-                      {formatDate(match.scheduled_at)}
-                    </span>
+                    <div className="match-time-info">
+                      <span className="match-game-time">{getGameTime(match.scheduled_at)}</span>
+                      <span className="match-real-time">{formatDate(match.scheduled_at)}</span>
+                    </div>
                   </div>
                 ))}
               </div>
