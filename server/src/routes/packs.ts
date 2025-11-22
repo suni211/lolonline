@@ -371,22 +371,22 @@ router.get('/team-color-bonus', authenticateToken, async (req: AuthRequest, res)
       [teamId]
     );
 
-    // 같은 팀컬러(프로팀)를 가진 카드 수 계산
-    const colorCounts: { [key: string]: number } = {};
+    // 같은 프로팀 소속 카드 수 계산 (실제 소속팀 기반)
+    const teamCounts: { [key: string]: number } = {};
     let totalBonus = 0;
 
     starters.forEach((card: any) => {
-      if (card.team_color_name) {
-        colorCounts[card.team_color_name] = (colorCounts[card.team_color_name] || 0) + 1;
+      if (card.pro_team) {
+        teamCounts[card.pro_team] = (teamCounts[card.pro_team] || 0) + 1;
       }
     });
 
-    // 같은 팀컬러 3명 이상: +5 보너스
+    // 같은 팀 3명 이상: +5 보너스
     const bonusDetails: string[] = [];
-    Object.entries(colorCounts).forEach(([colorName, count]) => {
+    Object.entries(teamCounts).forEach(([teamName, count]) => {
       if (count >= 3) {
         totalBonus += 5;
-        bonusDetails.push(`${colorName} (${count}명): +5`);
+        bonusDetails.push(`${teamName} (${count}명): +5`);
       }
     });
 
@@ -394,7 +394,8 @@ router.get('/team-color-bonus', authenticateToken, async (req: AuthRequest, res)
       starters,
       teamColorBonus: {
         totalBonus,
-        details: bonusDetails.join(', ') || '팀컬러 보너스 없음 (같은 팀 3명 이상 필요)'
+        details: bonusDetails.join(', ') || '팀컬러 보너스 없음 (같은 팀 3명 이상 필요)',
+        teamCounts // 프론트에서 표시용
       }
     });
   } catch (error) {

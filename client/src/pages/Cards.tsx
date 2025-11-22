@@ -53,6 +53,7 @@ interface TeamColorBonus {
   teamColorBonus: {
     totalBonus: number;
     details: string;
+    teamCounts?: { [key: string]: number };
   };
 }
 
@@ -68,7 +69,6 @@ export default function Cards() {
   const [filter, setFilter] = useState<string>('all');
   const [teamColors, setTeamColors] = useState<TeamColor[]>([]);
   const [teamColorBonus, setTeamColorBonus] = useState<TeamColorBonus | null>(null);
-  const [selectedCardForColor, setSelectedCardForColor] = useState<number | null>(null);
 
   useEffect(() => {
     fetchPacks();
@@ -120,19 +120,6 @@ export default function Cards() {
       setTeamColorBonus(response.data);
     } catch (error) {
       console.error('Failed to fetch team color bonus:', error);
-    }
-  };
-
-  const applyTeamColor = async (cardId: number, teamColorName: string | null) => {
-    try {
-      await axios.post(`/api/packs/cards/${cardId}/team-color`, {
-        teamColorName
-      });
-      await fetchCards();
-      await fetchTeamColorBonus();
-      setSelectedCardForColor(null);
-    } catch (error: any) {
-      alert(error.response?.data?.error || '팀컬러 적용 실패');
     }
   };
 
@@ -356,28 +343,15 @@ export default function Cards() {
                     }
                   </button>
                 ) : (
-                  <div className="card-actions">
-                    <button
-                      className={`starter-btn ${card.is_starter ? 'active' : ''}`}
-                      onClick={() => toggleStarter(card.id, card.is_starter)}
-                    >
-                      {card.is_starter ? '스타터 해제' : '스타터 지정'}
-                    </button>
-                    <button
-                      className="color-btn"
-                      onClick={() => setSelectedCardForColor(card.id)}
-                    >
-                      팀컬러
-                    </button>
-                  </div>
+                  <button
+                    className={`starter-btn ${card.is_starter ? 'active' : ''}`}
+                    onClick={() => toggleStarter(card.id, card.is_starter)}
+                  >
+                    {card.is_starter ? '스타터 해제' : '스타터 지정'}
+                  </button>
                 )}
                 {card.is_contracted && (
                   <div className="contract-badge">계약됨 (S{card.contract_season})</div>
-                )}
-                {(card as any).team_color_name && (
-                  <div className="card-team-color" style={{ borderColor: teamColors.find(c => c.team_name === (card as any).team_color_name)?.color_code || '#fff' }}>
-                    {(card as any).team_color_name}
-                  </div>
                 )}
               </div>
             ))}
@@ -448,76 +422,41 @@ export default function Cards() {
 
       {activeTab === 'teamcolor' && (
         <div className="teamcolor-section">
-          <h2>팀컬러 (프로팀)</h2>
+          <h2>팀 보너스</h2>
 
           <div className="teamcolor-info">
-            <p>카드에 프로팀 컬러를 적용하면 같은 팀 3명 이상일 때 +5 보너스!</p>
-          </div>
-
-          <div className="my-colors">
-            <h3>프로팀 목록</h3>
-            {teamColors.length > 0 ? (
-              <div className="colors-grid">
-                {teamColors.map(color => (
-                  <div key={color.team_name} className="color-item">
-                    <div
-                      className="color-preview"
-                      style={{ backgroundColor: color.color_code }}
-                    />
-                    <div className="color-info">
-                      <span className="color-name">{color.team_name}</span>
-                      <span className="color-league">{color.league}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="no-colors">프로팀 데이터를 불러오는 중...</p>
-            )}
+            <p>스타터에 같은 프로팀 소속 선수가 3명 이상이면 +5 보너스!</p>
           </div>
 
           {teamColorBonus && (
             <div className="color-bonus-info">
-              <h3>팀컬러 보너스 (3명 이상 동일 팀)</h3>
+              <h3>현재 팀 보너스</h3>
               <div className="bonus-detail">
                 <span>총 보너스: +{teamColorBonus.teamColorBonus.totalBonus}</span>
                 <p>{teamColorBonus.teamColorBonus.details}</p>
               </div>
+
+              {teamColorBonus.teamColorBonus.teamCounts && Object.keys(teamColorBonus.teamColorBonus.teamCounts).length > 0 && (
+                <div className="team-counts">
+                  <h4>스타터 팀 구성</h4>
+                  <div className="colors-grid">
+                    {Object.entries(teamColorBonus.teamColorBonus.teamCounts).map(([teamName, count]) => (
+                      <div key={teamName} className="color-item">
+                        <div
+                          className="color-preview"
+                          style={{ backgroundColor: teamColors.find(c => c.team_name === teamName)?.color_code || '#888' }}
+                        />
+                        <div className="color-info">
+                          <span className="color-name">{teamName}</span>
+                          <span className="color-league">{count}명</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
-
-      {selectedCardForColor && (
-        <div className="color-select-overlay" onClick={() => setSelectedCardForColor(null)}>
-          <div className="color-select-modal" onClick={e => e.stopPropagation()}>
-            <h3>팀컬러 선택</h3>
-            <div className="color-options-scroll">
-              <button
-                className="color-option none"
-                onClick={() => applyTeamColor(selectedCardForColor, null)}
-              >
-                해제
-              </button>
-              {teamColors.map(color => (
-                <button
-                  key={color.team_name}
-                  className="color-option"
-                  style={{ borderColor: color.color_code }}
-                  onClick={() => applyTeamColor(selectedCardForColor, color.team_name)}
-                >
-                  <div
-                    className="option-preview"
-                    style={{ backgroundColor: color.color_code }}
-                  />
-                  {color.team_name}
-                </button>
-              ))}
-            </div>
-            <button className="close-btn" onClick={() => setSelectedCardForColor(null)}>
-              닫기
-            </button>
-          </div>
         </div>
       )}
 
