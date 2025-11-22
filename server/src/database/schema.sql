@@ -324,10 +324,7 @@ CREATE TABLE IF NOT EXISTS leaderboards (
     UNIQUE KEY unique_team_league_season (team_id, league_id, season)
 );
 
--- 인덱스 추가
+-- 인덱스 추가 (IF NOT EXISTS는 MariaDB에서 지원하지 않으므로 별도 처리 필요)
 -- idx_players_overall은 표현식 인덱스를 지원하지 않으므로 제거 (이미 idx_overall 복합 인덱스가 있음)
-CREATE INDEX idx_matches_status ON matches(status);
-CREATE INDEX idx_matches_scheduled ON matches(scheduled_at);
-CREATE INDEX idx_trades_status ON trades(status);
-CREATE INDEX idx_league_participants_rank ON league_participants(rank);
+-- 인덱스는 init.ts에서 중복 체크 후 생성
 

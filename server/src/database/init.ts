@@ -28,19 +28,64 @@ export async function initializeDatabase() {
     const statements = schema.split(';').filter(s => s.trim().length > 0);
     
     for (const statement of statements) {
-      if (statement.trim()) {
-        await pool.query(statement);
+      if (statement.trim() && !statement.trim().startsWith('--')) {
+        try {
+          await pool.query(statement);
+        } catch (error: any) {
+          // 테이블이나 인덱스가 이미 존재하는 경우 무시
+          if (error.code === 'ER_TABLE_EXISTS_ERROR' || error.code === 'ER_DUP_KEYNAME') {
+            // 이미 존재하는 경우 무시
+            continue;
+          }
+          throw error;
+        }
       }
     }
+    
+    // 추가 인덱스 생성 (중복 체크)
+    await createIndexesIfNotExists();
     
     console.log('Database initialized successfully');
     
     // 초기 리그 생성
     await createInitialLeagues();
   } catch (error: any) {
-    if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
+    if (error.code !== 'ER_TABLE_EXISTS_ERROR' && error.code !== 'ER_DUP_KEYNAME') {
       console.error('Database initialization error:', error);
       throw error;
+    }
+  }
+}
+
+// 인덱스 생성 (중복 체크)
+async function createIndexesIfNotExists() {
+  const indexes = [
+    { name: 'idx_matches_status', table: 'matches', columns: 'status' },
+    { name: 'idx_matches_scheduled', table: 'matches', columns: 'scheduled_at' },
+    { name: 'idx_trades_status', table: 'trades', columns: 'status' },
+    { name: 'idx_league_participants_rank', table: 'league_participants', columns: 'rank' }
+  ];
+
+  for (const idx of indexes) {
+    try {
+      // 인덱스 존재 여부 확인
+      const result = await pool.query(
+        `SELECT COUNT(*) as count 
+         FROM information_schema.statistics 
+         WHERE table_schema = DATABASE() 
+         AND table_name = ? 
+         AND index_name = ?`,
+        [idx.table, idx.name]
+      );
+
+      if (result[0].count === 0) {
+        await pool.query(`CREATE INDEX ${idx.name} ON ${idx.table}(${idx.columns})`);
+      }
+    } catch (error: any) {
+      // 인덱스가 이미 존재하는 경우 무시
+      if (error.code !== 'ER_DUP_KEYNAME') {
+        console.error(`Error creating index ${idx.name}:`, error);
+      }
     }
   }
 }
