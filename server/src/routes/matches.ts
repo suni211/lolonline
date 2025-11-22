@@ -12,8 +12,8 @@ router.get('/', async (req, res) => {
 
     let query = `
       SELECT m.*,
-             ht.name as home_team_name,
-             at.name as away_team_name,
+             ht.name as home_team_name, ht.logo_url as home_team_logo,
+             at.name as away_team_name, at.logo_url as away_team_logo,
              l.name as league_name
       FROM matches m
       INNER JOIN teams ht ON m.home_team_id = ht.id
@@ -57,8 +57,8 @@ router.get('/:matchId', async (req, res) => {
 
     const matches = await pool.query(
       `       SELECT m.*,
-              ht.name as home_team_name,
-              at.name as away_team_name,
+              ht.name as home_team_name, ht.logo_url as home_team_logo,
+              at.name as away_team_name, at.logo_url as away_team_logo,
               l.name as league_name
        FROM matches m
        INNER JOIN teams ht ON m.home_team_id = ht.id

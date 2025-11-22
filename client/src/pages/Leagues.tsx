@@ -13,6 +13,7 @@ interface League {
 
 interface Standing {
   team_name: string;
+  logo_url: string | null;
   wins: number;
   losses: number;
   draws: number;
@@ -140,7 +141,14 @@ export default function Leagues() {
                 {standings.map((standing, idx) => (
                   <tr key={idx} className={standing.rank <= 4 ? 'top-four' : ''}>
                     <td>{standing.rank || idx + 1}</td>
-                    <td>{standing.team_name}</td>
+                    <td className="team-cell">
+                      {standing.logo_url ? (
+                        <img src={standing.logo_url} alt="" className="team-logo-small" />
+                      ) : (
+                        <div className="team-logo-placeholder" />
+                      )}
+                      {standing.team_name}
+                    </td>
                     <td>{standing.wins}</td>
                     <td>{standing.draws}</td>
                     <td>{standing.losses}</td>
@@ -157,7 +165,17 @@ export default function Leagues() {
             <div className="matches-list">
               {upcomingMatches.map((match) => (
                 <div key={match.id} className="match-item">
-                  <span>{match.home_team_name} vs {match.away_team_name}</span>
+                  <div className="match-teams">
+                    <span className="team-with-logo">
+                      {match.home_team_logo && <img src={match.home_team_logo} alt="" className="team-logo-small" />}
+                      {match.home_team_name}
+                    </span>
+                    <span className="vs">vs</span>
+                    <span className="team-with-logo">
+                      {match.away_team_logo && <img src={match.away_team_logo} alt="" className="team-logo-small" />}
+                      {match.away_team_name}
+                    </span>
+                  </div>
                   <span className="match-time">
                     {new Date(match.scheduled_at).toLocaleString('ko-KR')}
                   </span>

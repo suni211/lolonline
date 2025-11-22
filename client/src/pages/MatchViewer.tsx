@@ -22,6 +22,8 @@ interface MatchDetails {
   away_team_id: number;
   home_team_name: string;
   away_team_name: string;
+  home_team_logo: string | null;
+  away_team_logo: string | null;
   home_score: number;
   away_score: number;
   status: string;
@@ -224,6 +226,9 @@ export default function MatchViewer() {
     <div className="match-viewer">
       <div className="match-header">
         <div className="team-info home">
+          {match.home_team_logo && (
+            <img src={match.home_team_logo} alt="" className="team-logo" />
+          )}
           <h2>{match.home_team_name}</h2>
           <div className="score">{match.status === 'FINISHED' ? match.home_score : totalHomeWins}</div>
         </div>
@@ -235,6 +240,9 @@ export default function MatchViewer() {
           </div>
         </div>
         <div className="team-info away">
+          {match.away_team_logo && (
+            <img src={match.away_team_logo} alt="" className="team-logo" />
+          )}
           <h2>{match.away_team_name}</h2>
           <div className="score">{match.status === 'FINISHED' ? match.away_score : totalAwayWins}</div>
         </div>

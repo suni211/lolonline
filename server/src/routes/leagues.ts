@@ -82,7 +82,8 @@ router.get('/:leagueId', async (req, res) => {
 
     // 다음 경기 일정
     const upcomingMatches = await pool.query(
-      `SELECT m.*, ht.name as home_team_name, at.name as away_team_name
+      `SELECT m.*, ht.name as home_team_name, ht.logo_url as home_team_logo,
+              at.name as away_team_name, at.logo_url as away_team_logo
        FROM matches m
        INNER JOIN teams ht ON m.home_team_id = ht.id
        INNER JOIN teams at ON m.away_team_id = at.id
@@ -220,8 +221,8 @@ router.get('/all-matches/upcoming', async (req, res) => {
   try {
     const matches = await pool.query(
       `SELECT lm.*,
-              ht.name as home_team_name,
-              at.name as away_team_name,
+              ht.name as home_team_name, ht.logo_url as home_team_logo,
+              at.name as away_team_name, at.logo_url as away_team_logo,
               l.name as league_name
        FROM league_matches lm
        JOIN teams ht ON lm.home_team_id = ht.id
@@ -243,8 +244,8 @@ router.get('/all-matches/recent', async (req, res) => {
   try {
     const matches = await pool.query(
       `SELECT lm.*,
-              ht.name as home_team_name,
-              at.name as away_team_name,
+              ht.name as home_team_name, ht.logo_url as home_team_logo,
+              at.name as away_team_name, at.logo_url as away_team_logo,
               l.name as league_name
        FROM league_matches lm
        JOIN teams ht ON lm.home_team_id = ht.id

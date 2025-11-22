@@ -193,7 +193,17 @@ export default function Dashboard() {
             <div className="match-list">
               {upcomingMatches.map((match) => (
                 <div key={match.id} className="match-item">
-                  <span>{match.home_team_name} vs {match.away_team_name}</span>
+                  <div className="match-teams">
+                    <span className="team-with-logo">
+                      {match.home_team_logo && <img src={match.home_team_logo} alt="" className="team-logo-small" />}
+                      {match.home_team_name}
+                    </span>
+                    <span className="vs">vs</span>
+                    <span className="team-with-logo">
+                      {match.away_team_logo && <img src={match.away_team_logo} alt="" className="team-logo-small" />}
+                      {match.away_team_name}
+                    </span>
+                  </div>
                   <span className="match-time">
                     {new Date(match.scheduled_at).toLocaleString('ko-KR')}
                   </span>
@@ -211,9 +221,17 @@ export default function Dashboard() {
             <div className="match-list">
               {recentMatches.map((match) => (
                 <div key={match.id} className="match-item">
-                  <span>
-                    {match.home_team_name} {match.home_score} - {match.away_score} {match.away_team_name}
-                  </span>
+                  <div className="match-teams">
+                    <span className="team-with-logo">
+                      {match.home_team_logo && <img src={match.home_team_logo} alt="" className="team-logo-small" />}
+                      {match.home_team_name}
+                    </span>
+                    <span className="match-score">{match.home_score} - {match.away_score}</span>
+                    <span className="team-with-logo">
+                      {match.away_team_logo && <img src={match.away_team_logo} alt="" className="team-logo-small" />}
+                      {match.away_team_name}
+                    </span>
+                  </div>
                   <span className="match-time">
                     {new Date(match.finished_at).toLocaleString('ko-KR')}
                   </span>

@@ -139,8 +139,8 @@ export class LeagueMatchService {
   static async getMatchDetails(matchId: number) {
     const match = await pool.query(
       `SELECT lm.*,
-              ht.name as home_team_name,
-              at.name as away_team_name,
+              ht.name as home_team_name, ht.logo_url as home_team_logo,
+              at.name as away_team_name, at.logo_url as away_team_logo,
               l.name as league_name
        FROM league_matches lm
        JOIN teams ht ON lm.home_team_id = ht.id
