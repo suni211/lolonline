@@ -30,70 +30,15 @@ const formatDate = (dateString: string | null | undefined): string => {
   return date.toLocaleString('ko-KR');
 };
 
-// 게임 시간 변환 함수 (현실 시간 -> 게임 시간)
-const getGameTime = (dateString: string | null | undefined, gameStartTime: number): string => {
-  if (!dateString) return '-';
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return '-';
-
-  // 6시간(현실) = 1달(게임)
-  const MS_PER_GAME_MONTH = 6 * 60 * 60 * 1000;
-  const elapsed = date.getTime() - gameStartTime;
-  const totalMonths = Math.floor(elapsed / MS_PER_GAME_MONTH);
-
-  const year = 2025 + Math.floor(totalMonths / 12);
-  const month = (totalMonths % 12) + 1;
-  const weekInMonth = Math.floor((elapsed % MS_PER_GAME_MONTH) / (MS_PER_GAME_MONTH / 4)) + 1;
-
-  return `${year}년 ${month}월 ${weekInMonth}주차`;
-};
-
 export default function Dashboard() {
   const { team } = useAuth();
   const [teamStats, setTeamStats] = useState<TeamStats | null>(null);
   const [recentMatches, setRecentMatches] = useState<any[]>([]);
   const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
-  const [gameDate, setGameDate] = useState({ year: 2025, month: 1 });
   const [leagueInfo, setLeagueInfo] = useState<LeagueInfo | null>(null);
-  const [gameStartTime, setGameStartTime] = useState<number>(Date.now());
-
-  // 6시간(실제) = 1달(게임)
-  const REAL_HOURS_PER_GAME_MONTH = 6;
-  const MS_PER_GAME_MONTH = REAL_HOURS_PER_GAME_MONTH * 60 * 60 * 1000;
-
-  // 게임 시작 시간 초기화
-  useEffect(() => {
-    const savedStartTime = localStorage.getItem('gameStartTime');
-    if (savedStartTime) {
-      setGameStartTime(parseInt(savedStartTime));
-    } else {
-      const now = Date.now();
-      localStorage.setItem('gameStartTime', now.toString());
-      setGameStartTime(now);
-    }
-  }, []);
-
-  const calculateGameDate = () => {
-    const now = Date.now();
-    const elapsed = now - gameStartTime;
-    const totalMonths = Math.floor(elapsed / MS_PER_GAME_MONTH);
-
-    const year = 2025 + Math.floor(totalMonths / 12);
-    const month = (totalMonths % 12) + 1;
-
-    return { year, month };
-  };
 
   useEffect(() => {
     fetchDashboardData();
-
-    // 게임 날짜 업데이트 (1분마다 체크)
-    setGameDate(calculateGameDate());
-    const timer = setInterval(() => {
-      setGameDate(calculateGameDate());
-    }, 60000);
-
-    return () => clearInterval(timer);
   }, []);
 
   const fetchDashboardData = async () => {
@@ -122,29 +67,10 @@ export default function Dashboard() {
     }
   };
 
-  const getMonthName = (month: number) => {
-    const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
-    return months[month - 1];
-  };
-
-  const getTimeUntilNextMonth = () => {
-    const now = Date.now();
-    const elapsed = now - gameStartTime;
-    const currentMonthProgress = elapsed % MS_PER_GAME_MONTH;
-    const remaining = MS_PER_GAME_MONTH - currentMonthProgress;
-    const hours = Math.floor(remaining / (60 * 60 * 1000));
-    const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
-    return `${hours}시간 ${minutes}분`;
-  };
-
   return (
     <div className="dashboard">
       <div className="dashboard-header">
         <h1 className="page-title">대시보드</h1>
-        <div className="game-time">
-          <div className="game-date">{gameDate.year}년 {getMonthName(gameDate.month)}</div>
-          <div className="next-month">다음 달까지 {getTimeUntilNextMonth()}</div>
-        </div>
       </div>
 
       {/* 리그 정보 */}
@@ -230,9 +156,8 @@ export default function Dashboard() {
                       {match.away_team_name}
                     </span>
                   </div>
-                  <div className="match-time-info">
-                    <span className="match-game-time">{getGameTime(match.scheduled_at, gameStartTime)}</span>
-                    <span className="match-real-time">{formatDate(match.scheduled_at)}</span>
+                  <div className="match-time">
+                    {formatDate(match.scheduled_at)}
                   </div>
                 </div>
               ))}
@@ -259,9 +184,8 @@ export default function Dashboard() {
                       {match.away_team_name}
                     </span>
                   </div>
-                  <div className="match-time-info">
-                    <span className="match-game-time">{getGameTime(match.finished_at, gameStartTime)}</span>
-                    <span className="match-real-time">{formatDate(match.finished_at)}</span>
+                  <div className="match-time">
+                    {formatDate(match.finished_at)}
                   </div>
                 </div>
               ))}
