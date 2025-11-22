@@ -1,4 +1,4 @@
-import pool from '../database/db';
+import pool from '../database/db.js';
 
 // 정규리그 경기 일정 자동 생성
 export async function generateRegularSeasonMatches(leagueId: number) {

@@ -1,4 +1,4 @@
-import pool from '../database/db';
+import pool from '../database/db.js';
 import cron from 'node-cron';
 
 // 부상 시스템 초기화

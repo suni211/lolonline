@@ -1,4 +1,4 @@
-import pool from '../database/db';
+import pool from '../database/db.js';
 import cron from 'node-cron';
 
 // 컨디션 자동 회복 시스템 초기화

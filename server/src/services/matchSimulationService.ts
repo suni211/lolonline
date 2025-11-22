@@ -1,8 +1,8 @@
 import { Server } from 'socket.io';
-import pool from '../database/db';
+import pool from '../database/db.js';
 import cron from 'node-cron';
-import { giveMatchExperience } from './playerService';
-import { checkInjuryAfterMatch, getInjuryPenalty } from './injuryService';
+import { giveMatchExperience } from './playerService.js';
+import { checkInjuryAfterMatch, getInjuryPenalty } from './injuryService.js';
 
 const matchEvents = [
   '선수가 라인에서 CS를 먹고 있습니다.',

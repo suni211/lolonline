@@ -1,6 +1,6 @@
 import cron from 'node-cron';
-import pool from '../database/db';
-import { generateRegularSeasonMatches } from './leagueService';
+import pool from '../database/db.js';
+import { generateRegularSeasonMatches } from './leagueService.js';
 
 // 6시간마다 한 달 진행 (1-11월 시즌, 11-12월 스토브리그)
 export async function initializeSeasonSystem() {

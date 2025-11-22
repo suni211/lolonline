@@ -1,4 +1,4 @@
-import pool from '../database/db';
+import pool from '../database/db.js';
 
 // 경기 후 선수 경험치 획득
 export async function giveMatchExperience(matchId: number, teamId: number, won: boolean) {

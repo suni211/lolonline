@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import pool from './db';
-import { generateRegularSeasonMatches } from '../services/leagueService';
+import pool from './db.js';
+import { generateRegularSeasonMatches } from '../services/leagueService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
