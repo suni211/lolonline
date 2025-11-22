@@ -1,0 +1,365 @@
+.transfer-page {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-title {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+  color: var(--white);
+}
+
+.transfer-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.tab-btn {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--primary-blue);
+  color: var(--white);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  background-color: var(--light-blue);
+}
+
+.tab-btn.active {
+  background-color: var(--light-blue);
+}
+
+/* 필터 바 */
+.filter-bar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: var(--primary-blue);
+  border-radius: 8px;
+}
+
+.filter-bar select,
+.filter-bar input {
+  padding: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.3);
+  color: var(--white);
+  font-size: 0.9rem;
+}
+
+.filter-bar input {
+  width: 100px;
+}
+
+.filter-bar select {
+  min-width: 120px;
+}
+
+/* 매물 그리드 */
+.listings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.listing-card {
+  background-color: var(--primary-blue);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.listing-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.listing-card .position {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--white);
+}
+
+.listing-card .ovr {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.listing-card .player-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--white);
+}
+
+.listing-card .player-team {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+}
+
+.listing-card .player-info {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+}
+
+.listing-card .stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.listing-card .price {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffd43b;
+  margin-top: 0.5rem;
+}
+
+.listing-card .seller {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.buy-btn {
+  padding: 0.75rem;
+  background-color: var(--light-blue);
+  color: var(--white);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.buy-btn:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.buy-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.no-listings {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 3rem;
+}
+
+/* 판매 섹션 */
+.sell-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.sell-form,
+.my-listings {
+  background-color: var(--primary-blue);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.sell-form h2,
+.my-listings h2 {
+  margin-bottom: 1rem;
+  color: var(--white);
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--white);
+  font-weight: 600;
+}
+
+.form-group select,
+.form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.3);
+  color: var(--white);
+  font-size: 1rem;
+}
+
+.fee-info {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.list-btn {
+  width: 100%;
+  padding: 1rem;
+  background-color: #16a34a;
+  color: var(--white);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.list-btn:hover:not(:disabled) {
+  background-color: #15803d;
+}
+
+.list-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 내 매물 목록 */
+.my-listings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.my-listing-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+}
+
+.my-listing-item .listing-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.my-listing-item .player-name {
+  font-weight: 600;
+}
+
+.my-listing-item .position {
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  color: var(--white);
+}
+
+.my-listing-item .ovr {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.my-listing-item .price {
+  font-weight: 600;
+  color: #ffd43b;
+}
+
+.cancel-btn {
+  padding: 0.5rem 1rem;
+  background-color: #dc2626;
+  color: var(--white);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.cancel-btn:hover {
+  background-color: #b91c1c;
+}
+
+/* 거래 내역 */
+.history-section {
+  background-color: var(--primary-blue);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.history-section h2 {
+  margin-bottom: 1rem;
+  color: var(--white);
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.history-table th,
+.history-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.history-table th {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.history-table td {
+  color: var(--white);
+}
+
+.history-table .sold {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.history-table .bought {
+  color: var(--light-blue);
+  font-weight: 600;
+}
+
+.no-history {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 2rem;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .sell-section {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+  }
+
+  .filter-bar select,
+  .filter-bar input {
+    width: 100%;
+  }
+
+  .listings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .history-table {
+    font-size: 0.85rem;
+  }
+}

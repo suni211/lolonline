@@ -74,7 +74,7 @@ router.post('/create-admin', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await pool.query(
-      `INSERT INTO users (username, password, is_admin) VALUES (?, ?, true)`,
+      `INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, true)`,
       [username, hashedPassword]
     );
 

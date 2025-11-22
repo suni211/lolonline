@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     email VARCHAR(100) UNIQUE,
     registration_ip VARCHAR(45),
+    is_admin BOOLEAN DEFAULT FALSE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_login DATETIME,
     INDEX idx_registration_ip (registration_ip, created_at)
@@ -550,5 +551,22 @@ CREATE TABLE IF NOT EXISTS pro_team_colors (
     league VARCHAR(50) NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_pro_team_name (team_name)
+);
+
+-- 이적시장 테이블
+CREATE TABLE IF NOT EXISTS transfer_market (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    card_id INT NOT NULL,
+    seller_team_id INT NOT NULL,
+    asking_price BIGINT NOT NULL,
+    status ENUM('LISTED', 'SOLD', 'CANCELLED') DEFAULT 'LISTED',
+    listed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    sold_at DATETIME,
+    buyer_team_id INT,
+    FOREIGN KEY (card_id) REFERENCES player_cards(id) ON DELETE CASCADE,
+    FOREIGN KEY (seller_team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (buyer_team_id) REFERENCES teams(id) ON DELETE SET NULL,
+    INDEX idx_status (status),
+    INDEX idx_listed_at (listed_at)
 );
 

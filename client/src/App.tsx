@@ -17,6 +17,7 @@ import Admin from './pages/Admin';
 import MatchViewer from './pages/MatchViewer';
 import Tactics from './pages/Tactics';
 import Cards from './pages/Cards';
+import Transfer from './pages/Transfer';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -58,6 +59,7 @@ function App() {
             <Route path="match/:matchId" element={<MatchViewer />} />
             <Route path="tactics" element={<Tactics />} />
             <Route path="cards" element={<Cards />} />
+            <Route path="transfer" element={<Transfer />} />
           </Route>
         </Routes>
       </Router>
