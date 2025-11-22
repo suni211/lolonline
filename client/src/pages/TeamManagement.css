@@ -26,19 +26,26 @@
   align-items: center;
   padding: 1rem 0;
   border-bottom: 1px solid #333;
-}
-
-.info-item:last-child {
-  border-bottom: none;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .info-item label {
+  flex-shrink: 0;
+  min-width: 100px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.8);
 }
 
 .info-item span {
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--white);
+}
+
+.info-item:last-child {
+  border-bottom: none;
 }
 
 .team-input {

@@ -77,11 +77,11 @@ export default function Dashboard() {
       setTeamStats(teamRes.data);
 
       // 최근 경기
-      const matchesRes = await axios.get('/api/matches?status=FINISHED&limit=5');
+      const matchesRes = await axios.get('/api/leagues/all-matches/recent');
       setRecentMatches(matchesRes.data);
 
       // 예정된 경기
-      const upcomingRes = await axios.get('/api/matches?status=SCHEDULED&limit=5');
+      const upcomingRes = await axios.get('/api/leagues/all-matches/upcoming');
       setUpcomingMatches(upcomingRes.data);
 
       // 리그 정보
