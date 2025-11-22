@@ -25,7 +25,7 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: process.env.CLIENT_URL || '*', // 개발 환경에서는 모든 origin 허용
     methods: ['GET', 'POST']
   }
 });
@@ -76,8 +76,9 @@ async function startServer() {
     initializeInjurySystem();
     initializeConditionRecovery();
     
-    httpServer.listen(PORT, () => {
+    httpServer.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT}`);
+      console.log(`Server accessible at http://0.0.0.0:${PORT}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
