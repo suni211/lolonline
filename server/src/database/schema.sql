@@ -117,12 +117,57 @@ CREATE TABLE IF NOT EXISTS equipment (
 CREATE TABLE IF NOT EXISTS team_facilities (
     id INT PRIMARY KEY AUTO_INCREMENT,
     team_id INT NOT NULL,
-    facility_type ENUM('TRAINING', 'MEDICAL', 'SCOUTING', 'STADIUM', 'MERCHANDISE', 'RESTAURANT', 'ACCOMMODATION', 'MEDIA') NOT NULL,
+    facility_type ENUM('TRAINING', 'MEDICAL', 'SCOUTING', 'STADIUM', 'MERCHANDISE', 'RESTAURANT', 'ACCOMMODATION', 'MEDIA', 'GAMING_HOUSE', 'BROADCAST_STUDIO', 'FAN_ZONE', 'ANALYTICS_CENTER') NOT NULL,
     level INT DEFAULT 1,
     revenue_per_hour BIGINT DEFAULT 0,
     maintenance_cost BIGINT DEFAULT 0,
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
     UNIQUE KEY unique_team_facility (team_id, facility_type)
+);
+
+-- 스폰서 테이블
+CREATE TABLE IF NOT EXISTS sponsors (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    tier ENUM('BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND') NOT NULL,
+    base_payment BIGINT NOT NULL,
+    bonus_per_win BIGINT DEFAULT 0,
+    contract_duration_months INT DEFAULT 6,
+    min_team_rank INT DEFAULT 10,
+    min_wins INT DEFAULT 0,
+    description TEXT,
+    logo_url VARCHAR(255),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 팀 스폰서 계약 테이블
+CREATE TABLE IF NOT EXISTS team_sponsors (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    team_id INT NOT NULL,
+    sponsor_id INT NOT NULL,
+    monthly_payment BIGINT NOT NULL,
+    bonus_per_win BIGINT DEFAULT 0,
+    contract_start DATETIME DEFAULT CURRENT_TIMESTAMP,
+    contract_end DATETIME NOT NULL,
+    status ENUM('ACTIVE', 'EXPIRED', 'TERMINATED') DEFAULT 'ACTIVE',
+    total_earnings BIGINT DEFAULT 0,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (sponsor_id) REFERENCES sponsors(id) ON DELETE CASCADE,
+    INDEX idx_team_status (team_id, status)
+);
+
+-- 재정 기록 테이블
+CREATE TABLE IF NOT EXISTS financial_records (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    team_id INT NOT NULL,
+    record_type ENUM('INCOME', 'EXPENSE') NOT NULL,
+    category ENUM('MATCH_WIN', 'SPONSOR', 'FACILITY', 'PLAYER_SALARY', 'COACH_SALARY', 'TRANSFER_FEE', 'FACILITY_UPGRADE', 'FACILITY_MAINTENANCE', 'OTHER') NOT NULL,
+    amount BIGINT NOT NULL,
+    description VARCHAR(255),
+    recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    INDEX idx_team_date (team_id, recorded_at),
+    INDEX idx_team_type (team_id, record_type)
 );
 
 -- 선수 컨디션 기록 테이블 (그래프용)

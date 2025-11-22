@@ -13,14 +13,18 @@ interface Facility {
 }
 
 const facilityTypes = {
-  'TRAINING': { name: '훈련 시설', icon: '🏋️' },
-  'MEDICAL': { name: '의료 시설', icon: '🏥' },
-  'SCOUTING': { name: '스카우팅 시설', icon: '🔍' },
-  'STADIUM': { name: '구장', icon: '🏟️' },
-  'MERCHANDISE': { name: '굿즈샵', icon: '🛍️' },
-  'RESTAURANT': { name: '식당', icon: '🍽️' },
-  'ACCOMMODATION': { name: '숙소', icon: '🏨' },
-  'MEDIA': { name: '미디어 센터', icon: '📺' },
+  'TRAINING': { name: '훈련 시설', icon: '🏋️', description: '선수 훈련 효과 증가' },
+  'MEDICAL': { name: '의료 시설', icon: '🏥', description: '컨디션 회복 속도 증가' },
+  'SCOUTING': { name: '스카우팅 시설', icon: '🔍', description: '스카우팅 성공률 증가' },
+  'STADIUM': { name: '구장', icon: '🏟️', description: '경기 수익 증가' },
+  'MERCHANDISE': { name: '굿즈샵', icon: '🛍️', description: '시간당 수익 발생' },
+  'RESTAURANT': { name: '식당', icon: '🍽️', description: '시간당 수익 발생' },
+  'ACCOMMODATION': { name: '숙소', icon: '🏨', description: '시간당 수익 발생' },
+  'MEDIA': { name: '미디어 센터', icon: '📺', description: '시간당 수익 발생' },
+  'GAMING_HOUSE': { name: '게이밍 하우스', icon: '🏠', description: '선수 만족도 증가' },
+  'BROADCAST_STUDIO': { name: '방송 스튜디오', icon: '🎬', description: '팬 수익 증가' },
+  'FAN_ZONE': { name: '팬 존', icon: '🎪', description: '팬 이벤트 수익' },
+  'ANALYTICS_CENTER': { name: '분석 센터', icon: '📊', description: '경기 분석 능력 증가' },
 };
 
 export default function Facilities() {
@@ -57,7 +61,7 @@ export default function Facilities() {
   };
 
   const getFacilityInfo = (type: string) => {
-    return facilityTypes[type as keyof typeof facilityTypes] || { name: type, icon: '🏢' };
+    return facilityTypes[type as keyof typeof facilityTypes] || { name: type, icon: '🏢', description: '' };
   };
 
   return (
@@ -132,14 +136,9 @@ export default function Facilities() {
       <div className="facility-info-section">
         <h3>시설 정보</h3>
         <ul>
-          <li><strong>훈련 시설</strong>: 선수 훈련 효과 증가</li>
-          <li><strong>의료 시설</strong>: 컨디션 회복 속도 증가</li>
-          <li><strong>스카우팅 시설</strong>: 스카우팅 성공률 증가</li>
-          <li><strong>구장</strong>: 경기 수익 증가</li>
-          <li><strong>굿즈샵</strong>: 시간당 수익 발생</li>
-          <li><strong>식당</strong>: 시간당 수익 발생</li>
-          <li><strong>숙소</strong>: 시간당 수익 발생</li>
-          <li><strong>미디어 센터</strong>: 시간당 수익 발생</li>
+          {Object.entries(facilityTypes).map(([type, info]) => (
+            <li key={type}><strong>{info.name}</strong>: {info.description}</li>
+          ))}
         </ul>
         <p className="info-note">※ 수익 시설은 매 시간마다 자동으로 수익을 생성합니다.</p>
       </div>

@@ -1,0 +1,404 @@
+.sponsors-page {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.page-title {
+  font-size: 2rem;
+  color: var(--white);
+  margin: 0;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.tab-btn {
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+
+.tab-btn:hover {
+  color: var(--white);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.tab-active {
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  color: var(--light-blue);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border-bottom: 2px solid var(--light-blue);
+  margin-bottom: -2px;
+}
+
+/* Sponsors Grid */
+.sponsors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.sponsor-card {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.3) 0%, rgba(0, 0, 0, 0.4) 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 2px solid;
+  transition: all 0.3s ease;
+}
+
+.sponsor-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.sponsor-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tier-icon {
+  font-size: 2rem;
+}
+
+.sponsor-header h3 {
+  margin: 0 0 0.25rem 0;
+  color: var(--white);
+}
+
+.tier-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #000;
+}
+
+.sponsor-description {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  min-height: 40px;
+}
+
+.sponsor-details {
+  margin-bottom: 1rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.9rem;
+}
+
+.detail-row span:first-child {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.detail-row .value {
+  color: var(--light-blue);
+  font-weight: 600;
+}
+
+.detail-row.requirements .value {
+  color: #fbbf24;
+}
+
+/* Contracts */
+.contracts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.contract-card {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.3) 0%, rgba(0, 0, 0, 0.4) 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.contract-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.contract-header h3 {
+  margin: 0;
+  color: var(--white);
+}
+
+.contract-details .value.total {
+  color: #34d399;
+}
+
+/* Financial Section */
+.financial-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.financial-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.summary-card {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.3) 0%, rgba(0, 0, 0, 0.4) 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.summary-card h4 {
+  margin: 0 0 0.5rem 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+.summary-card .amount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.summary-card.income .amount {
+  color: #34d399;
+}
+
+.summary-card.expense .amount {
+  color: #f87171;
+}
+
+.summary-card.net .amount.positive {
+  color: #34d399;
+}
+
+.summary-card.net .amount.negative {
+  color: #f87171;
+}
+
+/* Charts */
+.chart-section {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.2) 0%, rgba(0, 0, 0, 0.3) 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.chart-section h3 {
+  margin: 0 0 1rem 0;
+  color: var(--white);
+}
+
+.chart-container {
+  width: 100%;
+}
+
+.pie-charts-section {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.pie-chart-container {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.2) 0%, rgba(0, 0, 0, 0.3) 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.pie-chart-container h3 {
+  margin: 0 0 1rem 0;
+  color: var(--white);
+  text-align: center;
+}
+
+/* Records */
+.records-section {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.2) 0%, rgba(0, 0, 0, 0.3) 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.records-section h3 {
+  margin: 0 0 1rem 0;
+  color: var(--white);
+}
+
+.records-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.record-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border-left: 3px solid;
+}
+
+.record-item.income {
+  border-left-color: #34d399;
+}
+
+.record-item.expense {
+  border-left-color: #f87171;
+}
+
+.record-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.record-category {
+  font-weight: 600;
+  color: var(--white);
+  font-size: 0.9rem;
+}
+
+.record-description {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+}
+
+.record-amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.record-amount .positive {
+  color: #34d399;
+  font-weight: 600;
+}
+
+.record-amount .negative {
+  color: #f87171;
+  font-weight: 600;
+}
+
+.record-date {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+}
+
+/* Buttons */
+.btn-primary {
+  width: 100%;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--light-blue) 100%);
+  border: none;
+  border-radius: 8px;
+  color: var(--white);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+  cursor: not-allowed;
+}
+
+.btn-danger {
+  width: 100%;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #dc2626 0%, #f87171 100%);
+  border: none;
+  border-radius: 8px;
+  color: var(--white);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-danger:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(220, 38, 38, 0.4);
+}
+
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.empty-message {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 3rem;
+  grid-column: 1 / -1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sponsors-page {
+    padding: 1rem;
+  }
+
+  .financial-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .pie-charts-section {
+    grid-template-columns: 1fr;
+  }
+
+  .sponsors-grid,
+  .contracts-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -8,10 +8,11 @@ const router = express.Router();
 router.get('/my', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const coaches = await pool.query(
-      `SELECT c.*, co.acquired_at 
+      `SELECT DISTINCT c.*, co.acquired_at
        FROM coaches c
        INNER JOIN coach_ownership co ON c.id = co.coach_id
-       WHERE co.team_id = ?`,
+       WHERE co.team_id = ?
+       GROUP BY c.id`,
       [req.teamId]
     );
 
@@ -51,7 +52,7 @@ router.post('/scout', authenticateToken, async (req: AuthRequest, res) => {
 
     // 이미 소유된 감독/코치는 제외하고 랜덤 선택
     const availableCoaches = await pool.query(
-      `SELECT c.* FROM coaches c
+      `SELECT DISTINCT c.* FROM coaches c
        LEFT JOIN coach_ownership co ON c.id = co.coach_id
        WHERE co.coach_id IS NULL`
     );
@@ -60,28 +61,49 @@ router.post('/scout', authenticateToken, async (req: AuthRequest, res) => {
       // 새로운 감독/코치 생성
       const roles: ('HEAD_COACH' | 'ASSISTANT_COACH')[] = ['HEAD_COACH', 'ASSISTANT_COACH'];
       const role = roles[Math.floor(Math.random() * roles.length)];
-      
+
+      // 더 다양한 코치 이름 (중복 방지를 위해 더 많은 이름 추가)
       const coachNames = [
         'kkOma', 'Bengi', 'Score', 'RapidStar', 'NoFe', 'Zefa', 'Kim', 'Edgar',
-        'Homme', 'Mafa', 'Ssong', 'CvMax', 'Dragon', 'Hirai', 'Ggoong', 'Reapered'
+        'Homme', 'Mafa', 'Ssong', 'CvMax', 'Dragon', 'Hirai', 'Ggoong', 'Reapered',
+        'Stardust', 'Flame', 'CloudTemplar', 'InSec', 'Watch', 'Spirit', 'Dandy',
+        'Poohmandu', 'Heart', 'Piccaboo', 'Gorilla', 'Wolf', 'Mata', 'Comet',
+        'DuDu', 'Micro', 'Shy', 'Expession', 'Save', 'Looper', 'Acorn', 'Duke',
+        'Smeb', 'Ssumday', 'Marin', 'Impact', 'Huni', 'Khan', 'TheShy', 'Nuguri',
+        'Cain', 'Zero', 'Paragon', 'Fly', 'Coco', 'Kuro', 'Crown', 'Bdd',
+        'ShowMaker', 'Chovy', 'Faker', 'Deft', 'Bang', 'Teddy', 'Ruler', 'Viper'
       ];
-      
-      const nationalities = ['KR', 'CN', 'EU', 'NA'];
-      const name = coachNames[Math.floor(Math.random() * coachNames.length)];
-      const nationality = nationalities[Math.floor(Math.random() * nationalities.length)];
-      
+
+      const nationalities = ['KR', 'CN', 'EU', 'NA', 'JP', 'TW', 'VN'];
+
+      // 기존에 없는 이름 조합을 선택
+      const existingCoaches = await pool.query('SELECT name, nationality, role FROM coaches');
+      const existingCombos = new Set(existingCoaches.map((c: any) => `${c.name}-${c.nationality}-${c.role}`));
+
+      let name, nationality;
+      let attempts = 0;
+      do {
+        name = coachNames[Math.floor(Math.random() * coachNames.length)];
+        nationality = nationalities[Math.floor(Math.random() * nationalities.length)];
+        attempts++;
+      } while (existingCombos.has(`${name}-${nationality}-${role}`) && attempts < 100);
+
       const scoutingAbility = 50 + Math.floor(Math.random() * 50);
       const trainingBoost = 1.0 + (Math.random() * 0.5); // 1.0 ~ 1.5
 
+      // 능력치에 따른 연봉 계산
+      const baseSalary = 5000;
+      const salary = Math.floor(baseSalary * (scoutingAbility / 50) * trainingBoost);
+
       const result = await pool.query(
-        `INSERT INTO coaches (name, nationality, role, scouting_ability, training_boost) 
-         VALUES (?, ?, ?, ?, ?)`,
-        [name, nationality, role, scoutingAbility, trainingBoost]
+        `INSERT INTO coaches (name, nationality, role, scouting_ability, training_boost, salary)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [name, nationality, role, scoutingAbility, trainingBoost, salary]
       );
 
       const newCoach = await pool.query('SELECT * FROM coaches WHERE id = ?', [result.insertId]);
-      
-      // 선수 소유권 추가
+
+      // 코치 소유권 추가
       await pool.query(
         'INSERT INTO coach_ownership (coach_id, team_id) VALUES (?, ?)',
         [result.insertId, req.teamId]

@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Players from './pages/Players';
 import Coaches from './pages/Coaches';
 import Facilities from './pages/Facilities';
+import Sponsors from './pages/Sponsors';
 import Matches from './pages/Matches';
 import Leagues from './pages/Leagues';
 import Trades from './pages/Trades';
@@ -48,6 +49,7 @@ function App() {
             <Route path="missions" element={<Missions />} />
             <Route path="team" element={<TeamManagement />} />
             <Route path="training" element={<Training />} />
+            <Route path="sponsors" element={<Sponsors />} />
           </Route>
         </Routes>
       </Router>

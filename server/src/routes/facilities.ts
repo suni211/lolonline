@@ -24,8 +24,8 @@ router.get('/my', authenticateToken, async (req: AuthRequest, res) => {
 router.post('/:facilityType/upgrade', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const facilityType = req.params.facilityType;
-    const validTypes = ['TRAINING', 'MEDICAL', 'SCOUTING', 'STADIUM', 'MERCHANDISE', 'RESTAURANT', 'ACCOMMODATION', 'MEDIA'];
-    
+    const validTypes = ['TRAINING', 'MEDICAL', 'SCOUTING', 'STADIUM', 'MERCHANDISE', 'RESTAURANT', 'ACCOMMODATION', 'MEDIA', 'GAMING_HOUSE', 'BROADCAST_STUDIO', 'FAN_ZONE', 'ANALYTICS_CENTER'];
+
     if (!validTypes.includes(facilityType)) {
       return res.status(400).json({ error: 'Invalid facility type' });
     }
@@ -94,6 +94,10 @@ function calculateRevenuePerHour(facilityType: string, level: number): number {
     'RESTAURANT': 2000,
     'ACCOMMODATION': 1500,
     'MEDIA': 1000,
+    'GAMING_HOUSE': 0,
+    'BROADCAST_STUDIO': 4000,
+    'FAN_ZONE': 2500,
+    'ANALYTICS_CENTER': 0,
     'TRAINING': 0,
     'MEDICAL': 0,
     'SCOUTING': 0
@@ -109,6 +113,10 @@ function calculateMaintenanceCost(facilityType: string, level: number): number {
     'RESTAURANT': 800,
     'ACCOMMODATION': 600,
     'MEDIA': 400,
+    'GAMING_HOUSE': 1000,
+    'BROADCAST_STUDIO': 1500,
+    'FAN_ZONE': 1200,
+    'ANALYTICS_CENTER': 800,
     'TRAINING': 500,
     'MEDICAL': 300,
     'SCOUTING': 200

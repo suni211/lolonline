@@ -11,6 +11,7 @@ export default function Layout() {
     { path: '/players', label: '선수 관리' },
     { path: '/coaches', label: '감독/코치' },
     { path: '/facilities', label: '구단 경영' },
+    { path: '/sponsors', label: '스폰서/재정' },
     { path: '/training', label: '훈련' },
     { path: '/matches', label: '경기' },
     { path: '/leagues', label: '리그' },
