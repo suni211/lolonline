@@ -2,8 +2,42 @@ import express from 'express';
 import pool from '../database/db.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import bcrypt from 'bcrypt';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 const router = express.Router();
+
+// 이미지 업로드 설정
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    // client/public/players 폴더에 저장
+    const uploadPath = path.join(__dirname, '..', '..', '..', '..', 'client', 'public', 'players');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    // player_id.확장자 형식으로 저장
+    const playerId = (req as any).params.playerId;
+    const ext = path.extname(file.originalname);
+    cb(null, `${playerId}${ext}`);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB 제한
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('이미지 파일만 업로드 가능합니다'));
+    }
+  }
+});
 
 // 어드민 인증 미들웨어
 const adminMiddleware = async (req: AuthRequest, res: any, next: any) => {
@@ -138,6 +172,19 @@ router.delete('/users/:userId', authenticateToken, adminMiddleware, async (req: 
   }
 });
 
+// 전체 팀 목록 조회
+router.get('/teams', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const teams = await pool.query(
+      `SELECT id, name, league FROM teams ORDER BY league, name`
+    );
+    res.json(teams);
+  } catch (error) {
+    console.error('Get teams error:', error);
+    res.status(500).json({ error: '팀 목록 조회 실패' });
+  }
+});
+
 // 리그 목록 조회
 router.get('/leagues', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
   try {
@@ -157,26 +204,26 @@ router.get('/leagues', authenticateToken, adminMiddleware, async (req: AuthReque
 // 새 시즌 리그 생성 (EAST, WEST) + 자동 스케줄 생성
 router.post('/leagues/create-season', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
   try {
-    const { season_number } = req.body;
+    const { season, eastName, westName } = req.body;
 
     // 기존 활성 리그 비활성화
     await pool.query(`UPDATE leagues SET status = 'FINISHED' WHERE status = 'ACTIVE'`);
 
     // EAST 리그 생성
     const eastResult = await pool.query(
-      `INSERT INTO leagues (name, season, region, status) VALUES (?, ?, 'EAST', 'ACTIVE')`,
-      [`EAST League S${season_number}`, season_number]
+      `INSERT INTO leagues (name, season, region, status) VALUES (?, ?, 'EAST', 'UPCOMING')`,
+      [eastName || `EAST League S${season}`, season]
     );
 
     // WEST 리그 생성
     const westResult = await pool.query(
-      `INSERT INTO leagues (name, season, region, status) VALUES (?, ?, 'WEST', 'ACTIVE')`,
-      [`WEST League S${season_number}`, season_number]
+      `INSERT INTO leagues (name, season, region, status) VALUES (?, ?, 'WEST', 'UPCOMING')`,
+      [westName || `WEST League S${season}`, season]
     );
 
     res.json({
       success: true,
-      message: `시즌 ${season_number} 리그가 생성되었습니다`,
+      message: `시즌 ${season} 리그가 생성되었습니다`,
       east_league_id: eastResult.insertId,
       west_league_id: westResult.insertId
     });
@@ -219,8 +266,8 @@ router.post('/leagues/:leagueId/start', authenticateToken, adminMiddleware, asyn
       }
     }
 
-    // 게임 시간 기준으로 스케줄 생성 (6시간 = 1달, 하루에 여러 경기)
-    const GAME_START = new Date('2025-01-01T00:00:00').getTime();
+    // 현재 시간 기준으로 스케줄 생성 (6시간 = 1달)
+    const now = Date.now();
     const MS_PER_GAME_MONTH = 6 * 60 * 60 * 1000;
     const MS_PER_GAME_DAY = MS_PER_GAME_MONTH / 30;
 
@@ -229,7 +276,7 @@ router.post('/leagues/:leagueId/start', authenticateToken, adminMiddleware, asyn
 
     for (let i = 0; i < matches.length; i++) {
       const match = matches[i];
-      const scheduledTime = new Date(GAME_START + (i * matchInterval));
+      const scheduledTime = new Date(now + (i * matchInterval));
 
       await pool.query(
         `INSERT INTO league_matches (league_id, home_team_id, away_team_id, round, scheduled_at, status)
@@ -239,12 +286,12 @@ router.post('/leagues/:leagueId/start', authenticateToken, adminMiddleware, asyn
     }
 
     // 리그 상태 업데이트
-    await pool.query(`UPDATE leagues SET status = 'IN_PROGRESS' WHERE id = ?`, [leagueId]);
+    await pool.query(`UPDATE leagues SET status = 'ACTIVE' WHERE id = ?`, [leagueId]);
 
     res.json({
       success: true,
       message: `${matches.length}개의 경기가 스케줄되었습니다`,
-      total_matches: matches.length
+      matchCount: matches.length
     });
   } catch (error) {
     console.error('Start league error:', error);
@@ -277,17 +324,17 @@ router.get('/leagues/:leagueId/schedule', authenticateToken, adminMiddleware, as
 });
 
 // 팀을 리그에 배정
-router.post('/leagues/:leagueId/add-team', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+router.post('/leagues/:leagueId/register-team', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
   try {
     const leagueId = parseInt(req.params.leagueId);
-    const { team_id } = req.body;
+    const { teamId } = req.body;
 
     // 이미 해당 시즌에 배정되었는지 확인
     const existing = await pool.query(
       `SELECT ls.* FROM league_standings ls
        JOIN leagues l ON ls.league_id = l.id
        WHERE ls.team_id = ? AND l.status = 'ACTIVE'`,
-      [team_id]
+      [teamId]
     );
 
     if (existing.length > 0) {
@@ -296,7 +343,7 @@ router.post('/leagues/:leagueId/add-team', authenticateToken, adminMiddleware, a
 
     await pool.query(
       `INSERT INTO league_standings (league_id, team_id, wins, losses, points) VALUES (?, ?, 0, 0, 0)`,
-      [leagueId, team_id]
+      [leagueId, teamId]
     );
 
     res.json({ success: true, message: '팀이 리그에 배정되었습니다' });
@@ -489,6 +536,90 @@ router.get('/worlds/:tournamentId', authenticateToken, adminMiddleware, async (r
   } catch (error) {
     console.error('Get worlds error:', error);
     res.status(500).json({ error: '토너먼트 조회 실패' });
+  }
+});
+
+// 전체 선수 목록 조회 (어드민용)
+router.get('/players', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const players = await pool.query(
+      `SELECT p.id, p.name, p.position, p.face_image,
+              (p.mental + p.teamfight + p.focus + p.laning) as overall,
+              t.name as team_name
+       FROM players p
+       LEFT JOIN player_ownership po ON p.id = po.player_id
+       LEFT JOIN teams t ON po.team_id = t.id
+       ORDER BY p.id`
+    );
+    res.json(players);
+  } catch (error) {
+    console.error('Get players error:', error);
+    res.status(500).json({ error: '선수 목록 조회 실패' });
+  }
+});
+
+// 선수 얼굴 이미지 업로드
+router.post('/players/:playerId/face', authenticateToken, adminMiddleware, upload.single('image'), async (req: AuthRequest, res) => {
+  try {
+    const playerId = parseInt(req.params.playerId);
+
+    if (!req.file) {
+      return res.status(400).json({ error: '이미지 파일이 필요합니다' });
+    }
+
+    // 선수 존재 확인
+    const players = await pool.query('SELECT id FROM players WHERE id = ?', [playerId]);
+    if (players.length === 0) {
+      // 업로드된 파일 삭제
+      fs.unlinkSync(req.file.path);
+      return res.status(404).json({ error: '선수를 찾을 수 없습니다' });
+    }
+
+    // 이미지 경로 저장 (public/players/id.ext 형식)
+    const imagePath = `/players/${req.file.filename}`;
+
+    await pool.query(
+      'UPDATE players SET face_image = ? WHERE id = ?',
+      [imagePath, playerId]
+    );
+
+    res.json({
+      success: true,
+      message: '이미지가 업로드되었습니다',
+      imagePath
+    });
+  } catch (error) {
+    console.error('Upload face image error:', error);
+    res.status(500).json({ error: '이미지 업로드 실패' });
+  }
+});
+
+// 선수 얼굴 이미지 삭제
+router.delete('/players/:playerId/face', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const playerId = parseInt(req.params.playerId);
+
+    // 현재 이미지 경로 조회
+    const players = await pool.query('SELECT face_image FROM players WHERE id = ?', [playerId]);
+    if (players.length === 0) {
+      return res.status(404).json({ error: '선수를 찾을 수 없습니다' });
+    }
+
+    if (players[0].face_image) {
+      // 파일 삭제
+      const filePath = path.join(__dirname, '..', '..', '..', '..', 'client', 'public', players[0].face_image);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    // DB에서 이미지 경로 제거
+    await pool.query('UPDATE players SET face_image = NULL WHERE id = ?', [playerId]);
+
+    res.json({ success: true, message: '이미지가 삭제되었습니다' });
+  } catch (error) {
+    console.error('Delete face image error:', error);
+    res.status(500).json({ error: '이미지 삭제 실패' });
   }
 });
 

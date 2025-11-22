@@ -29,16 +29,27 @@ export default function Dashboard() {
   const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
   const [gameDate, setGameDate] = useState({ year: 2025, month: 1 });
   const [leagueInfo, setLeagueInfo] = useState<LeagueInfo | null>(null);
+  const [gameStartTime, setGameStartTime] = useState<number>(Date.now());
 
-  // 게임 시작 시간 (서버 시작 또는 고정 시점)
-  const GAME_START_TIME = new Date('2025-01-01T00:00:00').getTime();
   // 6시간(실제) = 1달(게임)
   const REAL_HOURS_PER_GAME_MONTH = 6;
   const MS_PER_GAME_MONTH = REAL_HOURS_PER_GAME_MONTH * 60 * 60 * 1000;
 
+  // 게임 시작 시간 초기화
+  useEffect(() => {
+    const savedStartTime = localStorage.getItem('gameStartTime');
+    if (savedStartTime) {
+      setGameStartTime(parseInt(savedStartTime));
+    } else {
+      const now = Date.now();
+      localStorage.setItem('gameStartTime', now.toString());
+      setGameStartTime(now);
+    }
+  }, []);
+
   const calculateGameDate = () => {
     const now = Date.now();
-    const elapsed = now - GAME_START_TIME;
+    const elapsed = now - gameStartTime;
     const totalMonths = Math.floor(elapsed / MS_PER_GAME_MONTH);
 
     const year = 2025 + Math.floor(totalMonths / 12);
@@ -92,7 +103,7 @@ export default function Dashboard() {
 
   const getTimeUntilNextMonth = () => {
     const now = Date.now();
-    const elapsed = now - GAME_START_TIME;
+    const elapsed = now - gameStartTime;
     const currentMonthProgress = elapsed % MS_PER_GAME_MONTH;
     const remaining = MS_PER_GAME_MONTH - currentMonthProgress;
     const hours = Math.floor(remaining / (60 * 60 * 1000));

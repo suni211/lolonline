@@ -1,0 +1,377 @@
+.tactics-page {
+  max-width: 1200px;
+  padding: 1rem;
+}
+
+.tactics-page h1 {
+  color: white;
+  margin-bottom: 1.5rem;
+}
+
+.message {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.message.success {
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid #22c55e;
+  color: #22c55e;
+}
+
+.message.error {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  color: #ef4444;
+}
+
+.message button {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.tactics-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 1.5rem;
+}
+
+.tactics-list {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #333;
+}
+
+.list-header h2 {
+  color: white;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.list-header button {
+  padding: 0.5rem 1rem;
+  background: var(--primary-blue);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.list-header button:hover {
+  background: var(--light-blue);
+}
+
+.empty {
+  color: #666;
+  text-align: center;
+  padding: 2rem;
+}
+
+.tactic-item {
+  padding: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 0.5rem;
+  border: 1px solid transparent;
+}
+
+.tactic-item:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.tactic-item.selected {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: var(--primary-blue);
+}
+
+.tactic-item.active {
+  border-left: 3px solid #22c55e;
+}
+
+.tactic-name {
+  color: white;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.active-badge {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  background: #22c55e;
+  border-radius: 4px;
+  color: white;
+}
+
+.tactic-summary {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+
+.tactic-details {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.no-selection {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: #666;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.detail-header h2 {
+  color: white;
+  margin: 0;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.detail-actions button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.detail-actions button.primary {
+  background: var(--primary-blue);
+  color: white;
+}
+
+.detail-actions button.danger {
+  background: #ef4444;
+  color: white;
+}
+
+.tactic-description {
+  color: #888;
+  margin-bottom: 1.5rem;
+}
+
+.phase-overview {
+  margin-bottom: 2rem;
+}
+
+.phase-overview h3 {
+  color: white;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.phases {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.phase {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.phase-label {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.phase-value {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.phase-value.aggressive {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.phase-value.passive {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.phase-value.balanced {
+  background: rgba(107, 114, 128, 0.2);
+  color: #9ca3af;
+}
+
+.phase-arrow {
+  color: #666;
+  font-size: 1.25rem;
+}
+
+.teamfight-style {
+  color: #888;
+}
+
+.teamfight-style strong {
+  color: white;
+  margin-left: 0.5rem;
+}
+
+.position-tactics h3 {
+  color: white;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.position-tactics table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.position-tactics th,
+.position-tactics td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #333;
+}
+
+.position-tactics th {
+  color: #888;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+.position-tactics td {
+  color: white;
+}
+
+.position-tactics select {
+  width: 100%;
+  padding: 0.5rem;
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.85rem;
+}
+
+.position-tactics select:focus {
+  border-color: var(--primary-blue);
+  outline: none;
+}
+
+/* Create Form */
+.create-form h2 {
+  color: white;
+  margin-bottom: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  color: #888;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.form-group textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  border-color: var(--primary-blue);
+  outline: none;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.form-actions button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.form-actions button.primary {
+  background: var(--primary-blue);
+  color: white;
+}
+
+.form-actions button.secondary {
+  background: #444;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .tactics-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .phases {
+    flex-wrap: wrap;
+  }
+}

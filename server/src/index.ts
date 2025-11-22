@@ -19,6 +19,7 @@ import facilityRoutes, { initializeFacilityRevenue } from './routes/facilities.j
 import sponsorRoutes from './routes/sponsors.js';
 import eventRoutes from './routes/events.js';
 import adminRoutes from './routes/admin.js';
+import tacticsRoutes from './routes/tactics.js';
 import { initializeDatabase } from './database/init.js';
 import { initializeSeasonSystem } from './services/seasonService.js';
 import { initializeMatchSimulation } from './services/matchSimulationService.js';
@@ -60,6 +61,7 @@ app.use('/api/training', trainingRoutes);
 app.use('/api/sponsors', sponsorRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/tactics', tacticsRoutes);
 
 // Socket.IO 연결
 io.on('connection', (socket) => {

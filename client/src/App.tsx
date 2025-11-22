@@ -13,6 +13,9 @@ import Trades from './pages/Trades';
 import Missions from './pages/Missions';
 import TeamManagement from './pages/TeamManagement';
 import Training from './pages/Training';
+import Admin from './pages/Admin';
+import MatchViewer from './pages/MatchViewer';
+import Tactics from './pages/Tactics';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -50,6 +53,9 @@ function App() {
             <Route path="team" element={<TeamManagement />} />
             <Route path="training" element={<Training />} />
             <Route path="sponsors" element={<Sponsors />} />
+            <Route path="admin" element={<Admin />} />
+            <Route path="match/:matchId" element={<MatchViewer />} />
+            <Route path="tactics" element={<Tactics />} />
           </Route>
         </Routes>
       </Router>
