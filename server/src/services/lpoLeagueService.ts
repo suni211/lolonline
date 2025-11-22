@@ -326,19 +326,65 @@ export class LPOLeagueService {
       matches.push(...cycle4);
 
       // 경기 일정 생성
-      // 게임 시간: 6시간(현실) = 1달(게임) = 4주
-      // 1주(게임) = 1.5시간(현실) = 90분
-      const REAL_MS_PER_GAME_WEEK = 90 * 60 * 1000; // 90분
+      // 한국 시간 기준으로 일~금 06:00~24:00 사이에 경기
+      // 토요일은 스토브리그 (경기 없음)
+      // 새벽 시간대 (00:00~06:00) 경기 없음
 
-      const now = Date.now();
+      const MATCH_INTERVAL_MS = 30 * 60 * 1000; // 30분 간격
+
+      // 다음 유효한 경기 시간 찾기
+      const getNextValidMatchTime = (date: Date): Date => {
+        const result = new Date(date);
+
+        while (true) {
+          const dayOfWeek = result.getDay(); // 0=일, 6=토
+          const hours = result.getHours();
+
+          // 토요일이면 다음 일요일 06:00으로
+          if (dayOfWeek === 6) {
+            result.setDate(result.getDate() + 1);
+            result.setHours(6, 0, 0, 0);
+            continue;
+          }
+
+          // 새벽 시간대 (00:00~06:00)면 06:00으로
+          if (hours < 6) {
+            result.setHours(6, 0, 0, 0);
+            continue;
+          }
+
+          // 자정 이후면 다음 날 06:00으로
+          if (hours >= 24) {
+            result.setDate(result.getDate() + 1);
+            result.setHours(6, 0, 0, 0);
+            continue;
+          }
+
+          break;
+        }
+
+        return result;
+      };
+
+      // 현재 시간에서 다음 유효한 경기 시간 시작
+      let currentTime = getNextValidMatchTime(new Date());
+
       console.log(`League ${leagueId}: Generating ${matches.length} matches...`);
 
       for (let i = 0; i < matches.length; i++) {
         const match = matches[i];
-        // 각 경기는 1주(게임) 간격 = 1.5시간(현실) 간격
-        const scheduledAt = new Date(now + (i + 1) * REAL_MS_PER_GAME_WEEK);
-        // MySQL 형식으로 변환
-        const scheduledAtStr = scheduledAt.toISOString().slice(0, 19).replace('T', ' ');
+
+        // 현재 시간이 유효한지 확인하고 조정
+        currentTime = getNextValidMatchTime(currentTime);
+
+        // MySQL 형식으로 변환 (한국 시간 기준)
+        const year = currentTime.getFullYear();
+        const month = String(currentTime.getMonth() + 1).padStart(2, '0');
+        const day = String(currentTime.getDate()).padStart(2, '0');
+        const hours = String(currentTime.getHours()).padStart(2, '0');
+        const minutes = String(currentTime.getMinutes()).padStart(2, '0');
+        const seconds = String(currentTime.getSeconds()).padStart(2, '0');
+        const scheduledAtStr = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 
         if (i === 0) {
           console.log(`First match scheduled at: ${scheduledAtStr}`);
@@ -349,6 +395,9 @@ export class LPOLeagueService {
            VALUES (?, ?, ?, ?, 'SCHEDULED')`,
           [leagueId, match.home, match.away, scheduledAtStr]
         );
+
+        // 다음 경기 시간
+        currentTime = new Date(currentTime.getTime() + MATCH_INTERVAL_MS);
       }
 
       console.log(`League ${leagueId}: Generated ${matches.length} matches successfully`);
