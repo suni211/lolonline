@@ -72,6 +72,41 @@
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
+.event-btn {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  color: var(--white);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+}
+
+.event-btn:hover {
+  background: linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.5);
+}
+
+.event-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+  animation: pulse 1s ease-in-out infinite;
+}
+
 .logout-btn {
   background: linear-gradient(135deg, var(--light-blue) 0%, var(--primary-blue) 100%);
   color: var(--white);

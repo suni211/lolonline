@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../database/db.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { EventService } from '../services/eventService.js';
 
 const router = express.Router();
 
@@ -171,8 +172,8 @@ router.post('/:playerId/propose', authenticateToken, async (req: AuthRequest, re
 
 // AI 응답 생성 함수
 async function generateAIResponse(
-  playerId: number, 
-  teamId: number, 
+  playerId: number,
+  teamId: number,
   negotiationId: number,
   proposedSalary: number,
   proposedYears: number,
@@ -184,24 +185,33 @@ async function generateAIResponse(
   try {
     // 선수 오버롤 계산
     const overall = player.mental + player.teamfight + player.focus + player.laning;
-    
+
     // 기준 연봉 계산 (오버롤 * 1000)
     const baseSalary = overall * 1000;
-    
+
+    // 성격에 따른 협상 수정자 적용
+    const personality = player.personality || 'CALM';
+    const personalityMod = EventService.getPersonalityNegotiationModifier(personality);
+
     // 만족도에 따른 가중치 (50% = 1.0, 100% = 1.5, 0% = 0.5)
     const satisfactionMultiplier = 0.5 + (player.satisfaction / 100);
-    
+
+    // 성격에 따른 연봉 기대치 조정
+    const adjustedBaseSalary = Math.floor(baseSalary * personalityMod.salaryMod);
+
     // 최소 수락 연봉 계산
-    const minAcceptableSalary = Math.floor(baseSalary * satisfactionMultiplier * 0.8);
-    const idealSalary = Math.floor(baseSalary * satisfactionMultiplier * 1.2);
-    
+    const minAcceptableSalary = Math.floor(adjustedBaseSalary * satisfactionMultiplier * 0.8);
+    const idealSalary = Math.floor(adjustedBaseSalary * satisfactionMultiplier * 1.2);
+
     // 제안 평가
-    const salaryRatio = proposedSalary / baseSalary;
+    const salaryRatio = proposedSalary / adjustedBaseSalary;
     const isGoodOffer = proposedSalary >= minAcceptableSalary;
     const isExcellentOffer = proposedSalary >= idealSalary;
-    
-    // 랜덤 요소 추가 (AI 성향)
-    const aiPersonality = Math.random(); // 0~1 사이 랜덤 값
+
+    // 랜덤 요소 추가 (AI 성향) + 성격에 따른 수락 확률 조정
+    const baseRandom = Math.random() * 100; // 0~100 사이 랜덤 값
+    const adjustedRandom = baseRandom + personalityMod.acceptChanceMod;
+    const aiPersonality = adjustedRandom / 100; // 0~1 사이로 변환
     
     let responseType: 'ACCEPT' | 'REJECT' | 'COUNTER';
     let counterSalary = 0;

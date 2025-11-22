@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS players (
     name VARCHAR(100) NOT NULL,
     nationality VARCHAR(50) NOT NULL DEFAULT 'KR',
     position ENUM('TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT') NOT NULL,
+    -- 성격 유형
+    personality ENUM('LEADER', 'LONER', 'TEAMPLAYER', 'HOTHEAD', 'CALM', 'GREEDY', 'HUMBLE', 'PRANKSTER') DEFAULT 'CALM',
     -- 직접 올릴 수 있는 스탯 (4개)
     mental INT DEFAULT 1 CHECK (mental >= 1 AND mental <= 300),
     teamfight INT DEFAULT 1 CHECK (teamfight >= 1 AND teamfight <= 300),
@@ -61,6 +63,25 @@ CREATE TABLE IF NOT EXISTS players (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_position (position),
     INDEX idx_overall (mental, teamfight, focus, laning, leadership, adaptability, consistency, work_ethic)
+);
+
+-- 팀 이벤트 테이블
+CREATE TABLE IF NOT EXISTS team_events (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    team_id INT NOT NULL,
+    event_type ENUM('CONFLICT', 'CELEBRATION', 'PRANK', 'INJURY', 'BONUS', 'SCANDAL', 'INTERVIEW', 'TEAMBUILDING') NOT NULL,
+    player_id INT,
+    player2_id INT,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    effect_type ENUM('MORALE', 'CONDITION', 'SATISFACTION', 'GOLD', 'FAN') DEFAULT 'MORALE',
+    effect_value INT DEFAULT 0,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE SET NULL,
+    FOREIGN KEY (player2_id) REFERENCES players(id) ON DELETE SET NULL,
+    INDEX idx_team_date (team_id, created_at)
 );
 
 -- 선수 소유 테이블

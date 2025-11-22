@@ -1,10 +1,35 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import EventNotification from './EventNotification';
 import './Layout.css';
 
 export default function Layout() {
   const { team, logout } = useAuth();
   const location = useLocation();
+  const [showEvents, setShowEvents] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000); // 30초마다 체크
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await axios.get('/api/events/unread-count');
+      setUnreadCount(response.data.count);
+    } catch (error) {
+      console.error('Failed to fetch unread count:', error);
+    }
+  };
+
+  const handleEventClose = () => {
+    setShowEvents(false);
+    setUnreadCount(0);
+  };
 
   const navItems = [
     { path: '/dashboard', label: '대시보드' },
@@ -32,6 +57,10 @@ export default function Layout() {
                 <span className="currency fans">{(team.fan_count || 1000).toLocaleString()}명</span>
                 <span className="currency">{team.gold.toLocaleString()}원</span>
                 <span className="currency energy">{team.diamond} 에너지</span>
+                <button onClick={() => setShowEvents(true)} className="event-btn">
+                  이벤트
+                  {unreadCount > 0 && <span className="event-badge">{unreadCount}</span>}
+                </button>
               </>
             )}
             <button onClick={logout} className="logout-btn">로그아웃</button>
@@ -57,6 +86,8 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {showEvents && <EventNotification onClose={handleEventClose} />}
     </div>
   );
 }

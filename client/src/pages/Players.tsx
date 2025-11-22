@@ -30,6 +30,7 @@ interface Player {
   is_starter: boolean;
   is_benched: boolean;
   overall: number;
+  personality?: string;
 }
 
 interface SearchPlayer {
@@ -118,8 +119,8 @@ export default function Players() {
     <div className="players-page">
       <div className="page-header">
         <h1 className="page-title">선수 관리</h1>
-        <button onClick={() => setShowScout(!showScout)} className="btn-primary">
-          선수 스카우팅
+        <button onClick={() => setShowScout(!showScout)} className="btn-scout">
+          스카우팅
         </button>
       </div>
 

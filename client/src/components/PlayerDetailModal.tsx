@@ -25,7 +25,36 @@ interface Player {
   uniform_level: number;
   injury_status: string;
   injury_recovery_days: number;
+  personality?: string;
 }
+
+const getPersonalityLabel = (personality: string): string => {
+  switch (personality) {
+    case 'LEADER': return '리더';
+    case 'LONER': return '독불장군';
+    case 'TEAMPLAYER': return '팀플레이어';
+    case 'HOTHEAD': return '열혈한';
+    case 'CALM': return '침착한';
+    case 'GREEDY': return '욕심쟁이';
+    case 'HUMBLE': return '겸손한';
+    case 'PRANKSTER': return '장난꾸러기';
+    default: return personality;
+  }
+};
+
+const getPersonalityDescription = (personality: string): string => {
+  switch (personality) {
+    case 'LEADER': return '팀을 이끌며 중요한 경기에서 강함';
+    case 'LONER': return '혼자 있는 것을 좋아하며 팀 이적에 소극적';
+    case 'TEAMPLAYER': return '팀을 위해 양보하며 이적에 적극적';
+    case 'HOTHEAD': return '쉽게 흥분하며 갈등을 일으킬 수 있음';
+    case 'CALM': return '차분하고 합리적인 협상 가능';
+    case 'GREEDY': return '높은 연봉을 요구하며 협상이 어려움';
+    case 'HUMBLE': return '낮은 연봉도 수락하며 수락률 높음';
+    case 'PRANKSTER': return '팀 분위기를 밝게 하지만 사고칠 수 있음';
+    default: return '';
+  }
+};
 
 interface PlayerDetailModalProps {
   player: Player;
@@ -198,6 +227,12 @@ export default function PlayerDetailModal({ player, onClose, onUpdate }: PlayerD
             <div className="info-row">
               <span>포지션:</span>
               <span className={`position-badge ${player.position}`}>{player.position}</span>
+            </div>
+            <div className="info-row">
+              <span>성격:</span>
+              <span className="personality-badge" title={getPersonalityDescription(player.personality || 'CALM')}>
+                {getPersonalityLabel(player.personality || 'CALM')}
+              </span>
             </div>
             <div className="info-row">
               <span>레벨:</span>
