@@ -230,7 +230,7 @@ CREATE TABLE IF NOT EXISTS coach_ownership (
 CREATE TABLE IF NOT EXISTS leagues (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(50) NOT NULL,
-    region ENUM('EAST', 'WEST') NOT NULL,
+    region ENUM('EAST', 'WEST', 'SUPER', 'FIRST', 'SECOND') NOT NULL,
     season INT NOT NULL,
     current_month INT NOT NULL CHECK (current_month >= 1 AND current_month <= 12),
     is_offseason BOOLEAN DEFAULT FALSE,
