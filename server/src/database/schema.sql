@@ -504,6 +504,10 @@ CREATE TABLE IF NOT EXISTS player_cards (
     team_color_name VARCHAR(100),
     -- 스타터 여부
     is_starter BOOLEAN DEFAULT FALSE,
+    -- 계약 (시즌당)
+    is_contracted BOOLEAN DEFAULT FALSE,
+    contract_season INT DEFAULT NULL,
+    contract_cost BIGINT DEFAULT 1000000,
     -- 성장
     level INT DEFAULT 1,
     exp INT DEFAULT 0,
@@ -536,5 +540,18 @@ CREATE TABLE IF NOT EXISTS pack_openings (
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
     FOREIGN KEY (pack_id) REFERENCES player_packs(id) ON DELETE CASCADE,
     FOREIGN KEY (player_card_id) REFERENCES player_cards(id) ON DELETE CASCADE
+);
+
+-- 팀컬러 테이블
+CREATE TABLE IF NOT EXISTS team_colors (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    team_id INT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    color_code VARCHAR(7) NOT NULL DEFAULT '#FFFFFF',
+    stat_bonus INT DEFAULT 5,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    INDEX idx_team_color (team_id)
 );
 

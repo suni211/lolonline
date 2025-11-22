@@ -1,47 +1,7 @@
 import pool from '../database/db.js';
 
-// 300명의 프로게이머 닉네임 목록
-const PRO_PLAYER_NICKNAMES = [
-  // Row 1-50
-  'Blitz', 'Nexus', 'Rift', 'Crux', 'Zephyr', 'Volt', 'Nyx', 'Kaze', 'Dusk', 'Dawn',
-  'Flare', 'Pulse', 'Surge', 'Vex', 'Jinx', 'Hex', 'Flux', 'Wraith', 'Specter', 'Shade',
-  'Gloom', 'Dread', 'Bane', 'Spite', 'Wrath', 'Fury', 'Rage', 'Havoc', 'Mayhem', 'Ruin',
-  'Doom', 'Fate', 'Luck', 'Chance', 'Risk', 'Gambit', 'Rook', 'Bishop', 'Pawn', 'Castle',
-  'Throne', 'Crown', 'Scepter', 'Helm', 'Shield', 'Gauntlet', 'Armor', 'Cloak', 'Cowl', 'Hood',
-  // Row 51-100
-  'Talon', 'Fang', 'Claw', 'Tusk', 'Horn', 'Spine', 'Scale', 'Fin', 'Wing', 'Feather',
-  'Beak', 'Mane', 'Pelt', 'Hide', 'Bone', 'Skull', 'Fist', 'Palm', 'Grip', 'Clutch',
-  'Snap', 'Crack', 'Pop', 'Bang', 'Boom', 'Kaboom', 'Zap', 'Zing', 'Zoom', 'Zip',
-  'Dash', 'Rush', 'Bolt', 'Sprint', 'Stride', 'Leap', 'Bound', 'Vault', 'Dive', 'Plunge',
-  'Sway', 'Glide', 'Drift', 'Float', 'Hover', 'Soar', 'Climb', 'Scale', 'Peak', 'Summit',
-  // Row 101-150
-  'Ridge', 'Cliff', 'Crag', 'Bluff', 'Mesa', 'Butte', 'Gorge', 'Canyon', 'Ravine', 'Valley',
-  'Glen', 'Dale', 'Meadow', 'Grove', 'Thicket', 'Bramble', 'Thorn', 'Briar', 'Nettle', 'Thistle',
-  'Moss', 'Fern', 'Ivy', 'Vine', 'Root', 'Stem', 'Bark', 'Leaf', 'Bloom', 'Petal',
-  'Bud', 'Seed', 'Sprout', 'Sapling', 'Timber', 'Lumber', 'Plank', 'Beam', 'Pillar', 'Column',
-  'Arch', 'Dome', 'Spire', 'Tower', 'Citadel', 'Bastion', 'Fortress', 'Rampart', 'Bulwark', 'Parapet',
-  // Row 151-200
-  'Moat', 'Trench', 'Bunker', 'Vault', 'Crypt', 'Tomb', 'Shrine', 'Altar', 'Temple', 'Sanctum',
-  'Haven', 'Refuge', 'Oasis', 'Eden', 'Utopia', 'Arcadia', 'Elysium', 'Nirvana', 'Zenith', 'Apex',
-  'Acme', 'Pinnacle', 'Vertex', 'Crest', 'Cusp', 'Brink', 'Verge', 'Threshold', 'Gateway', 'Portal',
-  'Rift', 'Breach', 'Schism', 'Chasm', 'Void', 'Abyss', 'Oblivion', 'Limbo', 'Purgatory', 'Inferno',
-  'Blaze', 'Ember', 'Cinder', 'Ash', 'Soot', 'Char', 'Scorch', 'Sear', 'Brand', 'Mark',
-  // Row 201-250
-  'Sigil', 'Glyph', 'Rune', 'Script', 'Scroll', 'Tome', 'Codex', 'Grimoire', 'Lexicon', 'Almanac',
-  'Chronicle', 'Saga', 'Epic', 'Legend', 'Myth', 'Fable', 'Tale', 'Lore', 'Canon', 'Creed',
-  'Dogma', 'Tenet', 'Axiom', 'Maxim', 'Adage', 'Proverb', 'Riddle', 'Enigma', 'Puzzle', 'Cipher',
-  'Code', 'Key', 'Lock', 'Latch', 'Bolt', 'Hinge', 'Pivot', 'Axis', 'Core', 'Nucleus',
-  'Hub', 'Node', 'Link', 'Chain', 'Bond', 'Tie', 'Knot', 'Weave', 'Mesh', 'Grid',
-  // Row 251-300
-  'Matrix', 'Array', 'Lattice', 'Frame', 'Shell', 'Husk', 'Pod', 'Cell', 'Orb', 'Sphere',
-  'Globe', 'Ring', 'Loop', 'Coil', 'Spiral', 'Helix', 'Vortex', 'Cyclone', 'Tempest', 'Gale',
-  'Squall', 'Gust', 'Breeze', 'Zephyr', 'Mistral', 'Sirocco', 'Monsoon', 'Typhoon', 'Tsunami', 'Torrent',
-  'Cascade', 'Rapids', 'Current', 'Stream', 'Brook', 'Creek', 'River', 'Delta', 'Estuary', 'Lagoon',
-  'Marsh', 'Swamp', 'Bog', 'Fen', 'Mire', 'Quagmire', 'Slough', 'Morass', 'Tundra', 'Steppe'
-];
-
-// 사용된 닉네임 추적
-let usedNicknames: Set<string> = new Set();
+// AI 선수 카운터
+let aiPlayerCounter = 0;
 
 // AI 팀 이름 목록 (32팀)
 const AI_TEAM_NAMES = [
@@ -441,26 +401,15 @@ export class LPOLeagueService {
     }
   }
 
-  // 랜덤 선수 이름 생성 (고유 닉네임 사용)
+  // AI 선수 이름 생성
   static generatePlayerName(): string {
-    // 사용 가능한 닉네임 찾기
-    const availableNicknames = PRO_PLAYER_NICKNAMES.filter(n => !usedNicknames.has(n));
-
-    if (availableNicknames.length === 0) {
-      // 모든 닉네임이 사용된 경우 숫자 추가
-      const randomNick = PRO_PLAYER_NICKNAMES[Math.floor(Math.random() * PRO_PLAYER_NICKNAMES.length)];
-      return `${randomNick}${Math.floor(Math.random() * 100)}`;
-    }
-
-    const nickname = availableNicknames[Math.floor(Math.random() * availableNicknames.length)];
-    usedNicknames.add(nickname);
-
-    return nickname;
+    aiPlayerCounter++;
+    return `AI_Player_${aiPlayerCounter}`;
   }
 
-  // 사용된 닉네임 초기화
-  static resetUsedNicknames() {
-    usedNicknames = new Set();
+  // AI 선수 카운터 초기화
+  static resetPlayerCounter() {
+    aiPlayerCounter = 0;
   }
 
   // 플레이어 팀이 AI 팀을 대체

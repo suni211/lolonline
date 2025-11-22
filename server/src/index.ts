@@ -20,7 +20,9 @@ import sponsorRoutes from './routes/sponsors.js';
 import eventRoutes from './routes/events.js';
 import adminRoutes from './routes/admin.js';
 import tacticsRoutes from './routes/tactics.js';
+import packsRoutes from './routes/packs.js';
 import { initializeDatabase } from './database/init.js';
+import { ProPlayerService } from './services/proPlayerService.js';
 import { initializeSeasonSystem } from './services/seasonService.js';
 import { initializeMatchSimulation } from './services/matchSimulationService.js';
 import { initializeInjurySystem } from './services/injuryService.js';
@@ -62,6 +64,7 @@ app.use('/api/sponsors', sponsorRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/tactics', tacticsRoutes);
+app.use('/api/packs', packsRoutes);
 
 // Socket.IO 연결
 io.on('connection', (socket) => {
@@ -95,6 +98,10 @@ async function startServer() {
     initializeConditionRecovery();
     initializeFacilityRevenue();
     initializeLeagueMatchService();
+
+    // 프로 선수 및 선수팩 초기화
+    await ProPlayerService.initializeProPlayers();
+    await ProPlayerService.initializePlayerPacks();
     
     httpServer.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT}`);
