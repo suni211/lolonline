@@ -23,9 +23,11 @@ interface LeagueInfo {
 }
 
 // 날짜 포맷 헬퍼 함수
-const formatDate = (dateString: string | null | undefined): string => {
+const formatDate = (dateString: string | number | null | undefined): string => {
   if (!dateString) return '-';
-  const normalized = dateString.replace(' ', 'T');
+  // 문자열이 아닌 경우 문자열로 변환
+  const strDate = typeof dateString === 'string' ? dateString : String(dateString);
+  const normalized = strDate.replace(' ', 'T');
   const date = new Date(normalized);
   if (isNaN(date.getTime())) return '-';
   const month = date.getMonth() + 1;
