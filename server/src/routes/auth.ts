@@ -25,8 +25,15 @@ router.post('/register', async (req, res) => {
     }
 
     // IP 주소 가져오기
-    const clientIp = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    const ipAddress = Array.isArray(clientIp) ? clientIp[0] : clientIp?.split(',')[0]?.trim();
+    let ipAddress = req.ip;
+    if (!ipAddress) {
+      const forwarded = req.headers['x-forwarded-for'];
+      if (forwarded) {
+        ipAddress = Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0]?.trim();
+      } else {
+        ipAddress = req.connection?.remoteAddress || 'unknown';
+      }
+    }
 
     // IP 중복 확인 (같은 IP에서 24시간 이내 회원가입 확인)
     const recentRegistrations = await pool.query(
@@ -185,7 +192,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
       }
     }
 
-    // 팀이 없으면 생성
+    // 팀이 없으면 user_id로 찾기
     if (!team) {
       const teams = await pool.query('SELECT * FROM teams WHERE user_id = ?', [req.userId]);
       if (teams.length > 0) {
@@ -193,12 +200,14 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
       }
     }
 
+    // 팀이 없으면 빈 객체 반환 (에러 아님)
     res.json({
       user: users[0],
-      team: team
+      team: team || null
     });
   } catch (error: any) {
     console.error('Get user error:', error);
+    console.error('Error details:', error.stack);
     res.status(500).json({ error: '사용자 정보를 가져오는데 실패했습니다: ' + (error.message || '알 수 없는 오류') });
   }
 });
