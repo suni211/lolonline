@@ -231,16 +231,16 @@ router.post('/:playerId/levelup', authenticateToken, async (req: AuthRequest, re
     );
 
     // 개인의지 스탯 자동 증가 (랜덤, work_ethic에 비례)
-    const player = await pool.query('SELECT * FROM players WHERE id = ?', [playerId]);
-    if (player.length > 0) {
-      const workEthic = player[0].work_ethic || 50;
+    const updatedPlayerData = await pool.query('SELECT * FROM players WHERE id = ?', [playerId]);
+    if (updatedPlayerData.length > 0) {
+      const workEthic = updatedPlayerData[0].work_ethic || 50;
       const willPower = workEthic / 300; // 0~1 사이 값
       
       // 개인의지 스탯 증가 확률 (work_ethic이 높을수록 증가 확률 높음)
       if (Math.random() < willPower * 0.3) {
         const statsToIncrease = ['leadership', 'adaptability', 'consistency'];
         const randomStat = statsToIncrease[Math.floor(Math.random() * statsToIncrease.length)];
-        const currentValue = player[0][randomStat] || 50;
+        const currentValue = updatedPlayerData[0][randomStat] || 50;
         if (currentValue < 300) {
           await pool.query(
             `UPDATE players SET ${randomStat} = LEAST(?, 300) WHERE id = ?`,
