@@ -171,8 +171,16 @@ export default function Cards() {
   };
 
   const contractCard = async (cardId: number, ovr: number) => {
-    const cost = Math.floor(ovr * 50000);
-    if (!confirm(`이 카드와 계약하시겠습니까?\n계약 비용: ${cost.toLocaleString()}원\n(1시즌 동안 유효)`)) {
+    // 계약된 카드 수 확인 - 5명 미만이면 무료
+    const contractedCount = cards.filter(c => c.is_contracted).length;
+    const isFree = contractedCount < 5;
+    const cost = isFree ? 0 : Math.floor(ovr * 50000);
+
+    const message = isFree
+      ? `이 카드와 무료로 계약하시겠습니까?\n(초반 5명 무료 계약 - ${contractedCount + 1}/5)\n(1시즌 동안 유효)`
+      : `이 카드와 계약하시겠습니까?\n계약 비용: ${cost.toLocaleString()}원\n(1시즌 동안 유효)`;
+
+    if (!confirm(message)) {
       return;
     }
 
@@ -185,6 +193,9 @@ export default function Cards() {
       alert(error.response?.data?.error || '계약 실패');
     }
   };
+
+  // 계약된 카드 수 (무료 계약 표시용)
+  const contractedCount = cards.filter(c => c.is_contracted).length;
 
   const getPositionColor = (position: string) => {
     switch (position) {
@@ -339,7 +350,10 @@ export default function Cards() {
                     className="contract-btn"
                     onClick={() => contractCard(card.id, card.ovr)}
                   >
-                    계약 ({(card.ovr * 50000).toLocaleString()}원)
+                    {contractedCount < 5
+                      ? `무료 계약 (${contractedCount + 1}/5)`
+                      : `계약 (${(card.ovr * 50000).toLocaleString()}원)`
+                    }
                   </button>
                 ) : (
                   <div className="card-actions">

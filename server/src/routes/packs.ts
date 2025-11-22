@@ -80,13 +80,23 @@ router.post('/cards/:cardId/contract', authenticateToken, async (req: AuthReques
       return res.status(400).json({ error: '이미 계약된 카드입니다' });
     }
 
-    // 계약 비용 (OVR에 따라 다름)
-    const contractCost = Math.floor(card.ovr * 50000); // OVR * 5만원
+    // 현재 계약된 카드 수 확인 (초반 5명 무료)
+    const contractedCards = await pool.query(
+      'SELECT COUNT(*) as count FROM player_cards WHERE team_id = ? AND is_contracted = true',
+      [teamId]
+    );
+    const contractedCount = contractedCards[0]?.count || 0;
+    const isFree = contractedCount < 5;
 
-    // 팀 골드 확인
-    const team = await pool.query('SELECT gold FROM teams WHERE id = ?', [teamId]);
-    if (team.length === 0 || team[0].gold < contractCost) {
-      return res.status(400).json({ error: `골드가 부족합니다 (${contractCost.toLocaleString()}원 필요)` });
+    // 계약 비용 (OVR에 따라 다름) - 초반 5명은 무료
+    const contractCost = isFree ? 0 : Math.floor(card.ovr * 50000); // OVR * 5만원
+
+    // 팀 골드 확인 (무료가 아닌 경우만)
+    if (!isFree) {
+      const team = await pool.query('SELECT gold FROM teams WHERE id = ?', [teamId]);
+      if (team.length === 0 || team[0].gold < contractCost) {
+        return res.status(400).json({ error: `골드가 부족합니다 (${contractCost.toLocaleString()}원 필요)` });
+      }
     }
 
     // 현재 시즌 확인
@@ -95,8 +105,10 @@ router.post('/cards/:cardId/contract', authenticateToken, async (req: AuthReques
     );
     const currentSeason = leagues.length > 0 ? leagues[0].season : 1;
 
-    // 골드 차감 및 계약 처리
-    await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [contractCost, teamId]);
+    // 골드 차감 (무료가 아닌 경우만) 및 계약 처리
+    if (!isFree) {
+      await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [contractCost, teamId]);
+    }
     await pool.query(
       'UPDATE player_cards SET is_contracted = true, contract_season = ?, contract_cost = ? WHERE id = ?',
       [currentSeason, contractCost, cardId]
