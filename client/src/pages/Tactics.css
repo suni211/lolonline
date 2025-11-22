@@ -8,6 +8,12 @@
   margin-bottom: 1.5rem;
 }
 
+.loading {
+  color: #888;
+  text-align: center;
+  padding: 3rem;
+}
+
 .message {
   padding: 1rem;
   border-radius: 8px;
@@ -37,341 +43,276 @@
   cursor: pointer;
 }
 
-.tactics-layout {
+.saving-indicator {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  background: var(--primary-blue);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  z-index: 1000;
+}
+
+.tactics-container {
   display: grid;
-  grid-template-columns: 300px 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
 }
 
-.tactics-list {
-  background: #111;
-  border: 1px solid #333;
-  border-radius: 12px;
-  padding: 1rem;
-}
-
-.list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #333;
-}
-
-.list-header h2 {
-  color: white;
-  font-size: 1.1rem;
-  margin: 0;
-}
-
-.list-header button {
-  padding: 0.5rem 1rem;
-  background: var(--primary-blue);
-  border: none;
-  border-radius: 6px;
-  color: white;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-
-.list-header button:hover {
-  background: var(--light-blue);
-}
-
-.empty {
-  color: #666;
-  text-align: center;
-  padding: 2rem;
-}
-
-.tactic-item {
-  padding: 1rem;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-bottom: 0.5rem;
-  border: 1px solid transparent;
-}
-
-.tactic-item:hover {
-  background: rgba(59, 130, 246, 0.1);
-}
-
-.tactic-item.selected {
-  background: rgba(59, 130, 246, 0.2);
-  border-color: var(--primary-blue);
-}
-
-.tactic-item.active {
-  border-left: 3px solid #22c55e;
-}
-
-.tactic-name {
-  color: white;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.active-badge {
-  font-size: 0.7rem;
-  padding: 0.15rem 0.4rem;
-  background: #22c55e;
-  border-radius: 4px;
-  color: white;
-}
-
-.tactic-summary {
-  font-size: 0.8rem;
-  color: #888;
-  margin-top: 0.25rem;
-}
-
-.tactic-details {
+/* 팀 전술 섹션 */
+.team-tactics-section {
   background: #111;
   border: 1px solid #333;
   border-radius: 12px;
   padding: 1.5rem;
 }
 
-.no-selection {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 300px;
-  color: #666;
-}
-
-.detail-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.detail-header h2 {
+.team-tactics-section h2 {
   color: white;
-  margin: 0;
-}
-
-.detail-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.detail-actions button {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-
-.detail-actions button.primary {
-  background: var(--primary-blue);
-  color: white;
-}
-
-.detail-actions button.danger {
-  background: #ef4444;
-  color: white;
-}
-
-.tactic-description {
-  color: #888;
+  font-size: 1.2rem;
   margin-bottom: 1.5rem;
-}
-
-.phase-overview {
-  margin-bottom: 2rem;
-}
-
-.phase-overview h3 {
-  color: white;
-  font-size: 1rem;
-  margin-bottom: 1rem;
-}
-
-.phases {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.phase {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.phase-label {
-  font-size: 0.8rem;
-  color: #888;
-}
-
-.phase-value {
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-weight: 500;
-}
-
-.phase-value.aggressive {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-}
-
-.phase-value.passive {
-  background: rgba(59, 130, 246, 0.2);
-  color: #3b82f6;
-}
-
-.phase-value.balanced {
-  background: rgba(107, 114, 128, 0.2);
-  color: #9ca3af;
-}
-
-.phase-arrow {
-  color: #666;
-  font-size: 1.25rem;
-}
-
-.teamfight-style {
-  color: #888;
-}
-
-.teamfight-style strong {
-  color: white;
-  margin-left: 0.5rem;
-}
-
-.position-tactics h3 {
-  color: white;
-  font-size: 1rem;
-  margin-bottom: 1rem;
-}
-
-.position-tactics table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.position-tactics th,
-.position-tactics td {
-  padding: 0.75rem;
-  text-align: left;
+  padding-bottom: 1rem;
   border-bottom: 1px solid #333;
 }
 
-.position-tactics th {
-  color: #888;
-  font-weight: 500;
-  font-size: 0.85rem;
+.tactic-group {
+  margin-bottom: 1.5rem;
 }
 
-.position-tactics td {
+.tactic-group h3 {
+  color: white;
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+
+.tactic-desc {
+  color: #666;
+  font-size: 0.8rem;
+  margin-bottom: 0.75rem;
+}
+
+.button-group {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.button-group button {
+  padding: 0.5rem 1rem;
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.button-group button:hover {
+  background: #333;
+  border-color: #555;
   color: white;
 }
 
-.position-tactics select {
+.button-group button.active {
+  background: var(--primary-blue);
+  border-color: var(--primary-blue);
+  color: white;
+}
+
+.button-group.small button {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+/* 공격 성향 슬라이더 */
+.aggression-slider {
+  display: flex;
+  gap: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #444;
+}
+
+.aggression-btn {
+  flex: 1;
+  padding: 0.6rem 0.5rem;
+  background: #222;
+  border: none;
+  border-right: 1px solid #333;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.aggression-btn:last-child {
+  border-right: none;
+}
+
+.aggression-btn:hover {
+  background: #333;
+}
+
+.aggression-btn.active {
+  color: white;
+  font-weight: 500;
+}
+
+.aggression-btn.active.very-aggressive {
+  background: #dc2626;
+}
+
+.aggression-btn.active.aggressive {
+  background: #ea580c;
+}
+
+.aggression-btn.active.normal {
+  background: #ca8a04;
+}
+
+.aggression-btn.active.defensive {
+  background: #2563eb;
+}
+
+.aggression-btn.active.very-defensive {
+  background: #1d4ed8;
+}
+
+/* 포지션별 전술 섹션 */
+.position-tactics-section {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.position-tactics-section h2 {
+  color: white;
+  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #333;
+}
+
+.position-tactic-card {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.position-tactic-card:last-child {
+  margin-bottom: 0;
+}
+
+.position-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.position-title.top {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.position-title.jungle {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+}
+
+.position-title.mid {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.position-title.adc {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.position-title.support {
+  background: rgba(168, 85, 247, 0.2);
+  color: #a78bfa;
+}
+
+.position-settings {
+  margin-top: 0.5rem;
+}
+
+.setting-group {
+  margin-bottom: 0.75rem;
+}
+
+.setting-group:last-child {
+  margin-bottom: 0;
+}
+
+.setting-group label {
+  display: block;
+  color: #888;
+  font-size: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.setting-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.setting-group select {
   width: 100%;
   padding: 0.5rem;
   background: #222;
   border: 1px solid #444;
   border-radius: 6px;
   color: white;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
-.position-tactics select:focus {
+.setting-group select:focus {
   border-color: var(--primary-blue);
   outline: none;
 }
 
-/* Create Form */
-.create-form h2 {
-  color: white;
-  margin-bottom: 1.5rem;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: block;
-  color: #888;
-  font-size: 0.85rem;
-  margin-bottom: 0.5rem;
-}
-
-.form-group input,
-.form-group textarea,
-.form-group select {
-  width: 100%;
-  padding: 0.75rem;
-  background: #222;
-  border: 1px solid #444;
-  border-radius: 6px;
-  color: white;
-  font-size: 0.9rem;
-}
-
-.form-group textarea {
-  min-height: 80px;
-  resize: vertical;
-}
-
-.form-group input:focus,
-.form-group textarea:focus,
-.form-group select:focus {
-  border-color: var(--primary-blue);
-  outline: none;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-}
-
-.form-actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1.5rem;
-}
-
-.form-actions button {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-
-.form-actions button.primary {
-  background: var(--primary-blue);
-  color: white;
-}
-
-.form-actions button.secondary {
-  background: #444;
-  color: white;
+@media (max-width: 1024px) {
+  .tactics-container {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
-  .tactics-layout {
-    grid-template-columns: 1fr;
+  .button-group {
+    flex-direction: column;
   }
 
-  .form-row {
-    grid-template-columns: 1fr;
+  .button-group button {
+    width: 100%;
   }
 
-  .phases {
-    flex-wrap: wrap;
+  .aggression-slider {
+    flex-direction: column;
+  }
+
+  .aggression-btn {
+    border-right: none;
+    border-bottom: 1px solid #333;
+  }
+
+  .aggression-btn:last-child {
+    border-bottom: none;
+  }
+
+  .setting-row {
+    grid-template-columns: 1fr;
   }
 }

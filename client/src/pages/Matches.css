@@ -163,6 +163,76 @@
   border-radius: 4px;
 }
 
+/* 공격 성향 조절 */
+.aggression-control {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.aggression-control h4 {
+  color: white;
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+.aggression-buttons {
+  display: flex;
+  gap: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #444;
+}
+
+.aggression-control .aggression-btn {
+  flex: 1;
+  padding: 0.6rem 0.5rem;
+  background: #222;
+  border: none;
+  border-right: 1px solid #333;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.aggression-control .aggression-btn:last-child {
+  border-right: none;
+}
+
+.aggression-control .aggression-btn:hover {
+  background: #333;
+}
+
+.aggression-control .aggression-btn.active {
+  color: white;
+  font-weight: 500;
+}
+
+.aggression-control .aggression-btn.active.very-aggressive {
+  background: #dc2626;
+}
+
+.aggression-control .aggression-btn.active.aggressive {
+  background: #ea580c;
+}
+
+.aggression-control .aggression-btn.active.normal {
+  background: #ca8a04;
+}
+
+.aggression-control .aggression-btn.active.defensive {
+  background: #2563eb;
+}
+
+.aggression-control .aggression-btn.active.very-defensive {
+  background: #1d4ed8;
+}
+
 .match-events {
   margin-top: 1.5rem;
 }

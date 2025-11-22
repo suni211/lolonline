@@ -67,6 +67,16 @@ export default function Matches() {
   const [gameTime, setGameTime] = useState(0);
   const [filter, setFilter] = useState<'all' | 'scheduled' | 'live' | 'finished'>('all');
   const [showStats, setShowStats] = useState(false);
+  const [aggressionLevel, setAggressionLevel] = useState('NORMAL');
+  const [isMyMatch, setIsMyMatch] = useState(false);
+
+  const aggressionLabels: Record<string, string> = {
+    VERY_AGGRESSIVE: '매우 공격적',
+    AGGRESSIVE: '공격적',
+    NORMAL: '보통',
+    DEFENSIVE: '수비적',
+    VERY_DEFENSIVE: '매우 수비적'
+  };
 
   useEffect(() => {
     fetchMatches();
@@ -143,8 +153,36 @@ export default function Matches() {
       setMatchStats(response.data.stats || []);
       setGameTime(0);
       setShowStats(response.data.match.status === 'FINISHED');
+
+      // 내 팀 경기인지 확인 및 전술 로드
+      try {
+        const tacticsRes = await axios.get('/api/tactics');
+        if (tacticsRes.data.teamTactics) {
+          setAggressionLevel(tacticsRes.data.teamTactics.aggression_level || 'NORMAL');
+          // 경기에 내 팀이 참여하는지 확인
+          const myTeamId = tacticsRes.data.teamTactics.team_id;
+          const match = response.data.match;
+          setIsMyMatch(match.home_team_id === myTeamId || match.away_team_id === myTeamId);
+        }
+      } catch {
+        setIsMyMatch(false);
+      }
     } catch (error) {
       console.error('Failed to fetch match details:', error);
+    }
+  };
+
+  const changeAggression = async (level: string) => {
+    if (!selectedMatch || selectedMatch.status !== 'LIVE') return;
+
+    try {
+      await axios.post(`/api/tactics/match/${selectedMatch.id}/aggression`, {
+        aggression_level: level,
+        game_time: gameTime
+      });
+      setAggressionLevel(level);
+    } catch (error) {
+      console.error('Failed to change aggression:', error);
     }
   };
 
@@ -243,6 +281,23 @@ export default function Matches() {
             {selectedMatch.status === 'LIVE' && (
               <div className="game-time">
                 경기 시간: {formatTime(gameTime)}
+              </div>
+            )}
+
+            {selectedMatch.status === 'LIVE' && isMyMatch && (
+              <div className="aggression-control">
+                <h4>공격 성향 조절</h4>
+                <div className="aggression-buttons">
+                  {Object.entries(aggressionLabels).map(([value, label]) => (
+                    <button
+                      key={value}
+                      className={`aggression-btn ${aggressionLevel === value ? 'active' : ''} ${value.toLowerCase().replace('_', '-')}`}
+                      onClick={() => changeAggression(value)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 

@@ -358,14 +358,36 @@ async function updatePlayerStats(matchId: number, gameTime: number) {
 }
 
 async function createRandomEvent(match: any, gameTime: number) {
-  const eventTypes = ['KILL', 'ASSIST', 'TOWER', 'DRAGON', 'BARON', 'TEAMFIGHT'];
+  // 팀 전술 조회
+  const homeTactics = await getTeamTactics(match.home_team_id);
+  const awayTactics = await getTeamTactics(match.away_team_id);
+
+  // 전술에 따른 이벤트 타입 가중치
+  let eventTypes = ['KILL', 'ASSIST', 'TOWER', 'DRAGON', 'BARON', 'TEAMFIGHT'];
+
+  // 우선순위 오브젝트에 따른 가중치 조정
+  const objectiveWeights: Record<string, string[]> = {
+    'DRAGON': ['DRAGON', 'DRAGON'],
+    'BARON': ['BARON', 'BARON'],
+    'TOWER': ['TOWER', 'TOWER'],
+    'TEAMFIGHT': ['TEAMFIGHT', 'KILL', 'KILL']
+  };
+
+  // 홈팀과 어웨이팀 전술에 따라 이벤트 타입 추가
+  if (homeTactics.priority_objective && objectiveWeights[homeTactics.priority_objective]) {
+    eventTypes = eventTypes.concat(objectiveWeights[homeTactics.priority_objective]);
+  }
+  if (awayTactics.priority_objective && objectiveWeights[awayTactics.priority_objective]) {
+    eventTypes = eventTypes.concat(objectiveWeights[awayTactics.priority_objective]);
+  }
+
   const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-  
+
   const descriptions = matchEvents[Math.floor(Math.random() * matchEvents.length)];
 
-  // 팀별 오버롤 계산
-  const homeTeamOverall = await calculateTeamOverall(match.home_team_id);
-  const awayTeamOverall = await calculateTeamOverall(match.away_team_id);
+  // 팀별 오버롤 계산 (전술 보너스 포함)
+  const homeTeamOverall = await calculateTeamOverall(match.home_team_id, gameTime);
+  const awayTeamOverall = await calculateTeamOverall(match.away_team_id, gameTime);
 
   // 오버롤에 따른 이벤트 결과 결정
   const homeWinChance = homeTeamOverall / (homeTeamOverall + awayTeamOverall);
@@ -441,13 +463,99 @@ async function createRandomEvent(match: any, gameTime: number) {
   };
 }
 
-async function calculateTeamOverall(teamId: number): Promise<number> {
+// 팀 전술 조회
+async function getTeamTactics(teamId: number) {
+  const tactics = await pool.query(
+    'SELECT * FROM team_tactics WHERE team_id = ?',
+    [teamId]
+  );
+
+  if (tactics.length === 0) {
+    return {
+      teamfight_style: 'TACTICAL',
+      split_formation: '0-5-0',
+      aggression_level: 'NORMAL',
+      priority_objective: 'DRAGON',
+      early_game_strategy: 'STANDARD'
+    };
+  }
+
+  return tactics[0];
+}
+
+// 포지션별 전술 조회
+async function getPositionTactics(teamId: number) {
+  const tactics = await pool.query(
+    'SELECT * FROM position_tactics WHERE team_id = ?',
+    [teamId]
+  );
+  return tactics;
+}
+
+// 전술 기반 보너스 계산
+function getTacticsBonus(tactics: any, gameTime: number): number {
+  let bonus = 1.0;
+
+  // 공격 성향 보너스
+  switch (tactics.aggression_level) {
+    case 'VERY_AGGRESSIVE':
+      bonus += 0.15; // 높은 공격력, 높은 리스크
+      break;
+    case 'AGGRESSIVE':
+      bonus += 0.08;
+      break;
+    case 'NORMAL':
+      bonus += 0.0;
+      break;
+    case 'DEFENSIVE':
+      bonus -= 0.05; // 낮은 공격력, 낮은 리스크
+      break;
+    case 'VERY_DEFENSIVE':
+      bonus -= 0.10;
+      break;
+  }
+
+  // 초반 전략 보너스 (10분 이전)
+  if (gameTime < 600) {
+    switch (tactics.early_game_strategy) {
+      case 'AGGRESSIVE':
+        bonus += 0.10;
+        break;
+      case 'SCALING':
+        bonus -= 0.05; // 초반 약세
+        break;
+    }
+  } else if (gameTime >= 1200) {
+    // 후반 보너스
+    if (tactics.early_game_strategy === 'SCALING') {
+      bonus += 0.15; // 스케일링 팀은 후반에 강함
+    }
+  }
+
+  // 한타 스타일 보너스
+  switch (tactics.teamfight_style) {
+    case 'BURST':
+      bonus += 0.05; // 한타 시 폭발력
+      break;
+    case 'ORGANIC':
+      bonus += 0.03; // 유동적 대응
+      break;
+  }
+
+  return bonus;
+}
+
+async function calculateTeamOverall(teamId: number, gameTime: number = 0): Promise<number> {
   const players = await pool.query(
     `SELECT p.* FROM players p
      INNER JOIN player_ownership po ON p.id = po.player_id
      WHERE po.team_id = ? AND po.is_starter = true AND p.injury_status = 'NONE'`,
     [teamId]
   );
+
+  // 전술 조회
+  const tactics = await getTeamTactics(teamId);
+  const tacticsBonus = getTacticsBonus(tactics, gameTime);
 
   let totalOverall = 0;
   for (const player of players) {
@@ -459,7 +567,8 @@ async function calculateTeamOverall(teamId: number): Promise<number> {
     totalOverall += adjustedOverall * injuryPenalty;
   }
 
-  return totalOverall;
+  // 전술 보너스 적용
+  return totalOverall * tacticsBonus;
 }
 
 async function finishMatch(match: any, matchData: any, io: Server) {

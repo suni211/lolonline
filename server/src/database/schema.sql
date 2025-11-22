@@ -572,3 +572,55 @@ CREATE TABLE IF NOT EXISTS transfer_market (
     INDEX idx_listed_at (listed_at)
 );
 
+-- 팀 전술 테이블
+CREATE TABLE IF NOT EXISTS team_tactics (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    team_id INT NOT NULL UNIQUE,
+    -- 한타 스타일
+    teamfight_style ENUM('SAFE', 'BURST', 'ORGANIC', 'TACTICAL') DEFAULT 'TACTICAL',
+    -- 스플릿 포메이션
+    split_formation ENUM('1-3-1', '1-4-0', '0-5-0') DEFAULT '0-5-0',
+    -- 공격성향 (경기 중 조절 가능)
+    aggression_level ENUM('VERY_AGGRESSIVE', 'AGGRESSIVE', 'NORMAL', 'DEFENSIVE', 'VERY_DEFENSIVE') DEFAULT 'NORMAL',
+    -- 우선순위 오브젝트
+    priority_objective ENUM('DRAGON', 'BARON', 'TOWER', 'TEAMFIGHT') DEFAULT 'DRAGON',
+    -- 초반 전략
+    early_game_strategy ENUM('AGGRESSIVE', 'STANDARD', 'SCALING') DEFAULT 'STANDARD',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+);
+
+-- 포지션별 전술 테이블
+CREATE TABLE IF NOT EXISTS position_tactics (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    team_id INT NOT NULL,
+    position ENUM('TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT') NOT NULL,
+    -- 탑 전술: SPLITPUSH(스플릿), TEAMFIGHT(한타), TANK(탱킹)
+    -- 정글 전술: GANK(갱킹), FARM(파밍), INVADE(인베)
+    -- 미드 전술: ROAM(로밍), LANE_DOMINANCE(라인주도), FARM(파밍)
+    -- 원딜 전술: AGGRESSIVE(공격적), SAFE(안전), UTILITY(유틸)
+    -- 서폿 전술: ENGAGE(이니시), PEEL(필), ROAM(로밍)
+    playstyle VARCHAR(50) NOT NULL,
+    -- 추가 설정
+    risk_level ENUM('HIGH', 'MEDIUM', 'LOW') DEFAULT 'MEDIUM',
+    priority_target ENUM('CARRY', 'TANK', 'SUPPORT', 'NEAREST') DEFAULT 'NEAREST',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_team_position (team_id, position)
+);
+
+-- 경기 중 전술 변경 기록
+CREATE TABLE IF NOT EXISTS match_tactic_changes (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    match_id INT NOT NULL,
+    team_id INT NOT NULL,
+    game_time INT NOT NULL,
+    change_type ENUM('AGGRESSION', 'FORMATION', 'OBJECTIVE') NOT NULL,
+    old_value VARCHAR(50),
+    new_value VARCHAR(50),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    INDEX idx_match_team (match_id, team_id)
+);
+

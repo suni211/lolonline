@@ -2,65 +2,86 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import './Tactics.css';
 
-interface Tactic {
+interface TeamTactics {
   id: number;
-  name: string;
-  description: string;
-  early_game: string;
-  mid_game: string;
-  late_game: string;
+  team_id: number;
   teamfight_style: string;
-  is_active: boolean;
+  split_formation: string;
+  aggression_level: string;
+  priority_objective: string;
+  early_game_strategy: string;
 }
 
 interface PositionTactic {
+  id: number;
+  team_id: number;
   position: string;
   playstyle: string;
-  priority: string;
+  risk_level: string;
+  priority_target: string;
 }
 
 export default function Tactics() {
-  const [tactics, setTactics] = useState<Tactic[]>([]);
-  const [selectedTactic, setSelectedTactic] = useState<Tactic | null>(null);
+  const [teamTactics, setTeamTactics] = useState<TeamTactics | null>(null);
   const [positionTactics, setPositionTactics] = useState<PositionTactic[]>([]);
-  const [loading, setLoading] = useState(false);
-  void loading; // 로딩 상태 표시에 사용 예정
+  const [playstyleOptions, setPlaystyleOptions] = useState<Record<string, string[]>>({});
+  const [playstyleNames, setPlaystyleNames] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
-  const [isCreating, setIsCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const [newTactic, setNewTactic] = useState({
-    name: '',
-    description: '',
-    early_game: 'balanced',
-    mid_game: 'balanced',
-    late_game: 'balanced',
-    teamfight_style: 'engage'
-  });
+  // 한글 라벨
+  const labels = {
+    teamfight_style: {
+      SAFE: '사리기',
+      BURST: '버스트',
+      ORGANIC: '유기적',
+      TACTICAL: '전술대로'
+    },
+    split_formation: {
+      '1-3-1': '1-3-1',
+      '1-4-0': '1-4-0',
+      '0-5-0': '0-5-0 (뭉쳐서)'
+    },
+    aggression_level: {
+      VERY_AGGRESSIVE: '매우 공격적',
+      AGGRESSIVE: '공격적',
+      NORMAL: '보통',
+      DEFENSIVE: '수비적',
+      VERY_DEFENSIVE: '매우 수비적'
+    },
+    priority_objective: {
+      DRAGON: '드래곤',
+      BARON: '바론',
+      TOWER: '타워',
+      TEAMFIGHT: '한타'
+    },
+    early_game_strategy: {
+      AGGRESSIVE: '공격적',
+      STANDARD: '표준',
+      SCALING: '스케일링'
+    },
+    risk_level: {
+      HIGH: '높음',
+      MEDIUM: '보통',
+      LOW: '낮음'
+    },
+    priority_target: {
+      CARRY: '캐리',
+      TANK: '탱커',
+      SUPPORT: '서포터',
+      NEAREST: '가까운 적'
+    }
+  };
 
   const positions = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
-  const playstyles = [
-    { value: 'aggressive', label: '공격적' },
-    { value: 'passive', label: '수비적' },
-    { value: 'roaming', label: '로밍' },
-    { value: 'farming', label: '파밍' }
-  ];
-  const priorities = [
-    { value: 'carry', label: '캐리' },
-    { value: 'support', label: '서포트' },
-    { value: 'tank', label: '탱커' },
-    { value: 'utility', label: '유틸' }
-  ];
-  const gamePhases = [
-    { value: 'aggressive', label: '공격적' },
-    { value: 'passive', label: '수비적' },
-    { value: 'balanced', label: '균형' }
-  ];
-  const teamfightStyles = [
-    { value: 'engage', label: '돌격' },
-    { value: 'disengage', label: '회피' },
-    { value: 'poke', label: '견제' },
-    { value: 'protect', label: '보호' }
-  ];
+  const positionNames: Record<string, string> = {
+    TOP: '탑',
+    JUNGLE: '정글',
+    MID: '미드',
+    ADC: '원딜',
+    SUPPORT: '서폿'
+  };
 
   useEffect(() => {
     fetchTactics();
@@ -70,98 +91,67 @@ export default function Tactics() {
     try {
       setLoading(true);
       const res = await axios.get('/api/tactics');
-      setTactics(res.data);
+      setTeamTactics(res.data.teamTactics);
+      setPositionTactics(res.data.positionTactics);
+      setPlaystyleOptions(res.data.playstyleOptions);
+      setPlaystyleNames(res.data.playstyleNames);
     } catch (error) {
       console.error('Failed to fetch tactics:', error);
+      setMessage('전술을 불러오는데 실패했습니다');
     } finally {
       setLoading(false);
     }
   };
 
-  const selectTactic = async (tactic: Tactic) => {
-    setSelectedTactic(tactic);
-    try {
-      const res = await axios.get(`/api/tactics/${tactic.id}/positions`);
-      setPositionTactics(res.data);
-    } catch (error) {
-      // 기본값 설정
-      setPositionTactics(positions.map(pos => ({
-        position: pos,
-        playstyle: 'balanced',
-        priority: 'utility'
-      })));
-    }
-  };
+  const updateTeamTactics = async (field: string, value: string) => {
+    if (!teamTactics) return;
 
-  const createTactic = async () => {
-    if (!newTactic.name) {
-      setMessage('전술 이름을 입력하세요');
-      return;
-    }
+    setTeamTactics({ ...teamTactics, [field]: value });
 
     try {
-      await axios.post('/api/tactics', newTactic);
-      setMessage('전술이 생성되었습니다');
-      setIsCreating(false);
-      setNewTactic({
-        name: '',
-        description: '',
-        early_game: 'balanced',
-        mid_game: 'balanced',
-        late_game: 'balanced',
-        teamfight_style: 'engage'
-      });
-      fetchTactics();
+      setSaving(true);
+      await axios.put('/api/tactics/team', { [field]: value });
+      setMessage('팀 전술이 저장되었습니다');
+      setTimeout(() => setMessage(''), 2000);
     } catch (error: any) {
-      setMessage(error.response?.data?.error || '전술 생성 실패');
+      setMessage(error.response?.data?.error || '저장 실패');
+      fetchTactics(); // 롤백
+    } finally {
+      setSaving(false);
     }
   };
 
   const updatePositionTactic = async (position: string, field: string, value: string) => {
-    if (!selectedTactic) return;
-
     const updated = positionTactics.map(pt =>
       pt.position === position ? { ...pt, [field]: value } : pt
     );
     setPositionTactics(updated);
 
     try {
-      await axios.put(`/api/tactics/${selectedTactic.id}/positions`, {
-        position,
-        [field]: value
-      });
-    } catch (error) {
-      console.error('Failed to update position tactic:', error);
+      setSaving(true);
+      await axios.put(`/api/tactics/position/${position}`, { [field]: value });
+      setMessage(`${positionNames[position]} 전술이 저장되었습니다`);
+      setTimeout(() => setMessage(''), 2000);
+    } catch (error: any) {
+      setMessage(error.response?.data?.error || '저장 실패');
+      fetchTactics(); // 롤백
+    } finally {
+      setSaving(false);
     }
   };
 
-  const activateTactic = async (tacticId: number) => {
-    try {
-      await axios.post(`/api/tactics/${tacticId}/activate`);
-      setMessage('전술이 활성화되었습니다');
-      fetchTactics();
-    } catch (error: any) {
-      setMessage(error.response?.data?.error || '전술 활성화 실패');
-    }
-  };
-
-  const deleteTactic = async (tacticId: number) => {
-    if (!confirm('이 전술을 삭제하시겠습니까?')) return;
-    try {
-      await axios.delete(`/api/tactics/${tacticId}`);
-      setMessage('전술이 삭제되었습니다');
-      if (selectedTactic?.id === tacticId) {
-        setSelectedTactic(null);
-      }
-      fetchTactics();
-    } catch (error: any) {
-      setMessage(error.response?.data?.error || '전술 삭제 실패');
-    }
-  };
+  if (loading) {
+    return (
+      <div className="tactics-page">
+        <h1>전술 설정</h1>
+        <div className="loading">로딩 중...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="tactics-page">
-      <h1>전략/전술 설정</h1>
+      <h1>전술 설정</h1>
 
       {message && (
         <div className={`message ${message.includes('실패') ? 'error' : 'success'}`}>
@@ -170,211 +160,154 @@ export default function Tactics() {
         </div>
       )}
 
-      <div className="tactics-layout">
-        <div className="tactics-list">
-          <div className="list-header">
-            <h2>내 전술</h2>
-            <button onClick={() => setIsCreating(true)}>+ 새 전술</button>
+      {saving && <div className="saving-indicator">저장 중...</div>}
+
+      <div className="tactics-container">
+        {/* 팀 전술 섹션 */}
+        <section className="team-tactics-section">
+          <h2>팀 전술</h2>
+
+          <div className="tactic-group">
+            <h3>한타 스타일</h3>
+            <p className="tactic-desc">팀 싸움 시 전체적인 접근 방식</p>
+            <div className="button-group">
+              {Object.entries(labels.teamfight_style).map(([value, label]) => (
+                <button
+                  key={value}
+                  className={teamTactics?.teamfight_style === value ? 'active' : ''}
+                  onClick={() => updateTeamTactics('teamfight_style', value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {tactics.length === 0 ? (
-            <div className="empty">전술이 없습니다</div>
-          ) : (
-            tactics.map(tactic => (
-              <div
-                key={tactic.id}
-                className={`tactic-item ${selectedTactic?.id === tactic.id ? 'selected' : ''} ${tactic.is_active ? 'active' : ''}`}
-                onClick={() => selectTactic(tactic)}
-              >
-                <div className="tactic-name">
-                  {tactic.name}
-                  {tactic.is_active && <span className="active-badge">활성</span>}
-                </div>
-                <div className="tactic-summary">
-                  {tactic.early_game === 'aggressive' ? '공격' : tactic.early_game === 'passive' ? '수비' : '균형'} →{' '}
-                  {tactic.mid_game === 'aggressive' ? '공격' : tactic.mid_game === 'passive' ? '수비' : '균형'} →{' '}
-                  {tactic.late_game === 'aggressive' ? '공격' : tactic.late_game === 'passive' ? '수비' : '균형'}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        <div className="tactic-details">
-          {isCreating ? (
-            <div className="create-form">
-              <h2>새 전술 만들기</h2>
-              <div className="form-group">
-                <label>전술 이름</label>
-                <input
-                  type="text"
-                  value={newTactic.name}
-                  onChange={(e) => setNewTactic({ ...newTactic, name: e.target.value })}
-                  placeholder="예: 초반 공격 전술"
-                />
-              </div>
-              <div className="form-group">
-                <label>설명</label>
-                <textarea
-                  value={newTactic.description}
-                  onChange={(e) => setNewTactic({ ...newTactic, description: e.target.value })}
-                  placeholder="전술에 대한 설명"
-                />
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>초반 (1-15분)</label>
-                  <select
-                    value={newTactic.early_game}
-                    onChange={(e) => setNewTactic({ ...newTactic, early_game: e.target.value })}
-                  >
-                    {gamePhases.map(p => (
-                      <option key={p.value} value={p.value}>{p.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>중반 (15-30분)</label>
-                  <select
-                    value={newTactic.mid_game}
-                    onChange={(e) => setNewTactic({ ...newTactic, mid_game: e.target.value })}
-                  >
-                    {gamePhases.map(p => (
-                      <option key={p.value} value={p.value}>{p.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>후반 (30분+)</label>
-                  <select
-                    value={newTactic.late_game}
-                    onChange={(e) => setNewTactic({ ...newTactic, late_game: e.target.value })}
-                  >
-                    {gamePhases.map(p => (
-                      <option key={p.value} value={p.value}>{p.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="form-group">
-                <label>한타 스타일</label>
-                <select
-                  value={newTactic.teamfight_style}
-                  onChange={(e) => setNewTactic({ ...newTactic, teamfight_style: e.target.value })}
+          <div className="tactic-group">
+            <h3>스플릿 포메이션</h3>
+            <p className="tactic-desc">맵 분할 운영 방식</p>
+            <div className="button-group">
+              {Object.entries(labels.split_formation).map(([value, label]) => (
+                <button
+                  key={value}
+                  className={teamTactics?.split_formation === value ? 'active' : ''}
+                  onClick={() => updateTeamTactics('split_formation', value)}
                 >
-                  {teamfightStyles.map(s => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-actions">
-                <button onClick={createTactic} className="primary">생성</button>
-                <button onClick={() => setIsCreating(false)} className="secondary">취소</button>
-              </div>
+                  {label}
+                </button>
+              ))}
             </div>
-          ) : selectedTactic ? (
-            <>
-              <div className="detail-header">
-                <h2>{selectedTactic.name}</h2>
-                <div className="detail-actions">
-                  {!selectedTactic.is_active && (
-                    <button onClick={() => activateTactic(selectedTactic.id)} className="primary">
-                      활성화
-                    </button>
-                  )}
-                  <button onClick={() => deleteTactic(selectedTactic.id)} className="danger">
-                    삭제
-                  </button>
-                </div>
-              </div>
+          </div>
 
-              {selectedTactic.description && (
-                <p className="tactic-description">{selectedTactic.description}</p>
-              )}
-
-              <div className="phase-overview">
-                <h3>게임 페이즈별 전략</h3>
-                <div className="phases">
-                  <div className="phase">
-                    <span className="phase-label">초반</span>
-                    <span className={`phase-value ${selectedTactic.early_game}`}>
-                      {gamePhases.find(p => p.value === selectedTactic.early_game)?.label}
-                    </span>
-                  </div>
-                  <div className="phase-arrow">→</div>
-                  <div className="phase">
-                    <span className="phase-label">중반</span>
-                    <span className={`phase-value ${selectedTactic.mid_game}`}>
-                      {gamePhases.find(p => p.value === selectedTactic.mid_game)?.label}
-                    </span>
-                  </div>
-                  <div className="phase-arrow">→</div>
-                  <div className="phase">
-                    <span className="phase-label">후반</span>
-                    <span className={`phase-value ${selectedTactic.late_game}`}>
-                      {gamePhases.find(p => p.value === selectedTactic.late_game)?.label}
-                    </span>
-                  </div>
-                </div>
-                <div className="teamfight-style">
-                  <span>한타 스타일:</span>
-                  <strong>{teamfightStyles.find(s => s.value === selectedTactic.teamfight_style)?.label}</strong>
-                </div>
-              </div>
-
-              <div className="position-tactics">
-                <h3>포지션별 전술</h3>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>포지션</th>
-                      <th>플레이스타일</th>
-                      <th>역할</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {positions.map(pos => {
-                      const pt = positionTactics.find(p => p.position === pos) || {
-                        position: pos,
-                        playstyle: 'balanced',
-                        priority: 'utility'
-                      };
-                      return (
-                        <tr key={pos}>
-                          <td>{pos}</td>
-                          <td>
-                            <select
-                              value={pt.playstyle}
-                              onChange={(e) => updatePositionTactic(pos, 'playstyle', e.target.value)}
-                            >
-                              {playstyles.map(p => (
-                                <option key={p.value} value={p.value}>{p.label}</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td>
-                            <select
-                              value={pt.priority}
-                              onChange={(e) => updatePositionTactic(pos, 'priority', e.target.value)}
-                            >
-                              {priorities.map(p => (
-                                <option key={p.value} value={p.value}>{p.label}</option>
-                              ))}
-                            </select>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          ) : (
-            <div className="no-selection">
-              <p>왼쪽에서 전술을 선택하거나 새 전술을 만드세요</p>
+          <div className="tactic-group">
+            <h3>공격 성향</h3>
+            <p className="tactic-desc">경기 중 실시간 조절 가능</p>
+            <div className="aggression-slider">
+              {Object.entries(labels.aggression_level).map(([value, label]) => (
+                <button
+                  key={value}
+                  className={`aggression-btn ${teamTactics?.aggression_level === value ? 'active' : ''} ${value.toLowerCase().replace('_', '-')}`}
+                  onClick={() => updateTeamTactics('aggression_level', value)}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-          )}
-        </div>
+          </div>
+
+          <div className="tactic-group">
+            <h3>우선순위 오브젝트</h3>
+            <p className="tactic-desc">우선적으로 노리는 목표</p>
+            <div className="button-group">
+              {Object.entries(labels.priority_objective).map(([value, label]) => (
+                <button
+                  key={value}
+                  className={teamTactics?.priority_objective === value ? 'active' : ''}
+                  onClick={() => updateTeamTactics('priority_objective', value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="tactic-group">
+            <h3>초반 전략</h3>
+            <p className="tactic-desc">게임 초반 운영 방침</p>
+            <div className="button-group">
+              {Object.entries(labels.early_game_strategy).map(([value, label]) => (
+                <button
+                  key={value}
+                  className={teamTactics?.early_game_strategy === value ? 'active' : ''}
+                  onClick={() => updateTeamTactics('early_game_strategy', value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 포지션별 전술 섹션 */}
+        <section className="position-tactics-section">
+          <h2>포지션별 전술</h2>
+
+          {positions.map(pos => {
+            const pt = positionTactics.find(p => p.position === pos);
+            const options = playstyleOptions[pos] || [];
+
+            return (
+              <div key={pos} className="position-tactic-card">
+                <h3 className={`position-title ${pos.toLowerCase()}`}>
+                  {positionNames[pos]}
+                </h3>
+
+                <div className="position-settings">
+                  <div className="setting-group">
+                    <label>플레이스타일</label>
+                    <div className="button-group small">
+                      {options.map(style => (
+                        <button
+                          key={style}
+                          className={pt?.playstyle === style ? 'active' : ''}
+                          onClick={() => updatePositionTactic(pos, 'playstyle', style)}
+                        >
+                          {playstyleNames[style] || style}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="setting-row">
+                    <div className="setting-group">
+                      <label>리스크</label>
+                      <select
+                        value={pt?.risk_level || 'MEDIUM'}
+                        onChange={(e) => updatePositionTactic(pos, 'risk_level', e.target.value)}
+                      >
+                        {Object.entries(labels.risk_level).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="setting-group">
+                      <label>우선 타겟</label>
+                      <select
+                        value={pt?.priority_target || 'NEAREST'}
+                        onChange={(e) => updatePositionTactic(pos, 'priority_target', e.target.value)}
+                      >
+                        {Object.entries(labels.priority_target).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </section>
       </div>
     </div>
   );
