@@ -65,7 +65,7 @@ io.on('connection', (socket) => {
 // Socket.IO를 전역으로 사용할 수 있도록 설정
 app.set('io', io);
 
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT || '5000', 10);
 
 // 데이터베이스 초기화 및 서버 시작
 async function startServer() {
