@@ -11,8 +11,8 @@ const router = express.Router();
 // 이미지 업로드 설정
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // client/public/players 폴더에 저장
-    const uploadPath = path.join(__dirname, '..', '..', '..', '..', 'client', 'public', 'players');
+    // client/dist/players 폴더에 저장
+    const uploadPath = path.join(__dirname, '..', '..', '..', 'client', 'dist', 'players');
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
@@ -607,7 +607,7 @@ router.delete('/players/:playerId/face', authenticateToken, adminMiddleware, asy
 
     if (players[0].face_image) {
       // 파일 삭제
-      const filePath = path.join(__dirname, '..', '..', '..', '..', 'client', 'public', players[0].face_image);
+      const filePath = path.join(__dirname, '..', '..', '..', 'client', 'dist', players[0].face_image);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }

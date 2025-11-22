@@ -11,7 +11,8 @@ const router = express.Router();
 // 로고 업로드 설정
 const logoStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '..', '..', '..', '..', 'client', 'public', 'logos');
+    // dist에서 실행되므로 상위로 3단계 올라가서 client/dist/logos로
+    const uploadPath = path.join(__dirname, '..', '..', '..', 'client', 'dist', 'logos');
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
@@ -218,7 +219,7 @@ router.post('/logo', authenticateToken, uploadLogo.single('logo'), async (req: A
     // 기존 로고 삭제
     const teams = await pool.query('SELECT logo_url FROM teams WHERE id = ?', [req.teamId]);
     if (teams.length > 0 && teams[0].logo_url) {
-      const oldPath = path.join(__dirname, '..', '..', '..', '..', 'client', 'public', teams[0].logo_url);
+      const oldPath = path.join(__dirname, '..', '..', '..', 'client', 'dist', teams[0].logo_url);
       if (fs.existsSync(oldPath)) {
         fs.unlinkSync(oldPath);
       }
@@ -248,7 +249,7 @@ router.delete('/logo', authenticateToken, async (req: AuthRequest, res) => {
 
     const teams = await pool.query('SELECT logo_url FROM teams WHERE id = ?', [req.teamId]);
     if (teams.length > 0 && teams[0].logo_url) {
-      const filePath = path.join(__dirname, '..', '..', '..', '..', 'client', 'public', teams[0].logo_url);
+      const filePath = path.join(__dirname, '..', '..', '..', 'client', 'dist', teams[0].logo_url);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
