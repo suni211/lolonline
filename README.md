@@ -166,6 +166,49 @@ npm run start:server  # 서버만
 npm run start:client  # 클라이언트만
 ```
 
+## 도메인 설정 (Cloudflare)
+
+### Nginx 리버스 프록시 설정
+
+1. Nginx 설치:
+```bash
+sudo apt update
+sudo apt install nginx
+```
+
+2. 설정 파일 복사:
+```bash
+sudo cp nginx.conf /etc/nginx/sites-available/berrple.com
+sudo ln -s /etc/nginx/sites-available/berrple.com /etc/nginx/sites-enabled/
+```
+
+3. Nginx 설정 테스트:
+```bash
+sudo nginx -t
+```
+
+4. Nginx 재시작:
+```bash
+sudo systemctl restart nginx
+sudo systemctl enable nginx
+```
+
+5. GCP 방화벽에서 80, 443 포트 열기:
+```bash
+gcloud compute firewall-rules create allow-http \
+    --allow tcp:80 \
+    --source-ranges 0.0.0.0/0
+
+gcloud compute firewall-rules create allow-https \
+    --allow tcp:443 \
+    --source-ranges 0.0.0.0/0
+```
+
+6. Cloudflare 설정:
+- DNS: A 레코드로 서버 IP (34.64.110.133) 추가
+- SSL/TLS: Full (strict) 또는 Flexible 모드
+- 프록시: 활성화 (주황색 구름)
+
 ## 데이터베이스 스키마
 
 데이터베이스 스키마는 `server/src/database/schema.sql`에 정의되어 있으며, 서버 시작 시 자동으로 생성됩니다.
