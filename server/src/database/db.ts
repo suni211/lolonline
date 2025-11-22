@@ -17,14 +17,47 @@ export async function getConnection() {
   return await pool.getConnection();
 }
 
+// BigInt를 Number로 변환하는 헬퍼 함수
+function convertBigIntToNumber(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  
+  if (typeof obj === 'bigint') {
+    return Number(obj);
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(convertBigIntToNumber);
+  }
+  
+  if (typeof obj === 'object') {
+    const converted: any = {};
+    for (const key in obj) {
+      converted[key] = convertBigIntToNumber(obj[key]);
+    }
+    return converted;
+  }
+  
+  return obj;
+}
+
 export async function query(sql: string, params?: any[]) {
   const conn = await getConnection();
   try {
-    return await conn.query(sql, params);
+    const result = await conn.query(sql, params);
+    return convertBigIntToNumber(result);
   } finally {
     conn.release();
   }
 }
+
+// pool.query를 래핑하여 BigInt 변환
+const originalQuery = pool.query.bind(pool);
+pool.query = async function(sql: string, params?: any[]) {
+  const result = await originalQuery(sql, params);
+  return convertBigIntToNumber(result);
+};
 
 export default pool;
 
