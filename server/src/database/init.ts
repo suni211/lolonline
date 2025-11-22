@@ -7,9 +7,21 @@ import { generateRegularSeasonMatches } from '../services/leagueService.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// 스키마 파일 경로 찾기 (빌드된 파일이 있으면 dist에서, 없으면 src에서 찾기)
+const getSchemaPath = () => {
+  const distPath = path.join(__dirname, 'schema.sql');
+  if (fs.existsSync(distPath)) {
+    return distPath;
+  }
+  // dist에 없으면 src에서 찾기
+  const srcPath = path.resolve(__dirname, '../../src/database/schema.sql');
+  return srcPath;
+};
+
 export async function initializeDatabase() {
   try {
-    const schemaPath = path.join(__dirname, 'schema.sql');
+    // 스키마 파일 경로 찾기 (dist 또는 src에서)
+    const schemaPath = getSchemaPath();
     const schema = fs.readFileSync(schemaPath, 'utf-8');
     
     // 스키마 실행
