@@ -1,5 +1,4 @@
-import pool from '../database/connection';
-import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import pool from '../database/db.js';
 
 interface Player {
   id: number;
@@ -85,10 +84,9 @@ export class EventService {
       return;
     }
 
-    const connection = await pool.getConnection();
     try {
       // 팀 선수 목록 조회
-      const [players] = await connection.query<RowDataPacket[]>(
+      const players = await pool.query(
         `SELECT id, name, personality, is_starter, overall, player_condition
          FROM players
          WHERE team_id = ? AND injury_status = 'NONE'`,
@@ -111,7 +109,7 @@ export class EventService {
       // 두 번째 선수 필요시 선택
       let player2: Player | null = null;
       if (template.requiresSecondPlayer && players.length > 1) {
-        const otherPlayers = players.filter(p => (p as Player).id !== player.id);
+        const otherPlayers = players.filter((p: Player) => p.id !== player.id);
         player2 = otherPlayers[Math.floor(Math.random() * otherPlayers.length)] as Player;
       }
 
@@ -124,17 +122,17 @@ export class EventService {
       }
 
       // 이벤트 저장
-      await connection.query<ResultSetHeader>(
+      await pool.query(
         `INSERT INTO team_events (team_id, event_type, player_id, player2_id, title, description, effect_type, effect_value)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [teamId, eventType, player.id, player2?.id || null, title, description, template.effectType, template.effectValue]
       );
 
       // 효과 적용
-      await this.applyEventEffect(connection, teamId, player.id, template.effectType, template.effectValue);
+      await this.applyEventEffect(teamId, player.id, template.effectType, template.effectValue);
 
-    } finally {
-      connection.release();
+    } catch (error) {
+      console.error('Failed to generate event:', error);
     }
   }
 
@@ -156,7 +154,6 @@ export class EventService {
 
   // 이벤트 효과 적용
   private static async applyEventEffect(
-    connection: any,
     teamId: number,
     playerId: number,
     effectType: string,
@@ -165,7 +162,7 @@ export class EventService {
     switch (effectType) {
       case 'MORALE':
         // 팀 전체 선수 컨디션에 영향
-        await connection.query(
+        await pool.query(
           `UPDATE players
            SET player_condition = LEAST(100, GREATEST(0, player_condition + ?))
            WHERE team_id = ?`,
@@ -175,7 +172,7 @@ export class EventService {
 
       case 'CONDITION':
         // 특정 선수 컨디션에 영향
-        await connection.query(
+        await pool.query(
           `UPDATE players
            SET player_condition = LEAST(100, GREATEST(0, player_condition + ?))
            WHERE id = ?`,
@@ -185,7 +182,7 @@ export class EventService {
 
       case 'GOLD':
         // 팀 골드에 영향
-        await connection.query(
+        await pool.query(
           `UPDATE teams SET gold = gold + ? WHERE id = ?`,
           [effectValue, teamId]
         );
@@ -193,7 +190,7 @@ export class EventService {
 
       case 'FAN':
         // 팀 팬 수에 영향
-        await connection.query(
+        await pool.query(
           `UPDATE teams SET fan_count = GREATEST(0, fan_count + ?) WHERE id = ?`,
           [effectValue, teamId]
         );
@@ -207,7 +204,7 @@ export class EventService {
 
   // 팀 이벤트 목록 조회
   static async getTeamEvents(teamId: number, limit: number = 20): Promise<any[]> {
-    const [events] = await pool.query<RowDataPacket[]>(
+    const events = await pool.query(
       `SELECT e.*,
               p1.name as player_name,
               p2.name as player2_name
@@ -224,11 +221,11 @@ export class EventService {
 
   // 읽지 않은 이벤트 수 조회
   static async getUnreadEventCount(teamId: number): Promise<number> {
-    const [result] = await pool.query<RowDataPacket[]>(
+    const result = await pool.query(
       `SELECT COUNT(*) as count FROM team_events WHERE team_id = ? AND is_read = FALSE`,
       [teamId]
     );
-    return result[0].count;
+    return result[0]?.count || 0;
   }
 
   // 이벤트 읽음 처리
