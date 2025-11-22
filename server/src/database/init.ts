@@ -45,6 +45,18 @@ export async function initializeDatabase() {
     // 추가 인덱스 생성 (중복 체크)
     await createIndexesIfNotExists();
     
+    // users 테이블에 registration_ip 컬럼 추가 (기존 테이블 업데이트)
+    try {
+      await pool.query('ALTER TABLE users ADD COLUMN registration_ip VARCHAR(45)');
+      await pool.query('ALTER TABLE users ADD INDEX idx_registration_ip (registration_ip, created_at)');
+      console.log('Added registration_ip column to users table');
+    } catch (error: any) {
+      // 컬럼이 이미 존재하는 경우 무시
+      if (error.code !== 'ER_DUP_FIELDNAME' && error.code !== 'ER_DUP_KEYNAME') {
+        console.error('Error adding registration_ip column:', error);
+      }
+    }
+    
     console.log('Database initialized successfully');
     
     // 초기 리그 생성

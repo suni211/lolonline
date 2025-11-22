@@ -6,8 +6,10 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     email VARCHAR(100) UNIQUE,
+    registration_ip VARCHAR(45),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    last_login DATETIME
+    last_login DATETIME,
+    INDEX idx_registration_ip (registration_ip, created_at)
 );
 
 -- 팀 테이블

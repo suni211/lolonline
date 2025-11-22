@@ -12,17 +12,42 @@ router.post('/register', async (req, res) => {
     const { username, password, email } = req.body;
 
     if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password required' });
+      return res.status(400).json({ error: '사용자명과 비밀번호가 필요합니다' });
     }
 
-    // 중복 확인
+    // 사용자명 유효성 검사
+    if (username.length < 3 || username.length > 20) {
+      return res.status(400).json({ error: '사용자명은 3자 이상 20자 이하여야 합니다' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: '비밀번호는 6자 이상이어야 합니다' });
+    }
+
+    // IP 주소 가져오기
+    const clientIp = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const ipAddress = Array.isArray(clientIp) ? clientIp[0] : clientIp?.split(',')[0]?.trim();
+
+    // IP 중복 확인 (같은 IP에서 24시간 이내 회원가입 확인)
+    const recentRegistrations = await pool.query(
+      `SELECT * FROM users 
+       WHERE registration_ip = ? 
+       AND created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
+      [ipAddress]
+    );
+
+    if (recentRegistrations.length > 0) {
+      return res.status(400).json({ error: '같은 IP에서 24시간 이내에 이미 회원가입하셨습니다' });
+    }
+
+    // 사용자명 중복 확인
     const existingUser = await pool.query(
       'SELECT * FROM users WHERE username = ?',
       [username]
     );
 
     if (existingUser.length > 0) {
-      return res.status(400).json({ error: 'Username already exists' });
+      return res.status(400).json({ error: '이미 사용 중인 사용자명입니다' });
     }
 
     // 비밀번호 해시
@@ -30,8 +55,8 @@ router.post('/register', async (req, res) => {
 
     // 유저 생성
     const result = await pool.query(
-      'INSERT INTO users (username, password_hash, email) VALUES (?, ?, ?)',
-      [username, passwordHash, email || null]
+      'INSERT INTO users (username, password_hash, email, registration_ip) VALUES (?, ?, ?, ?)',
+      [username, passwordHash, email || null, ipAddress]
     );
 
     const userId = result.insertId;
@@ -71,7 +96,11 @@ router.post('/register', async (req, res) => {
     res.json({ token, userId, teamId });
   } catch (error: any) {
     console.error('Registration error:', error);
-    res.status(500).json({ error: 'Registration failed' });
+    // 데이터베이스 에러 상세 정보
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: '이미 사용 중인 사용자명입니다' });
+    }
+    res.status(500).json({ error: '회원가입에 실패했습니다: ' + (error.message || '알 수 없는 오류') });
   }
 });
 
@@ -127,27 +156,50 @@ router.post('/login', async (req, res) => {
     res.json({ token, userId: user.id, teamId });
   } catch (error: any) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed' });
+    res.status(500).json({ error: '로그인에 실패했습니다: ' + (error.message || '알 수 없는 오류') });
   }
 });
 
 // 현재 유저 정보
 router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const users = await pool.query('SELECT id, username, email, created_at, last_login FROM users WHERE id = ?', [req.userId]);
-    const teams = await pool.query('SELECT * FROM teams WHERE id = ?', [req.teamId]);
+    if (!req.userId) {
+      return res.status(401).json({ error: '인증이 필요합니다' });
+    }
 
-    if (users.length === 0 || teams.length === 0) {
-      return res.status(404).json({ error: 'User or team not found' });
+    const users = await pool.query(
+      'SELECT id, username, email, created_at, last_login FROM users WHERE id = ?', 
+      [req.userId]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
+    }
+
+    // 팀 정보 가져오기 (teamId가 없을 수도 있음)
+    let team = null;
+    if (req.teamId) {
+      const teams = await pool.query('SELECT * FROM teams WHERE id = ?', [req.teamId]);
+      if (teams.length > 0) {
+        team = teams[0];
+      }
+    }
+
+    // 팀이 없으면 생성
+    if (!team) {
+      const teams = await pool.query('SELECT * FROM teams WHERE user_id = ?', [req.userId]);
+      if (teams.length > 0) {
+        team = teams[0];
+      }
     }
 
     res.json({
       user: users[0],
-      team: teams[0]
+      team: team
     });
   } catch (error: any) {
     console.error('Get user error:', error);
-    res.status(500).json({ error: 'Failed to get user info' });
+    res.status(500).json({ error: '사용자 정보를 가져오는데 실패했습니다: ' + (error.message || '알 수 없는 오류') });
   }
 });
 

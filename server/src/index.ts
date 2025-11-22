@@ -33,6 +33,9 @@ const io = new Server(httpServer, {
 app.use(cors());
 app.use(express.json());
 
+// IP 주소 추출을 위한 미들웨어
+app.set('trust proxy', true);
+
 // 라우트
 app.use('/api/auth', authRoutes);
 app.use('/api/teams', teamRoutes);

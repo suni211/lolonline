@@ -204,9 +204,22 @@ gcloud compute firewall-rules create allow-https \
     --source-ranges 0.0.0.0/0
 ```
 
-6. Cloudflare 설정:
+6. SSL 인증서 설정 (Let's Encrypt):
+```bash
+# Certbot 설치
+sudo apt update
+sudo apt install certbot python3-certbot-nginx -y
+
+# SSL 인증서 발급
+sudo certbot --nginx -d berrple.com -d www.berrple.com
+
+# 자동 갱신 테스트
+sudo certbot renew --dry-run
+```
+
+7. Cloudflare 설정:
 - DNS: A 레코드로 서버 IP (34.64.110.133) 추가
-- SSL/TLS: Full (strict) 또는 Flexible 모드
+- SSL/TLS: Full (strict) 모드 (서버에 SSL 인증서가 있으므로)
 - 프록시: 활성화 (주황색 구름)
 
 ## 데이터베이스 스키마
