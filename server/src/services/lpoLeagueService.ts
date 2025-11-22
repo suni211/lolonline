@@ -84,9 +84,9 @@ export class LPOLeagueService {
         `DELETE FROM league_participants WHERE team_id IN (SELECT id FROM teams WHERE is_ai = true)`
       );
 
-      // AI 팀의 경기 삭제 (league_matches 테이블)
+      // AI 팀의 경기 삭제
       await pool.query(
-        `DELETE FROM league_matches WHERE home_team_id IN (SELECT id FROM teams WHERE is_ai = true)
+        `DELETE FROM matches WHERE home_team_id IN (SELECT id FROM teams WHERE is_ai = true)
          OR away_team_id IN (SELECT id FROM teams WHERE is_ai = true)`
       );
 

@@ -39,7 +39,7 @@ router.get('/', async (req, res) => {
       params.push(match_type);
     }
 
-    query += ' ORDER BY m.scheduled_at DESC LIMIT 100';
+    query += ' ORDER BY m.scheduled_at ASC LIMIT 100';
 
     const matches = await pool.query(query, params);
 
