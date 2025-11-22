@@ -6,6 +6,7 @@ interface ContractNegotiationModalProps {
   playerId: number;
   playerName: string;
   playerOverall: number;
+  ownedCount?: number; // 다른 팀에 소속되어 있는지 확인 (0 = FA, >0 = 다른 팀 소속)
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -32,12 +33,15 @@ export default function ContractNegotiationModal({
   playerId,
   playerName,
   playerOverall,
+  ownedCount = 0,
   onClose,
   onSuccess
 }: ContractNegotiationModalProps) {
   const [annualSalary, setAnnualSalary] = useState<number>(playerOverall * 1000);
   const [contractYears, setContractYears] = useState<number>(2);
   const [signingBonus, setSigningBonus] = useState<number>(0);
+  const [transferFee, setTransferFee] = useState<number>(playerOverall * 5000);
+  const [requiresTransferFee, setRequiresTransferFee] = useState(ownedCount > 0);
   const [negotiation, setNegotiation] = useState<Negotiation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -73,6 +77,11 @@ export default function ContractNegotiationModal({
       return;
     }
 
+    if (requiresTransferFee && transferFee <= 0) {
+      setError('이적료를 입력해주세요');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -80,15 +89,29 @@ export default function ContractNegotiationModal({
       const response = await axios.post(`/api/contracts/${playerId}/propose`, {
         annual_salary: annualSalary,
         contract_years: contractYears,
-        signing_bonus: signingBonus
+        signing_bonus: signingBonus,
+        transfer_fee: transferFee || undefined
       });
 
+      if (response.data.success) {
+        // FA 선수 즉시 계약 성사
+        alert(response.data.message || '계약이 성사되었습니다!');
+        onSuccess();
+        onClose();
+        return;
+      }
+
+      setRequiresTransferFee(response.data.requires_transfer_fee || false);
       setNegotiation(null);
       setTimeout(() => {
         checkExistingNegotiation();
       }, 2000);
     } catch (error: any) {
-      setError(error.response?.data?.error || '제안 전송에 실패했습니다');
+      const errorMsg = error.response?.data?.error || '제안 전송에 실패했습니다';
+      setError(errorMsg);
+      if (error.response?.data?.requires_transfer_fee) {
+        setRequiresTransferFee(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -170,8 +193,9 @@ export default function ContractNegotiationModal({
     }
   };
 
-  const totalCost = annualSalary * contractYears + signingBonus;
+  const totalCost = annualSalary * contractYears + signingBonus + (requiresTransferFee ? transferFee : 0);
   const baseSalary = playerOverall * 1000;
+  const baseTransferFee = playerOverall * 5000;
 
   return (
     <div className="contract-negotiation-modal-overlay" onClick={onClose}>
@@ -234,11 +258,38 @@ export default function ContractNegotiationModal({
                   />
                 </div>
 
+                {requiresTransferFee && (
+                  <div className="form-group transfer-fee-group">
+                    <label>이적료 (골드) *필수</label>
+                    <input
+                      type="number"
+                      value={transferFee}
+                      onChange={(e) => setTransferFee(parseInt(e.target.value) || 0)}
+                      min={1}
+                      className="form-input"
+                      required
+                    />
+                    <div className="form-hint">
+                      기준 이적료: {baseTransferFee.toLocaleString()} 골드
+                      {transferFee < baseTransferFee * 0.8 && (
+                        <span className="warning"> (낮은 이적료입니다)</span>
+                      )}
+                      {transferFee > baseTransferFee * 1.2 && (
+                        <span className="success"> (매우 좋은 이적료입니다)</span>
+                      )}
+                    </div>
+                    <div className="transfer-fee-notice">
+                      <p>⚠️ 이 선수는 다른 팀에 소속되어 있습니다. 이적료를 지불해야 합니다.</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="cost-summary">
                   <h4>총 비용</h4>
                   <p className="total-cost">{totalCost.toLocaleString()} 골드</p>
                   <p className="cost-breakdown">
-                    (연봉 {annualSalary.toLocaleString()} × {contractYears}년 + 계약금 {signingBonus.toLocaleString()})
+                    (연봉 {annualSalary.toLocaleString()} × {contractYears}년 + 계약금 {signingBonus.toLocaleString()}
+                    {requiresTransferFee && ` + 이적료 ${transferFee.toLocaleString()}`})
                   </p>
                 </div>
 

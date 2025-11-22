@@ -88,3 +88,18 @@
   border-bottom: none;
 }
 
+.nationality-flag {
+  font-size: 1.5rem;
+  line-height: 1;
+  display: inline-block;
+  vertical-align: middle;
+  cursor: help;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  transition: transform 0.2s ease;
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'EmojiOne Color', 'Android Emoji', sans-serif;
+}
+
+.nationality-flag:hover {
+  transform: scale(1.2);
+}
+

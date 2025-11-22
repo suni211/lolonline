@@ -110,15 +110,15 @@ async function startMatch(match: any, io: Server) {
     // 경기 통계 초기화
     for (const player of availableHomePlayers) {
       await pool.query(
-        `INSERT INTO match_stats (match_id, player_id, team_id, kills, deaths, assists, gold_earned, damage_dealt, vision_score)
-         VALUES (?, ?, ?, 0, 0, 0, 0, 0, 0)`,
+        `INSERT INTO match_stats (match_id, player_id, team_id, kills, deaths, assists, cs, gold_earned, damage_dealt, damage_taken, vision_score, wards_placed, wards_destroyed, turret_kills, first_blood)
+         VALUES (?, ?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, FALSE)`,
         [match.id, player.id, match.home_team_id]
       );
     }
     for (const player of availableAwayPlayers) {
       await pool.query(
-        `INSERT INTO match_stats (match_id, player_id, team_id, kills, deaths, assists, gold_earned, damage_dealt, vision_score)
-         VALUES (?, ?, ?, 0, 0, 0, 0, 0, 0)`,
+        `INSERT INTO match_stats (match_id, player_id, team_id, kills, deaths, assists, cs, gold_earned, damage_dealt, damage_taken, vision_score, wards_placed, wards_destroyed, turret_kills, first_blood)
+         VALUES (?, ?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, FALSE)`,
         [match.id, player.id, match.away_team_id]
       );
     }
@@ -143,7 +143,13 @@ async function updateLiveMatches(io: Server) {
 
 async function simulateMatchProgress(match: any, io: Server) {
   try {
-    const matchData = match.match_data ? JSON.parse(match.match_data) : { game_time: 0, home_score: 0, away_score: 0, events: [] };
+    const matchData = match.match_data ? JSON.parse(match.match_data) : { 
+      game_time: 0, 
+      home_score: 0, 
+      away_score: 0, 
+      events: [],
+      player_stats: {}
+    };
     
     matchData.game_time += 10; // 10초씩 진행
 
@@ -152,6 +158,9 @@ async function simulateMatchProgress(match: any, io: Server) {
       await finishMatch(match, matchData, io);
       return;
     }
+
+    // 선수 통계 업데이트 (CS, 골드 등 지속적으로 증가)
+    await updatePlayerStats(match.id, matchData.game_time);
 
     // 랜덤 이벤트 발생 (10% 확률)
     if (Math.random() < 0.1) {
@@ -169,12 +178,54 @@ async function simulateMatchProgress(match: any, io: Server) {
         // 실시간 이벤트 전송
         io.to(`match_${match.id}`).emit('match_event', event);
 
-        // 점수 업데이트 (킬 발생 시)
+        // 점수 및 통계 업데이트
         if (event.type === 'KILL') {
           if (event.data.team === 'home') {
             matchData.home_score++;
+            // 킬 통계 업데이트
+            if (event.data.killer_id) {
+              await pool.query(
+                'UPDATE match_stats SET kills = kills + 1 WHERE match_id = ? AND player_id = ?',
+                [match.id, event.data.killer_id]
+              );
+            }
+            if (event.data.victim_id) {
+              await pool.query(
+                'UPDATE match_stats SET deaths = deaths + 1 WHERE match_id = ? AND player_id = ?',
+                [match.id, event.data.victim_id]
+              );
+            }
+            // 어시스트 업데이트
+            if (event.data.assist_ids) {
+              for (const assistId of event.data.assist_ids) {
+                await pool.query(
+                  'UPDATE match_stats SET assists = assists + 1 WHERE match_id = ? AND player_id = ?',
+                  [match.id, assistId]
+                );
+              }
+            }
           } else {
             matchData.away_score++;
+            if (event.data.killer_id) {
+              await pool.query(
+                'UPDATE match_stats SET kills = kills + 1 WHERE match_id = ? AND player_id = ?',
+                [match.id, event.data.killer_id]
+              );
+            }
+            if (event.data.victim_id) {
+              await pool.query(
+                'UPDATE match_stats SET deaths = deaths + 1 WHERE match_id = ? AND player_id = ?',
+                [match.id, event.data.victim_id]
+              );
+            }
+            if (event.data.assist_ids) {
+              for (const assistId of event.data.assist_ids) {
+                await pool.query(
+                  'UPDATE match_stats SET assists = assists + 1 WHERE match_id = ? AND player_id = ?',
+                  [match.id, assistId]
+                );
+              }
+            }
           }
         }
       }
@@ -198,6 +249,72 @@ async function simulateMatchProgress(match: any, io: Server) {
   }
 }
 
+// 선수 통계 업데이트 (CS, 골드 등)
+async function updatePlayerStats(matchId: number, gameTime: number) {
+  try {
+    // 모든 선수 통계 가져오기
+    const allStats = await pool.query(
+      'SELECT * FROM match_stats WHERE match_id = ?',
+      [matchId]
+    );
+
+    for (const stat of allStats) {
+      // CS 증가 (분당 약 8-12 CS)
+      const csIncrease = Math.floor(8 + Math.random() * 4);
+      await pool.query(
+        'UPDATE match_stats SET cs = cs + ? WHERE id = ?',
+        [csIncrease, stat.id]
+      );
+
+      // 골드 수급 (분당 약 400-600 골드)
+      const goldIncrease = Math.floor(400 + Math.random() * 200);
+      await pool.query(
+        'UPDATE match_stats SET gold_earned = gold_earned + ? WHERE id = ?',
+        [goldIncrease, stat.id]
+      );
+
+      // 딜량 증가 (분당 약 2000-4000)
+      const damageIncrease = Math.floor(2000 + Math.random() * 2000);
+      await pool.query(
+        'UPDATE match_stats SET damage_dealt = damage_dealt + ? WHERE id = ?',
+        [damageIncrease, stat.id]
+      );
+
+      // 받은 딜량 증가
+      const damageTakenIncrease = Math.floor(1500 + Math.random() * 1500);
+      await pool.query(
+        'UPDATE match_stats SET damage_taken = damage_taken + ? WHERE id = ?',
+        [damageTakenIncrease, stat.id]
+      );
+
+      // 와드 설치 (가끔)
+      if (Math.random() < 0.1) {
+        await pool.query(
+          'UPDATE match_stats SET wards_placed = wards_placed + 1 WHERE id = ?',
+          [stat.id]
+        );
+      }
+
+      // 와드 제거 (가끔)
+      if (Math.random() < 0.05) {
+        await pool.query(
+          'UPDATE match_stats SET wards_destroyed = wards_destroyed + 1 WHERE id = ?',
+          [stat.id]
+        );
+      }
+
+      // 비전 점수 증가
+      const visionIncrease = Math.floor(1 + Math.random() * 2);
+      await pool.query(
+        'UPDATE match_stats SET vision_score = vision_score + ? WHERE id = ?',
+        [visionIncrease, stat.id]
+      );
+    }
+  } catch (error) {
+    console.error('Error updating player stats:', error);
+  }
+}
+
 async function createRandomEvent(match: any, gameTime: number) {
   const eventTypes = ['KILL', 'ASSIST', 'TOWER', 'DRAGON', 'BARON', 'TEAMFIGHT'];
   const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
@@ -211,14 +328,67 @@ async function createRandomEvent(match: any, gameTime: number) {
   // 오버롤에 따른 이벤트 결과 결정
   const homeWinChance = homeTeamOverall / (homeTeamOverall + awayTeamOverall);
 
+  // 선수 목록 가져오기
+  const homePlayers = await pool.query(
+    `SELECT p.id, p.name, p.position FROM players p
+     INNER JOIN player_ownership po ON p.id = po.player_id
+     WHERE po.team_id = ? AND po.is_starter = true AND p.injury_status = 'NONE'`,
+    [match.home_team_id]
+  );
+  const awayPlayers = await pool.query(
+    `SELECT p.id, p.name, p.position FROM players p
+     INNER JOIN player_ownership po ON p.id = po.player_id
+     WHERE po.team_id = ? AND po.is_starter = true AND p.injury_status = 'NONE'`,
+    [match.away_team_id]
+  );
+
+  const winningTeam = Math.random() < homeWinChance ? 'home' : 'away';
+  const winningPlayers = winningTeam === 'home' ? homePlayers : awayPlayers;
+  const losingPlayers = winningTeam === 'home' ? awayPlayers : homePlayers;
+
   let eventData: any = {
-    team: Math.random() < homeWinChance ? 'home' : 'away',
+    team: winningTeam,
     description: descriptions
   };
 
   if (eventType === 'KILL') {
-    eventData.killer = 'Player' + Math.floor(Math.random() * 5 + 1);
-    eventData.victim = 'Player' + Math.floor(Math.random() * 5 + 1);
+    const killer = winningPlayers[Math.floor(Math.random() * winningPlayers.length)];
+    const victim = losingPlayers[Math.floor(Math.random() * losingPlayers.length)];
+    const assistCount = Math.floor(Math.random() * 3); // 0-2명 어시스트
+    const assistIds: number[] = [];
+    for (let i = 0; i < assistCount && i < winningPlayers.length - 1; i++) {
+      const assistPlayer = winningPlayers.filter((p: any) => p.id !== killer.id)[Math.floor(Math.random() * (winningPlayers.length - 1))];
+      if (assistPlayer && !assistIds.includes(assistPlayer.id)) {
+        assistIds.push(assistPlayer.id);
+      }
+    }
+
+    eventData.killer_id = killer.id;
+    eventData.killer_name = killer.name;
+    eventData.victim_id = victim.id;
+    eventData.victim_name = victim.name;
+    eventData.assist_ids = assistIds;
+
+    // 퍼스트블러드 체크
+    const existingKills = await pool.query(
+      'SELECT SUM(kills) as total FROM match_stats WHERE match_id = ?',
+      [match.id]
+    );
+    if (existingKills[0].total === 0) {
+      eventData.first_blood = true;
+      await pool.query(
+        'UPDATE match_stats SET first_blood = TRUE WHERE match_id = ? AND player_id = ?',
+        [match.id, killer.id]
+      );
+    }
+  } else if (eventType === 'TOWER') {
+    const turretKiller = winningPlayers[Math.floor(Math.random() * winningPlayers.length)];
+    eventData.killer_id = turretKiller.id;
+    eventData.killer_name = turretKiller.name;
+    await pool.query(
+      'UPDATE match_stats SET turret_kills = turret_kills + 1 WHERE match_id = ? AND player_id = ?',
+      [match.id, turretKiller.id]
+    );
   }
 
   return {

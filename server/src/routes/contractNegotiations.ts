@@ -36,6 +36,14 @@ router.post('/:playerId/propose', authenticateToken, async (req: AuthRequest, re
       return res.status(400).json({ error: '이미 소유한 선수입니다' });
     }
 
+    // FA 선수인지 확인 (소유권이 없는 선수)
+    const existingOwnership = await pool.query(
+      'SELECT * FROM player_ownership WHERE player_id = ?',
+      [playerId]
+    );
+
+    const isFA = existingOwnership.length === 0;
+
     // 최대 보유 수 확인 (23명)
     const playerCount = await pool.query(
       'SELECT COUNT(*) as count FROM player_ownership WHERE team_id = ?',
@@ -69,28 +77,92 @@ router.post('/:playerId/propose', authenticateToken, async (req: AuthRequest, re
       return res.status(400).json({ error: '보유 골드가 부족합니다' });
     }
 
-    // 협상 제안 생성
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 24); // 24시간 후 만료
-
-    const result = await pool.query(
-      `INSERT INTO contract_negotiations 
-       (player_id, team_id, annual_salary, contract_years, signing_bonus, expires_at) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [playerId, req.teamId, annual_salary, contract_years, signing_bonus || 0, expiresAt]
-    );
-
-    // AI 응답 생성 (비동기로 처리)
-    if (req.teamId) {
-      setTimeout(async () => {
-        await generateAIResponse(playerId, req.teamId!, result.insertId, annual_salary, contract_years, signing_bonus || 0, player);
-      }, 1000);
+    // FA 선수는 즉시 수락, 유저 소유 선수는 이적료 협상 필요
+    if (isFA) {
+      // FA 선수는 즉시 계약 성사
+      const totalCost = annual_salary * contract_years + (signing_bonus || 0);
+      
+      // 재화 차감
+      await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [totalCost, req.teamId]);
+      
+      // 선수 소유권 추가
+      await pool.query(
+        `INSERT INTO player_ownership (player_id, team_id, is_benched) VALUES (?, ?, true)`,
+        [playerId, req.teamId]
+      );
+      
+      // 선수 계약 정보 업데이트
+      const contractExpiresAt = new Date();
+      contractExpiresAt.setFullYear(contractExpiresAt.getFullYear() + contract_years);
+      
+      await pool.query(
+        `UPDATE players 
+         SET contract_fee = ?, 
+             contract_expires_at = ? 
+         WHERE id = ?`,
+        [annual_salary, contractExpiresAt, playerId]
+      );
+      
+      return res.json({ 
+        success: true,
+        message: 'FA 선수와 계약이 성사되었습니다!',
+        player_id: playerId
+      });
+    } else {
+      // 유저 소유 선수는 이적료 협상 필요
+      const { transfer_fee } = req.body;
+      
+      if (!transfer_fee || transfer_fee <= 0) {
+        return res.status(400).json({ 
+          error: '이 선수는 다른 팀에 소속되어 있습니다. 이적료를 제시해야 합니다.',
+          requires_transfer_fee: true
+        });
+      }
+      
+      // 이적료 확인
+      const totalCost = annual_salary * contract_years + (signing_bonus || 0) + transfer_fee;
+      if (teams[0].gold < totalCost) {
+        return res.status(400).json({ 
+          error: `보유 골드가 부족합니다. 필요: ${totalCost.toLocaleString()} 골드 (연봉: ${(annual_salary * contract_years + (signing_bonus || 0)).toLocaleString()}, 이적료: ${transfer_fee.toLocaleString()})`
+        });
+      }
+      
+      // 소유 팀 확인
+      const ownerTeam = await pool.query(
+        `SELECT t.* FROM teams t
+         INNER JOIN player_ownership po ON t.id = po.team_id
+         WHERE po.player_id = ?`,
+        [playerId]
+      );
+      
+      if (ownerTeam.length === 0) {
+        return res.status(400).json({ error: '선수의 소유 팀을 찾을 수 없습니다' });
+      }
+      
+      // 협상 제안 생성 (이적료 포함)
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24);
+      
+      const result = await pool.query(
+        `INSERT INTO contract_negotiations 
+         (player_id, team_id, annual_salary, contract_years, signing_bonus, transfer_fee, owner_team_id, expires_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [playerId, req.teamId, annual_salary, contract_years, signing_bonus || 0, transfer_fee, ownerTeam[0].id, expiresAt]
+      );
+      
+      // AI 응답 생성 (비동기로 처리)
+      if (req.teamId) {
+        setTimeout(async () => {
+          await generateAIResponse(playerId, req.teamId!, result.insertId, annual_salary, contract_years, signing_bonus || 0, player, transfer_fee, ownerTeam[0].id);
+        }, 1000);
+      }
+      
+      res.json({ 
+        negotiation_id: result.insertId,
+        message: '이적료 협상 제안이 전송되었습니다. 상대 팀이 곧 응답할 예정입니다.',
+        is_transfer: true
+      });
     }
-
-    res.json({ 
-      negotiation_id: result.insertId,
-      message: '협상 제안이 전송되었습니다. AI가 곧 응답할 예정입니다.' 
-    });
   } catch (error: any) {
     console.error('Propose contract error:', error);
     res.status(500).json({ error: '협상 제안 생성에 실패했습니다' });
@@ -105,7 +177,9 @@ async function generateAIResponse(
   proposedSalary: number,
   proposedYears: number,
   proposedBonus: number,
-  player: any
+  player: any,
+  transferFee?: number,
+  ownerTeamId?: number
 ) {
   try {
     // 선수 오버롤 계산
@@ -165,21 +239,22 @@ async function generateAIResponse(
       }
     }
     
-    // AI 응답 저장
+    // AI 응답 저장 (FA 선수 연봉협상)
     if (responseType === 'ACCEPT') {
       await pool.query(
         `UPDATE contract_negotiations 
          SET status = 'ACCEPTED', 
-             ai_response_type = 'ACCEPT',
+             player_response_salary = ?,
+             player_response_years = ?,
+             player_response_bonus = ?,
              responded_at = NOW()
          WHERE id = ?`,
-        [negotiationId]
+        [proposedSalary, proposedYears, proposedBonus, negotiationId]
       );
     } else if (responseType === 'REJECT') {
       await pool.query(
         `UPDATE contract_negotiations 
          SET status = 'REJECTED', 
-             ai_response_type = 'REJECT',
              responded_at = NOW()
          WHERE id = ?`,
         [negotiationId]
@@ -189,10 +264,9 @@ async function generateAIResponse(
       await pool.query(
         `UPDATE contract_negotiations 
          SET status = 'COUNTER_OFFER', 
-             ai_response_type = 'COUNTER',
-             ai_counter_salary = ?,
-             ai_counter_years = ?,
-             ai_counter_bonus = ?,
+             player_response_salary = ?,
+             player_response_years = ?,
+             player_response_bonus = ?,
              responded_at = NOW()
          WHERE id = ?`,
         [counterSalary, counterYears, counterBonus, negotiationId]
@@ -311,14 +385,28 @@ router.post('/:negotiationId/accept', authenticateToken, async (req: AuthRequest
     
     // 재화 확인
     const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);
-    const totalCost = negotiation.annual_salary * negotiation.contract_years + negotiation.signing_bonus;
+    const transferFee = negotiation.transfer_fee || 0;
+    const totalCost = negotiation.annual_salary * negotiation.contract_years + negotiation.signing_bonus + transferFee;
     
     if (teams[0].gold < totalCost) {
-      return res.status(400).json({ error: '보유 골드가 부족합니다' });
+      return res.status(400).json({ 
+        error: `보유 골드가 부족합니다. 필요: ${totalCost.toLocaleString()} 골드 (현재: ${teams[0].gold.toLocaleString()} 골드)`
+      });
     }
     
     // 재화 차감
     await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [totalCost, req.teamId]);
+    
+    // 이적료가 있으면 소유 팀에 지급
+    if (transferFee > 0 && negotiation.owner_team_id) {
+      await pool.query('UPDATE teams SET gold = gold + ? WHERE id = ?', [transferFee, negotiation.owner_team_id]);
+      
+      // 기존 소유권 제거
+      await pool.query(
+        'DELETE FROM player_ownership WHERE player_id = ? AND team_id = ?',
+        [negotiation.player_id, negotiation.owner_team_id]
+      );
+    }
     
     // 선수 소유권 추가
     await pool.query(
@@ -338,7 +426,11 @@ router.post('/:negotiationId/accept', authenticateToken, async (req: AuthRequest
       [negotiation.annual_salary, contractExpiresAt, negotiation.player_id]
     );
     
-    res.json({ message: '계약이 성사되었습니다!' });
+    res.json({ 
+      success: true,
+      message: transferFee > 0 ? '이적료 협상이 성사되었습니다!' : '계약이 성사되었습니다!',
+      player_id: negotiation.player_id
+    });
   } catch (error: any) {
     console.error('Accept negotiation error:', error);
     res.status(500).json({ error: '계약 수락에 실패했습니다' });

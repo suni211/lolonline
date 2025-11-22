@@ -113,9 +113,18 @@
 .stat-item {
   display: flex;
   justify-content: space-between;
-  padding: 0.5rem;
-  background-color: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
+  border-radius: 8px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.3) 0%, rgba(59, 130, 246, 0.2) 100%);
+  border-color: rgba(59, 130, 246, 0.4);
+  transform: translateX(5px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .allocation-inputs {
@@ -263,9 +272,23 @@
 
 .ability-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary-blue), var(--light-blue));
+  background: linear-gradient(90deg, var(--primary-blue) 0%, var(--light-blue) 50%, #60a5fa 100%);
   border-radius: 10px;
   transition: width 0.5s ease;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+  position: relative;
+  overflow: hidden;
+}
+
+.ability-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
 }
 
 .ability-value {

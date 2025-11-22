@@ -216,6 +216,310 @@
   padding: 2rem;
 }
 
+.match-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #333;
+}
+
+.match-tabs button {
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.match-tabs button:hover {
+  color: var(--white);
+}
+
+.match-tabs .tab-active {
+  color: var(--light-blue);
+  border-bottom-color: var(--light-blue);
+}
+
+.match-stats {
+  margin-top: 1.5rem;
+}
+
+.match-stats h3 {
+  margin-bottom: 1rem;
+  color: var(--white);
+}
+
+.stats-table-container {
+  overflow-x: auto;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #111;
+  font-size: 0.9rem;
+}
+
+.stats-table thead {
+  position: sticky;
+  top: 0;
+  background-color: var(--primary-blue);
+  z-index: 10;
+}
+
+.stats-table th {
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+  color: var(--white);
+  font-weight: 600;
+  border-bottom: 2px solid var(--light-blue);
+  white-space: nowrap;
+}
+
+.stats-table td {
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid #333;
+}
+
+.stats-table tbody tr:hover {
+  background-color: rgba(30, 58, 138, 0.2);
+}
+
+.stats-table tbody tr.first-blood {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.stats-table .player-name {
+  text-align: left;
+  font-weight: 600;
+  color: var(--light-blue);
+}
+
+.stats-table .position {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+}
+
+.stats-table .kills {
+  color: #10B981;
+  font-weight: 600;
+}
+
+.stats-table .deaths {
+  color: #EF4444;
+  font-weight: 600;
+}
+
+.stats-table .assists {
+  color: #F59E0B;
+  font-weight: 600;
+}
+
+.stats-table .kda {
+  font-weight: 700;
+  color: var(--light-blue);
+}
+
+.stats-table .cs {
+  color: #8B5CF6;
+}
+
+.stats-table .gold {
+  color: #FCD34D;
+  font-weight: 600;
+}
+
+.stats-table .damage {
+  color: #F87171;
+  font-weight: 600;
+}
+
+.stats-table .damage-taken {
+  color: #60A5FA;
+}
+
+.stats-table .vision {
+  color: #34D399;
+}
+
+.stats-table .wards {
+  color: #A78BFA;
+  font-size: 0.85rem;
+}
+
+.stats-table .turrets {
+  color: #FBBF24;
+  font-weight: 600;
+}
+
+.stats-table .fb {
+  color: #EF4444;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.stats-table .kda-excellent {
+  color: #10B981;
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.stats-table .kda-good {
+  color: #60A5FA;
+  font-weight: 700;
+}
+
+.stats-table .kda-average {
+  color: #FBBF24;
+  font-weight: 600;
+}
+
+.stats-table .kda-poor {
+  color: #EF4444;
+  font-weight: 600;
+}
+
+.stats-table .player-name {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.player-name-text {
+  font-weight: 600;
+  color: var(--light-blue);
+}
+
+.team-name-badge {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(30, 58, 138, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.empty-stats {
+  text-align: center;
+  padding: 3rem;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px dashed #333;
+}
+
+.event-killer {
+  color: #10B981;
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+.event-victim {
+  color: #EF4444;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+/* 애니메이션 추가 */
+.match-item {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.match-filters button {
+  animation: scaleIn 0.2s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.stats-table tbody tr {
+  transition: all 0.2s ease;
+  animation: fadeInRow 0.4s ease-out backwards;
+}
+
+.stats-table tbody tr:hover {
+  transform: translateX(4px);
+  box-shadow: 0 2px 8px rgba(96, 165, 250, 0.3);
+}
+
+@keyframes fadeInRow {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.event-item {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.match-header {
+  animation: slideDown 0.4s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 1024px) {
   .matches-container {
     grid-template-columns: 1fr;
@@ -224,6 +528,15 @@
   .match-viewer {
     position: relative;
     top: 0;
+  }
+
+  .stats-table {
+    font-size: 0.75rem;
+  }
+
+  .stats-table th,
+  .stats-table td {
+    padding: 0.5rem 0.25rem;
   }
 }
 

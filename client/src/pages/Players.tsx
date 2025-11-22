@@ -209,23 +209,39 @@ export default function Players() {
                 <div className="player-stats">
                   <div className="stat-row">
                     <span>멘탈</span>
-                    <span>{player.mental}</span>
+                    <span className="stat-value">{player.mental}</span>
                   </div>
                   <div className="stat-row">
                     <span>한타력</span>
-                    <span>{player.teamfight}</span>
+                    <span className="stat-value">{player.teamfight}</span>
                   </div>
                   <div className="stat-row">
                     <span>집중력</span>
-                    <span>{player.focus}</span>
+                    <span className="stat-value">{player.focus}</span>
                   </div>
                   <div className="stat-row">
                     <span>라인전</span>
-                    <span>{player.laning}</span>
+                    <span className="stat-value">{player.laning}</span>
+                  </div>
+                  <div className="stat-row">
+                    <span>리더십</span>
+                    <span className="stat-value will-stat">{player.leadership || 50}</span>
+                  </div>
+                  <div className="stat-row">
+                    <span>적응력</span>
+                    <span className="stat-value will-stat">{player.adaptability || 50}</span>
+                  </div>
+                  <div className="stat-row">
+                    <span>일관성</span>
+                    <span className="stat-value will-stat">{player.consistency || 50}</span>
+                  </div>
+                  <div className="stat-row">
+                    <span>노력</span>
+                    <span className="stat-value will-stat">{player.work_ethic || 50}</span>
                   </div>
                   <div className="stat-row overall">
                     <span>총 오버롤</span>
-                    <span>{player.overall}</span>
+                    <span className="overall-value">{player.overall}</span>
                   </div>
                 </div>
                 <div className="player-info">
@@ -366,6 +382,7 @@ export default function Players() {
           playerId={negotiatingPlayer.id}
           playerName={negotiatingPlayer.name}
           playerOverall={negotiatingPlayer.overall}
+          ownedCount={negotiatingPlayer.owned_count}
           onClose={() => setNegotiatingPlayer(null)}
           onSuccess={() => {
             setNegotiatingPlayer(null);

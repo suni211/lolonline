@@ -23,13 +23,35 @@ interface MatchEvent {
   data: any;
 }
 
+interface MatchStat {
+  id: number;
+  player_id: number;
+  player_name: string;
+  position: string;
+  team_name: string;
+  kills: number;
+  deaths: number;
+  assists: number;
+  cs: number;
+  gold_earned: number;
+  damage_dealt: number;
+  damage_taken: number;
+  vision_score: number;
+  wards_placed: number;
+  wards_destroyed: number;
+  turret_kills: number;
+  first_blood: boolean;
+}
+
 export default function Matches() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
   const [matchEvents, setMatchEvents] = useState<MatchEvent[]>([]);
+  const [matchStats, setMatchStats] = useState<MatchStat[]>([]);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [gameTime, setGameTime] = useState(0);
   const [filter, setFilter] = useState<'all' | 'scheduled' | 'live' | 'finished'>('all');
+  const [showStats, setShowStats] = useState(false);
 
   useEffect(() => {
     fetchMatches();
@@ -99,7 +121,9 @@ export default function Matches() {
       const response = await axios.get(`/api/matches/${matchId}`);
       setSelectedMatch(response.data.match);
       setMatchEvents(response.data.events || []);
+      setMatchStats(response.data.stats || []);
       setGameTime(0);
+      setShowStats(response.data.match.status === 'FINISHED');
     } catch (error) {
       console.error('Failed to fetch match details:', error);
     }
@@ -203,20 +227,113 @@ export default function Matches() {
               </div>
             )}
 
-            <div className="match-events">
-              <h3>경기 이벤트</h3>
-              <div className="events-list">
-                {matchEvents.map((event, idx) => (
-                  <div key={idx} className={`event-item ${event.type.toLowerCase()}`}>
-                    <span className="event-time">{formatTime(event.time)}</span>
-                    <span className="event-description">{event.description}</span>
+            <div className="match-tabs">
+              <button 
+                className={!showStats ? 'tab-active' : ''}
+                onClick={() => setShowStats(false)}
+              >
+                이벤트
+              </button>
+              <button 
+                className={showStats ? 'tab-active' : ''}
+                onClick={() => setShowStats(true)}
+              >
+                통계
+              </button>
+            </div>
+
+            {!showStats ? (
+              <div className="match-events">
+                <h3>경기 이벤트</h3>
+                <div className="events-list">
+                  {matchEvents.map((event, idx) => (
+                    <div key={idx} className={`event-item ${event.type.toLowerCase()}`}>
+                      <span className="event-time">{formatTime(event.time)}</span>
+                      <span className="event-description">
+                        {event.data?.killer_name && (
+                          <span className="event-killer">{event.data.killer_name}</span>
+                        )}
+                        {event.description}
+                        {event.data?.victim_name && (
+                          <span className="event-victim"> → {event.data.victim_name}</span>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                  {matchEvents.length === 0 && (
+                    <p className="empty-events">이벤트가 없습니다.</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="match-stats">
+                <h3>경기 통계</h3>
+                {matchStats.length === 0 ? (
+                  <div className="empty-stats">
+                    <p>경기 통계가 아직 없습니다.</p>
                   </div>
-                ))}
-                {matchEvents.length === 0 && (
-                  <p className="empty-events">이벤트가 없습니다.</p>
+                ) : (
+                  <div className="stats-table-container">
+                    <table className="stats-table">
+                      <thead>
+                        <tr>
+                          <th>선수</th>
+                          <th>포지션</th>
+                          <th>K</th>
+                          <th>D</th>
+                          <th>A</th>
+                          <th>KDA</th>
+                          <th>CS</th>
+                          <th>골드</th>
+                          <th>딜량</th>
+                          <th>받은딜</th>
+                          <th>비전</th>
+                          <th>와드</th>
+                          <th>타워</th>
+                          <th>FB</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {matchStats.map((stat, index) => {
+                          const kda = stat.deaths === 0 
+                            ? (stat.kills + stat.assists).toFixed(1)
+                            : ((stat.kills + stat.assists) / stat.deaths).toFixed(2);
+                          const kdaValue = parseFloat(kda);
+                          const kdaClass = kdaValue >= 3 ? 'kda-excellent' : kdaValue >= 2 ? 'kda-good' : kdaValue >= 1 ? 'kda-average' : 'kda-poor';
+                          return (
+                            <tr 
+                              key={stat.id} 
+                              className={`${stat.first_blood ? 'first-blood' : ''} stat-row-${index}`}
+                              style={{ animationDelay: `${index * 0.05}s` }}
+                            >
+                              <td className="player-name">
+                                <span className="player-name-text">{stat.player_name}</span>
+                                <span className="team-name-badge">{stat.team_name}</span>
+                              </td>
+                              <td className="position">
+                                <span className={`position-badge ${stat.position}`}>{stat.position}</span>
+                              </td>
+                              <td className="kills">{stat.kills}</td>
+                              <td className="deaths">{stat.deaths}</td>
+                              <td className="assists">{stat.assists}</td>
+                              <td className={`kda ${kdaClass}`}>{kda}</td>
+                              <td className="cs">{stat.cs.toLocaleString()}</td>
+                              <td className="gold">{stat.gold_earned.toLocaleString()}</td>
+                              <td className="damage">{stat.damage_dealt.toLocaleString()}</td>
+                              <td className="damage-taken">{stat.damage_taken.toLocaleString()}</td>
+                              <td className="vision">{stat.vision_score}</td>
+                              <td className="wards">{stat.wards_placed}/{stat.wards_destroyed}</td>
+                              <td className="turrets">{stat.turret_kills}</td>
+                              <td className="fb">{stat.first_blood ? '✓' : '-'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>

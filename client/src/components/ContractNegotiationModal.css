@@ -253,3 +253,47 @@
   flex: 1;
 }
 
+.transfer-fee-group {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  animation: slideIn 0.3s ease-out;
+}
+
+.transfer-fee-notice {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+}
+
+.transfer-fee-notice p {
+  margin: 0;
+  color: #fca5a5;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
