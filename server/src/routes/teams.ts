@@ -146,8 +146,8 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
 
     // 팀 생성 (자동으로 LPO 2 LEAGUE로 배정)
     const teamResult = await pool.query(
-      `INSERT INTO teams (user_id, name, league, logo_url, team_color, gold, diamond, is_ai)
-       VALUES (?, ?, 'SECOND', ?, ?, 1000, 100, false)`,
+      `INSERT INTO teams (user_id, name, league, logo_url, team_color, gold, diamond)
+       VALUES (?, ?, 'SECOND', ?, ?, 1000, 100)`,
       [req.userId, name, logo_url || null, team_color || '#1E3A8A']
     );
 
