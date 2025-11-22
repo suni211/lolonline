@@ -121,8 +121,10 @@ export class LPOLeagueService {
 
       // 기존 플레이어 팀을 LPO 2 LEAGUE에 등록
       const playerTeams = await pool.query(
-        `SELECT id FROM teams WHERE is_ai = false OR is_ai IS NULL`
+        `SELECT id, name FROM teams WHERE user_id IS NOT NULL`
       );
+
+      console.log(`Found ${playerTeams.length} player teams:`, playerTeams.map((t: any) => t.name));
 
       if (playerTeams.length > 0) {
         console.log(`Registering ${playerTeams.length} player teams to LPO 2 LEAGUE...`);
