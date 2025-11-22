@@ -44,20 +44,6 @@ export class LPOLeagueService {
     try {
       console.log('Initializing LPO League system...');
 
-      // AI 시스템 유저 확인/생성
-      let aiUser = await pool.query('SELECT id FROM users WHERE username = ?', ['AI_SYSTEM']);
-      let aiUserId: number;
-
-      if (aiUser.length === 0) {
-        const result = await pool.query(
-          'INSERT INTO users (username, password_hash, email) VALUES (?, ?, ?)',
-          ['AI_SYSTEM', 'not_a_real_password', 'ai@system.local']
-        );
-        aiUserId = result.insertId;
-      } else {
-        aiUserId = aiUser[0].id;
-      }
-
       // 기존 AI 팀 및 LPO 리그 삭제 (완전 초기화)
       console.log('Cleaning up existing LPO data...');
 
@@ -102,11 +88,11 @@ export class LPOLeagueService {
         for (let i = 0; i < tierInfo.count; i++) {
           const teamName = AI_TEAM_NAMES[tierInfo.startIdx + i];
 
-          // AI 팀 생성
+          // AI 팀 생성 (user_id는 NULL)
           const teamResult = await pool.query(
             `INSERT INTO teams (user_id, name, league, is_ai, gold, diamond, fan_count)
-             VALUES (?, ?, ?, true, 100000, 100, 1000)`,
-            [aiUserId, teamName, tierInfo.tier]
+             VALUES (NULL, ?, ?, true, 100000, 100, 1000)`,
+            [teamName, tierInfo.tier]
           );
 
           const teamId = teamResult.insertId;
