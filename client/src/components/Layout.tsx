@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import './Layout.css';
 
 export default function Layout() {
-  const { user, team, logout } = useAuth();
+  const { team, logout } = useAuth();
   const location = useLocation();
 
   const navItems = [

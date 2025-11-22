@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
 import { soundManager } from '../utils/soundManager';
 import './PlayerDetailModal.css';
@@ -35,7 +35,6 @@ export default function PlayerDetailModal({ player, onClose, onUpdate }: PlayerD
     laning: 0
   });
   const [showLevelUp, setShowLevelUp] = useState(false);
-  const [showUniformUpgrade, setShowUniformUpgrade] = useState(false);
 
   const canLevelUp = player.exp >= player.exp_to_next;
 

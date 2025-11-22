@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useAuth } from '../contexts/AuthContext';
 import './Training.css';
 
 interface Player {
@@ -27,12 +26,10 @@ interface TrainingHistory {
 }
 
 export default function Training() {
-  const { team } = useAuth();
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
   const [selectedStat, setSelectedStat] = useState<'MENTAL' | 'TEAMFIGHT' | 'FOCUS' | 'LANING'>('MENTAL');
   const [trainingHistory, setTrainingHistory] = useState<TrainingHistory[]>([]);
-  const [trainingType, setTrainingType] = useState<'individual' | 'team'>('individual');
 
   useEffect(() => {
     fetchPlayers();
