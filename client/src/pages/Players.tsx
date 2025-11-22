@@ -197,7 +197,7 @@ export default function Players() {
           </div>
 
           <div className="players-grid">
-            {filteredPlayers.map((player, index) => (
+            {filteredPlayers.map((player) => (
               <div
                 key={player.id}
                 className={`player-card ${player.is_starter ? 'starter' : ''}`}
