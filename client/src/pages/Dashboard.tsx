@@ -22,6 +22,14 @@ interface LeagueInfo {
   points?: number;
 }
 
+// 날짜 포맷 헬퍼 함수
+const formatDate = (dateString: string | null | undefined): string => {
+  if (!dateString) return '-';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '-';
+  return date.toLocaleString('ko-KR');
+};
+
 export default function Dashboard() {
   const { team } = useAuth();
   const [teamStats, setTeamStats] = useState<TeamStats | null>(null);
@@ -205,7 +213,7 @@ export default function Dashboard() {
                     </span>
                   </div>
                   <span className="match-time">
-                    {new Date(match.scheduled_at).toLocaleString('ko-KR')}
+                    {formatDate(match.scheduled_at)}
                   </span>
                 </div>
               ))}
@@ -233,7 +241,7 @@ export default function Dashboard() {
                     </span>
                   </div>
                   <span className="match-time">
-                    {new Date(match.finished_at).toLocaleString('ko-KR')}
+                    {formatDate(match.finished_at)}
                   </span>
                 </div>
               ))}

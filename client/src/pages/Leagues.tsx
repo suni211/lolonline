@@ -2,6 +2,14 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import './Leagues.css';
 
+// 날짜 포맷 헬퍼 함수
+const formatDate = (dateString: string | null | undefined): string => {
+  if (!dateString) return '-';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '-';
+  return date.toLocaleString('ko-KR');
+};
+
 interface League {
   id: number;
   name: string;
@@ -243,7 +251,7 @@ export default function Leagues() {
                       </span>
                     </div>
                     <span className="match-time">
-                      {new Date(match.scheduled_at).toLocaleString('ko-KR')}
+                      {formatDate(match.scheduled_at)}
                     </span>
                   </div>
                 ))}
