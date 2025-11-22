@@ -6,9 +6,16 @@ import './Matches.css';
 // 날짜 포맷 헬퍼 함수
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return '-';
-  const date = new Date(dateString);
+  // MySQL datetime 형식 처리
+  const normalized = dateString.replace(' ', 'T');
+  const date = new Date(normalized);
   if (isNaN(date.getTime())) return '-';
-  return date.toLocaleString('ko-KR');
+  return date.toLocaleString('ko-KR', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 };
 
 interface Match {
