@@ -52,7 +52,10 @@ router.get('/search', authenticateToken, async (req: AuthRequest, res) => {
              (p.mental + p.teamfight + p.focus + p.laning) as overall,
              (SELECT COUNT(*) FROM player_ownership po2 WHERE po2.player_id = p.id) as owned_count
       FROM players p
-      WHERE 1=1
+      WHERE NOT EXISTS (
+        SELECT 1 FROM player_ownership po 
+        WHERE po.player_id = p.id
+      )
     `;
 
     const params: any[] = [];
@@ -141,14 +144,41 @@ router.post('/scout', authenticateToken, async (req: AuthRequest, res) => {
     const nationalities = ['KR', 'CN', 'EU', 'NA', 'VN', 'TW', 'JP', 'BR', 'TR', 'RU', 'PH', 'ID', 'TH', 'MY', 'SG', 'FR', 'DE', 'ES', 'DK', 'PL', 'SE', 'NO', 'FI', 'IT', 'GB', 'CA', 'AU', 'MX', 'AR', 'CL'];
     const nationality = nationalities[Math.floor(Math.random() * nationalities.length)];
 
-    // 기본 선수 이름 (나중에 확장 가능)
-    const baseNames = [
+    // 이미 소유된 선수 이름 확인 (어떤 팀이든 소유 중이면 제외)
+    const ownedPlayers = await pool.query(
+      `SELECT DISTINCT p.name 
+       FROM players p 
+       INNER JOIN player_ownership po ON p.id = po.player_id`
+    );
+    const ownedNames = new Set(ownedPlayers.map((p: any) => p.name));
+
+    // 기본 선수 이름 리스트 (제공된 선수 + 추가 선수)
+    const allBaseNames = [
+      'Leadingsquash68', 'GaeNald', 'Vilrain', 'Onsoo', 't1romance', '03261592630',
+      'SquidFriend1', 'DOKyuN', 'CGG', 'KIO', 'Pizza', 'Yebin', 'LHW', 'Hyeseong',
+      'SoSo', 'MS1005', 'Laving', 'Mato', 'Frost', 'JeongMin', 'JUNHYUNG',
+      // 추가 가상 선수들
       'Faker', 'Chovy', 'Deft', 'Keria', 'Zeus', 'Oner', 'Gumayusi', 'ShowMaker', 'Canyon',
       'BeryL', 'Nuguri', 'TheShy', 'Rookie', 'Uzi', 'Caps', 'Perkz', 'Doublelift', 'Bjergsen'
     ];
     
-    const baseName = baseNames[Math.floor(Math.random() * baseNames.length)];
-    const name = baseName + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    // 소유되지 않은 이름만 필터링
+    const availableNames = allBaseNames.filter(name => !ownedNames.has(name));
+    
+    // 소유되지 않은 이름이 없으면 랜덤 이름 생성
+    let name: string;
+    if (availableNames.length > 0) {
+      const baseName = availableNames[Math.floor(Math.random() * availableNames.length)];
+      // 숫자가 이미 포함된 이름이면 숫자 추가 안함
+      name = /^\d/.test(baseName) || /\d$/.test(baseName) 
+        ? baseName 
+        : baseName + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    } else {
+      // 모든 기본 이름이 소유되었으면 완전히 새로운 랜덤 이름 생성
+      const randomNames = ['Player', 'Pro', 'Gamer', 'Star', 'Elite', 'Master', 'Champion', 'Legend'];
+      const randomName = randomNames[Math.floor(Math.random() * randomNames.length)];
+      name = randomName + Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    }
 
     const result = await pool.query(
       `INSERT INTO players (name, nationality, position, mental, teamfight, focus, laning, level, exp_to_next) 
