@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS teams (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
     name VARCHAR(100) NOT NULL,
-    league ENUM('EAST', 'WEST') NOT NULL,
+    league ENUM('SUPER', 'FIRST', 'SECOND') DEFAULT 'SECOND',
     logo_url VARCHAR(255),
     team_color VARCHAR(7) DEFAULT '#1E3A8A',
     home_stadium VARCHAR(100),
