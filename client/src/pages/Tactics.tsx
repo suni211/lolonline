@@ -24,6 +24,7 @@ export default function Tactics() {
   const [selectedTactic, setSelectedTactic] = useState<Tactic | null>(null);
   const [positionTactics, setPositionTactics] = useState<PositionTactic[]>([]);
   const [loading, setLoading] = useState(false);
+  void loading; // 로딩 상태 표시에 사용 예정
   const [message, setMessage] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
@@ -99,7 +100,7 @@ export default function Tactics() {
     }
 
     try {
-      const res = await axios.post('/api/tactics', newTactic);
+      await axios.post('/api/tactics', newTactic);
       setMessage('전술이 생성되었습니다');
       setIsCreating(false);
       setNewTactic({

@@ -70,7 +70,7 @@ export default function MatchViewer() {
     }
   };
 
-  const generateNarration = (homeTeam: string, awayTeam: string, homePlayers: Player[], awayPlayers: Player[]) => {
+  const generateNarration = (homeTeam: string, awayTeam: string, homePlayersList: Player[], awayPlayersList: Player[]) => {
     const narrations = [
       `${homeTeam}의 정글러가 상대 블루 버프를 노립니다!`,
       `${awayTeam} 미드라이너의 화려한 솔로킬!`,
@@ -100,7 +100,11 @@ export default function MatchViewer() {
       '인히비터를 파괴했습니다!',
     ];
 
-    return { narrations, killNarrations, objectiveNarrations };
+    // 선수 목록을 killNarrations에서 사용
+    const getHomeKillNarration = () => killNarrations(homeTeam, homePlayersList);
+    const getAwayKillNarration = () => killNarrations(awayTeam, awayPlayersList);
+
+    return { narrations, getHomeKillNarration, getAwayKillNarration, objectiveNarrations };
   };
 
   const simulateSet = async () => {
@@ -110,7 +114,7 @@ export default function MatchViewer() {
     setGameEvents([]);
     setGameTime(0);
 
-    const { narrations, killNarrations, objectiveNarrations } = generateNarration(
+    const { narrations, getHomeKillNarration, getAwayKillNarration, objectiveNarrations } = generateNarration(
       match.home_team_name,
       match.away_team_name,
       match.home_players,
@@ -141,7 +145,7 @@ export default function MatchViewer() {
           // 킬 이벤트
           if (isHomeEvent) {
             homeKills++;
-            const killNarr = killNarrations(match.home_team_name, match.home_players);
+            const killNarr = getHomeKillNarration();
             event = {
               time: `${minute}:00`,
               type: 'kill',
@@ -150,7 +154,7 @@ export default function MatchViewer() {
             };
           } else {
             awayKills++;
-            const killNarr = killNarrations(match.away_team_name, match.away_players);
+            const killNarr = getAwayKillNarration();
             event = {
               time: `${minute}:00`,
               type: 'kill',

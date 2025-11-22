@@ -119,7 +119,7 @@ export default function Admin() {
     }
   };
 
-  const registerTeamToLeague = async (leagueId: number, teamId: number) => {
+  const _registerTeamToLeague = async (leagueId: number, teamId: number) => {
     try {
       await axios.post(`/api/admin/leagues/${leagueId}/register-team`, { teamId });
       setMessage('팀 등록 완료');
@@ -128,6 +128,8 @@ export default function Admin() {
       setMessage(error.response?.data?.error || '팀 등록 실패');
     }
   };
+  // 나중에 개별 팀 등록 UI에서 사용할 수 있도록 보관
+  void _registerTeamToLeague;
 
   const startLeague = async (leagueId: number) => {
     try {
