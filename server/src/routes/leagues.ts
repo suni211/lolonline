@@ -220,16 +220,16 @@ router.get('/matches/:matchId', async (req, res) => {
 router.get('/all-matches/upcoming', async (req, res) => {
   try {
     const matches = await pool.query(
-      `SELECT lm.*,
+      `SELECT m.*,
               ht.name as home_team_name, ht.logo_url as home_team_logo,
               at.name as away_team_name, at.logo_url as away_team_logo,
               l.name as league_name
-       FROM league_matches lm
-       JOIN teams ht ON lm.home_team_id = ht.id
-       JOIN teams at ON lm.away_team_id = at.id
-       JOIN leagues l ON lm.league_id = l.id
-       WHERE lm.status = 'SCHEDULED'
-       ORDER BY lm.scheduled_at
+       FROM matches m
+       JOIN teams ht ON m.home_team_id = ht.id
+       JOIN teams at ON m.away_team_id = at.id
+       JOIN leagues l ON m.league_id = l.id
+       WHERE m.status = 'SCHEDULED'
+       ORDER BY m.scheduled_at
        LIMIT 20`
     );
     res.json(matches);
@@ -243,16 +243,16 @@ router.get('/all-matches/upcoming', async (req, res) => {
 router.get('/all-matches/recent', async (req, res) => {
   try {
     const matches = await pool.query(
-      `SELECT lm.*,
+      `SELECT m.*,
               ht.name as home_team_name, ht.logo_url as home_team_logo,
               at.name as away_team_name, at.logo_url as away_team_logo,
               l.name as league_name
-       FROM league_matches lm
-       JOIN teams ht ON lm.home_team_id = ht.id
-       JOIN teams at ON lm.away_team_id = at.id
-       JOIN leagues l ON lm.league_id = l.id
-       WHERE lm.status = 'FINISHED'
-       ORDER BY lm.finished_at DESC
+       FROM matches m
+       JOIN teams ht ON m.home_team_id = ht.id
+       JOIN teams at ON m.away_team_id = at.id
+       JOIN leagues l ON m.league_id = l.id
+       WHERE m.status = 'FINISHED'
+       ORDER BY m.finished_at DESC
        LIMIT 20`
     );
     res.json(matches);
