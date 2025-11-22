@@ -15,6 +15,10 @@ interface Player {
   teamfight: number;
   focus: number;
   laning: number;
+  leadership?: number;
+  adaptability?: number;
+  consistency?: number;
+  work_ethic?: number;
   level: number;
   exp: number;
   exp_to_next: number;

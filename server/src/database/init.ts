@@ -69,6 +69,91 @@ export async function initializeDatabase() {
       }
     }
 
+    // players 테이블에 새로운 스탯 컬럼 추가 (개인의지 스탯)
+    const newStats = ['leadership', 'adaptability', 'consistency', 'work_ethic'];
+    for (const stat of newStats) {
+      try {
+        await pool.query(`ALTER TABLE players ADD COLUMN ${stat} INT DEFAULT 50 CHECK (${stat} >= 1 AND ${stat} <= 300)`);
+        console.log(`Added ${stat} column to players table`);
+      } catch (error: any) {
+        if (error.code !== 'ER_DUP_FIELDNAME') {
+          console.error(`Error adding ${stat} column:`, error);
+        }
+      }
+    }
+
+    // player_condition_history 테이블 생성
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS player_condition_history (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          player_id INT NOT NULL,
+          condition_value INT NOT NULL CHECK (condition_value >= 0 AND condition_value <= 100),
+          recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+          INDEX idx_player_date (player_id, recorded_at)
+        )
+      `);
+      console.log('Player condition history table created/verified');
+    } catch (error: any) {
+      if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
+        console.error('Error creating player_condition_history table:', error);
+      }
+    }
+
+    // coaches 테이블 생성
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS coaches (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          name VARCHAR(100) NOT NULL,
+          nationality VARCHAR(50) NOT NULL DEFAULT 'KR',
+          role ENUM('HEAD_COACH', 'ASSISTANT_COACH') NOT NULL,
+          scouting_ability INT DEFAULT 50 CHECK (scouting_ability >= 1 AND scouting_ability <= 100),
+          training_boost DECIMAL(3,2) DEFAULT 1.0 CHECK (training_boost >= 0.5 AND training_boost <= 2.0),
+          salary BIGINT DEFAULT 0,
+          contract_expires_at DATETIME,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('Coaches table created/verified');
+    } catch (error: any) {
+      if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
+        console.error('Error creating coaches table:', error);
+      }
+    }
+
+    // coach_ownership 테이블 생성
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS coach_ownership (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          coach_id INT NOT NULL,
+          team_id INT NOT NULL,
+          acquired_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (coach_id) REFERENCES coaches(id) ON DELETE CASCADE,
+          FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+          UNIQUE KEY unique_coach_team (coach_id, team_id)
+        )
+      `);
+      console.log('Coach ownership table created/verified');
+    } catch (error: any) {
+      if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
+        console.error('Error creating coach_ownership table:', error);
+      }
+    }
+
+    // team_facilities 테이블 확장
+    try {
+      await pool.query('ALTER TABLE team_facilities ADD COLUMN revenue_per_hour BIGINT DEFAULT 0');
+      await pool.query('ALTER TABLE team_facilities ADD COLUMN maintenance_cost BIGINT DEFAULT 0');
+      console.log('Extended team_facilities table');
+    } catch (error: any) {
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        console.error('Error extending team_facilities table:', error);
+      }
+    }
+
     // contract_negotiations 테이블이 없으면 생성 (기존 DB 업데이트)
     try {
       await pool.query(`
@@ -278,19 +363,29 @@ async function createInitialPlayers() {
       const focus = Math.floor(baseOverall * statWeights.focus) + Math.floor(Math.random() * 20);
       const laning = baseOverall - mental - teamfight - focus;
 
-      await pool.query(
-        `INSERT INTO players (name, nationality, position, mental, teamfight, focus, laning, level, exp_to_next) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, 1, 100)`,
-        [
-          player.name,
-          player.nationality,
-          player.position,
-          Math.min(mental, 300),
-          Math.min(teamfight, 300),
-          Math.min(focus, 300),
-          Math.min(laning, 300)
-        ]
-      );
+          // 개인의지 스탯 랜덤 생성 (50-150 사이)
+          const leadership = 50 + Math.floor(Math.random() * 100);
+          const adaptability = 50 + Math.floor(Math.random() * 100);
+          const consistency = 50 + Math.floor(Math.random() * 100);
+          const workEthic = 50 + Math.floor(Math.random() * 100);
+
+          await pool.query(
+            `INSERT INTO players (name, nationality, position, mental, teamfight, focus, laning, leadership, adaptability, consistency, work_ethic, level, exp_to_next) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 100)`,
+            [
+              player.name,
+              player.nationality,
+              player.position,
+              Math.min(mental, 300),
+              Math.min(teamfight, 300),
+              Math.min(focus, 300),
+              Math.min(laning, 300),
+              Math.min(leadership, 300),
+              Math.min(adaptability, 300),
+              Math.min(consistency, 300),
+              Math.min(workEthic, 300)
+            ]
+          );
     }
 
     console.log(`Created ${initialPlayers.length} initial players`);

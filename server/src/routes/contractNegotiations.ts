@@ -81,9 +81,11 @@ router.post('/:playerId/propose', authenticateToken, async (req: AuthRequest, re
     );
 
     // AI 응답 생성 (비동기로 처리)
-    setTimeout(async () => {
-      await generateAIResponse(playerId, req.teamId, result.insertId, annual_salary, contract_years, signing_bonus || 0, player);
-    }, 1000);
+    if (req.teamId) {
+      setTimeout(async () => {
+        await generateAIResponse(playerId, req.teamId!, result.insertId, annual_salary, contract_years, signing_bonus || 0, player);
+      }, 1000);
+    }
 
     res.json({ 
       negotiation_id: result.insertId,
@@ -407,18 +409,20 @@ router.post('/:negotiationId/counter', authenticateToken, async (req: AuthReques
     );
     
     // AI 응답 생성
-    const players = await pool.query('SELECT * FROM players WHERE id = ?', [negotiation.player_id]);
-    setTimeout(async () => {
-      await generateAIResponse(
-        negotiation.player_id, 
-        req.teamId, 
-        result.insertId, 
-        annual_salary, 
-        contract_years, 
-        signing_bonus || 0, 
-        players[0]
-      );
-    }, 1000);
+    if (req.teamId) {
+      const players = await pool.query('SELECT * FROM players WHERE id = ?', [negotiation.player_id]);
+      setTimeout(async () => {
+        await generateAIResponse(
+          negotiation.player_id, 
+          req.teamId!, 
+          result.insertId, 
+          annual_salary, 
+          contract_years, 
+          signing_bonus || 0, 
+          players[0]
+        );
+      }, 1000);
+    }
     
     res.json({ 
       negotiation_id: result.insertId,

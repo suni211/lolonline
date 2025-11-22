@@ -11,7 +11,9 @@ router.get('/my', authenticateToken, async (req: AuthRequest, res) => {
 
     let query = `
       SELECT p.*, po.is_starter, po.is_benched,
-             (p.mental + p.teamfight + p.focus + p.laning) as overall
+             (p.mental + p.teamfight + p.focus + p.laning + 
+              COALESCE(p.leadership, 0) + COALESCE(p.adaptability, 0) + 
+              COALESCE(p.consistency, 0) + COALESCE(p.work_ethic, 0)) as overall
       FROM players p
       INNER JOIN player_ownership po ON p.id = po.player_id
       WHERE po.team_id = ?
@@ -25,7 +27,7 @@ router.get('/my', authenticateToken, async (req: AuthRequest, res) => {
     }
 
     if (sort_by) {
-      const validSorts = ['overall', 'level', 'name', 'mental', 'teamfight', 'focus', 'laning'];
+      const validSorts = ['overall', 'level', 'name', 'mental', 'teamfight', 'focus', 'laning', 'leadership', 'adaptability', 'consistency', 'work_ethic'];
       if (validSorts.includes(sort_by as string)) {
         query += ` ORDER BY ${sort_by} ${order === 'desc' ? 'DESC' : 'ASC'}`;
       }
@@ -49,7 +51,9 @@ router.get('/search', authenticateToken, async (req: AuthRequest, res) => {
 
     let query = `
       SELECT p.*, 
-             (p.mental + p.teamfight + p.focus + p.laning) as overall,
+             (p.mental + p.teamfight + p.focus + p.laning + 
+              COALESCE(p.leadership, 0) + COALESCE(p.adaptability, 0) + 
+              COALESCE(p.consistency, 0) + COALESCE(p.work_ethic, 0)) as overall,
              (SELECT COUNT(*) FROM player_ownership po2 WHERE po2.player_id = p.id) as owned_count
       FROM players p
       WHERE NOT EXISTS (
@@ -71,12 +75,12 @@ router.get('/search', authenticateToken, async (req: AuthRequest, res) => {
     }
 
     if (min_overall) {
-      query += ' AND (p.mental + p.teamfight + p.focus + p.laning) >= ?';
+      query += ' AND (p.mental + p.teamfight + p.focus + p.laning + COALESCE(p.leadership, 0) + COALESCE(p.adaptability, 0) + COALESCE(p.consistency, 0) + COALESCE(p.work_ethic, 0)) >= ?';
       params.push(parseInt(min_overall as string));
     }
 
     if (max_overall) {
-      query += ' AND (p.mental + p.teamfight + p.focus + p.laning) <= ?';
+      query += ' AND (p.mental + p.teamfight + p.focus + p.laning + COALESCE(p.leadership, 0) + COALESCE(p.adaptability, 0) + COALESCE(p.consistency, 0) + COALESCE(p.work_ethic, 0)) <= ?';
       params.push(parseInt(max_overall as string));
     }
 
@@ -225,6 +229,26 @@ router.post('/:playerId/levelup', authenticateToken, async (req: AuthRequest, re
         newMental, newTeamfight, newFocus, newLaning, playerId
       ]
     );
+
+    // 개인의지 스탯 자동 증가 (랜덤, work_ethic에 비례)
+    const player = await pool.query('SELECT * FROM players WHERE id = ?', [playerId]);
+    if (player.length > 0) {
+      const workEthic = player[0].work_ethic || 50;
+      const willPower = workEthic / 300; // 0~1 사이 값
+      
+      // 개인의지 스탯 증가 확률 (work_ethic이 높을수록 증가 확률 높음)
+      if (Math.random() < willPower * 0.3) {
+        const statsToIncrease = ['leadership', 'adaptability', 'consistency'];
+        const randomStat = statsToIncrease[Math.floor(Math.random() * statsToIncrease.length)];
+        const currentValue = player[0][randomStat] || 50;
+        if (currentValue < 300) {
+          await pool.query(
+            `UPDATE players SET ${randomStat} = LEAST(?, 300) WHERE id = ?`,
+            [currentValue + 1, playerId]
+          );
+        }
+      }
+    }
 
     const updatedPlayer = await pool.query('SELECT * FROM players WHERE id = ?', [playerId]);
 

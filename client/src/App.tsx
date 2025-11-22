@@ -4,6 +4,8 @@ import Login from './pages/Login';
 import CreateTeam from './pages/CreateTeam';
 import Dashboard from './pages/Dashboard';
 import Players from './pages/Players';
+import Coaches from './pages/Coaches';
+import Facilities from './pages/Facilities';
 import Matches from './pages/Matches';
 import Leagues from './pages/Leagues';
 import Trades from './pages/Trades';
@@ -38,6 +40,8 @@ function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="players" element={<Players />} />
+            <Route path="coaches" element={<Coaches />} />
+            <Route path="facilities" element={<Facilities />} />
             <Route path="matches" element={<Matches />} />
             <Route path="leagues" element={<Leagues />} />
             <Route path="trades" element={<Trades />} />

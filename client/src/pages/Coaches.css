@@ -1,0 +1,90 @@
+.coaches-page {
+  max-width: 1400px;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.coaches-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.coach-card {
+  background: linear-gradient(135deg, #111 0%, #1a1a1a 100%);
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.coach-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.coach-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 12px 24px rgba(30, 58, 138, 0.4), 0 0 20px rgba(59, 130, 246, 0.2);
+  border-color: var(--light-blue);
+}
+
+.coach-card:hover::before {
+  left: 100%;
+}
+
+.coach-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.coach-header h3 {
+  color: var(--white);
+  font-size: 1.25rem;
+}
+
+.role-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.role-badge.HEAD_COACH {
+  background: linear-gradient(135deg, #F59E0B, #F97316);
+  color: var(--white);
+}
+
+.role-badge.ASSISTANT_COACH {
+  background: linear-gradient(135deg, #3B82F6, #60A5FA);
+  color: var(--white);
+}
+
+.coach-stats {
+  margin-top: 1rem;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #333;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.stat-row:last-child {
+  border-bottom: none;
+}
+

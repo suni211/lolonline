@@ -98,6 +98,23 @@ git clone <repository-url>
 cd LOLONLINE
 ```
 
+## 업데이트 및 빌드
+
+### 빠른 업데이트
+```bash
+# 코드 업데이트
+git pull origin main
+
+# 빌드
+npm run build
+
+# PM2 재시작
+pm2 restart all
+```
+
+### 상세 가이드
+자세한 배포 및 업데이트 방법은 [DEPLOY.md](./DEPLOY.md) 파일을 참고하세요.
+
 2. 루트 디렉토리에서 의존성 설치
 ```bash
 npm install

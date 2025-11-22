@@ -34,10 +34,16 @@ CREATE TABLE IF NOT EXISTS players (
     name VARCHAR(100) NOT NULL,
     nationality VARCHAR(50) NOT NULL DEFAULT 'KR',
     position ENUM('TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT') NOT NULL,
+    -- 직접 올릴 수 있는 스탯 (4개)
     mental INT DEFAULT 1 CHECK (mental >= 1 AND mental <= 300),
     teamfight INT DEFAULT 1 CHECK (teamfight >= 1 AND teamfight <= 300),
     focus INT DEFAULT 1 CHECK (focus >= 1 AND focus <= 300),
     laning INT DEFAULT 1 CHECK (laning >= 1 AND laning <= 300),
+    -- 개인의지에 달린 스탯 (4개)
+    leadership INT DEFAULT 50 CHECK (leadership >= 1 AND leadership <= 300),
+    adaptability INT DEFAULT 50 CHECK (adaptability >= 1 AND adaptability <= 300),
+    consistency INT DEFAULT 50 CHECK (consistency >= 1 AND consistency <= 300),
+    work_ethic INT DEFAULT 50 CHECK (work_ethic >= 1 AND work_ethic <= 300),
     level INT DEFAULT 1,
     exp INT DEFAULT 0,
     exp_to_next INT DEFAULT 100,
@@ -53,7 +59,7 @@ CREATE TABLE IF NOT EXISTS players (
     injury_started_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_position (position),
-    INDEX idx_overall (mental, teamfight, focus, laning)
+    INDEX idx_overall (mental, teamfight, focus, laning, leadership, adaptability, consistency, work_ethic)
 );
 
 -- 선수 소유 테이블
@@ -111,10 +117,46 @@ CREATE TABLE IF NOT EXISTS equipment (
 CREATE TABLE IF NOT EXISTS team_facilities (
     id INT PRIMARY KEY AUTO_INCREMENT,
     team_id INT NOT NULL,
-    facility_type ENUM('TRAINING', 'MEDICAL', 'SCOUTING') NOT NULL,
+    facility_type ENUM('TRAINING', 'MEDICAL', 'SCOUTING', 'STADIUM', 'MERCHANDISE', 'RESTAURANT', 'ACCOMMODATION', 'MEDIA') NOT NULL,
     level INT DEFAULT 1,
+    revenue_per_hour BIGINT DEFAULT 0,
+    maintenance_cost BIGINT DEFAULT 0,
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
     UNIQUE KEY unique_team_facility (team_id, facility_type)
+);
+
+-- 선수 컨디션 기록 테이블 (그래프용)
+CREATE TABLE IF NOT EXISTS player_condition_history (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    player_id INT NOT NULL,
+    condition_value INT NOT NULL CHECK (condition_value >= 0 AND condition_value <= 100),
+    recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+    INDEX idx_player_date (player_id, recorded_at)
+);
+
+-- 감독 테이블
+CREATE TABLE IF NOT EXISTS coaches (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    nationality VARCHAR(50) NOT NULL DEFAULT 'KR',
+    role ENUM('HEAD_COACH', 'ASSISTANT_COACH') NOT NULL,
+    scouting_ability INT DEFAULT 50 CHECK (scouting_ability >= 1 AND scouting_ability <= 100),
+    training_boost DECIMAL(3,2) DEFAULT 1.0 CHECK (training_boost >= 0.5 AND training_boost <= 2.0),
+    salary BIGINT DEFAULT 0,
+    contract_expires_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 감독 소유 테이블
+CREATE TABLE IF NOT EXISTS coach_ownership (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    coach_id INT NOT NULL,
+    team_id INT NOT NULL,
+    acquired_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (coach_id) REFERENCES coaches(id) ON DELETE CASCADE,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_coach_team (coach_id, team_id)
 );
 
 -- 리그 테이블

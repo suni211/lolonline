@@ -40,6 +40,12 @@ async function processConditionRecovery() {
         'UPDATE players SET player_condition = ? WHERE id = ?',
         [newCondition, player.id]
       );
+
+      // 컨디션 히스토리 기록 (그래프용)
+      await pool.query(
+        'INSERT INTO player_condition_history (player_id, condition_value) VALUES (?, ?)',
+        [player.id, newCondition]
+      );
     }
   } catch (error) {
     console.error('Error processing condition recovery:', error);

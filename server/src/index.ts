@@ -14,6 +14,8 @@ import friendlyMatchRoutes from './routes/friendlyMatches.js';
 import combinationRoutes from './routes/combinations.js';
 import trainingRoutes from './routes/training.js';
 import contractNegotiationRoutes from './routes/contractNegotiations.js';
+import coachRoutes from './routes/coaches.js';
+import facilityRoutes, { initializeFacilityRevenue } from './routes/facilities.js';
 import { initializeDatabase } from './database/init.js';
 import { initializeSeasonSystem } from './services/seasonService.js';
 import { initializeMatchSimulation } from './services/matchSimulationService.js';
@@ -42,6 +44,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/players', playerRoutes);
 app.use('/api/contracts', contractNegotiationRoutes);
+app.use('/api/coaches', coachRoutes);
+app.use('/api/facilities', facilityRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/leagues', leagueRoutes);
 app.use('/api/trades', tradeRoutes);
@@ -80,6 +84,7 @@ async function startServer() {
     await initializeMatchSimulation(io);
     initializeInjurySystem();
     initializeConditionRecovery();
+    initializeFacilityRevenue();
     
     httpServer.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT}`);

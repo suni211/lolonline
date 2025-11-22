@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { soundManager } from '../utils/soundManager';
+import { LineChart, Line, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Area, AreaChart } from 'recharts';
 import './PlayerDetailModal.css';
 
 interface Player {
@@ -12,6 +13,10 @@ interface Player {
   teamfight: number;
   focus: number;
   laning: number;
+  leadership?: number;
+  adaptability?: number;
+  consistency?: number;
+  work_ethic?: number;
   level: number;
   exp: number;
   exp_to_next: number;
@@ -28,6 +33,11 @@ interface PlayerDetailModalProps {
   onUpdate: () => void;
 }
 
+interface ConditionHistory {
+  condition_value: number;
+  recorded_at: string;
+}
+
 export default function PlayerDetailModal({ player, onClose, onUpdate }: PlayerDetailModalProps) {
   const [statAllocation, setStatAllocation] = useState({
     mental: 0,
@@ -36,8 +46,47 @@ export default function PlayerDetailModal({ player, onClose, onUpdate }: PlayerD
     laning: 0
   });
   const [showLevelUp, setShowLevelUp] = useState(false);
+  const [conditionHistory, setConditionHistory] = useState<ConditionHistory[]>([]);
+  const [activeTab, setActiveTab] = useState<'stats' | 'condition' | 'abilities'>('stats');
 
   const canLevelUp = player.exp >= player.exp_to_next;
+
+  useEffect(() => {
+    fetchConditionHistory();
+  }, [player.id]);
+
+  const fetchConditionHistory = async () => {
+    try {
+      const response = await axios.get(`/api/players/${player.id}/condition-history`);
+      setConditionHistory(response.data);
+    } catch (error) {
+      console.error('Failed to fetch condition history:', error);
+    }
+  };
+
+  // 능력치 레이더 차트 데이터
+  const abilityData = [
+    { stat: '멘탈', value: player.mental, max: 300 },
+    { stat: '한타력', value: player.teamfight, max: 300 },
+    { stat: '집중력', value: player.focus, max: 300 },
+    { stat: '라인전', value: player.laning, max: 300 },
+    { stat: '리더십', value: player.leadership || 50, max: 300 },
+    { stat: '적응력', value: player.adaptability || 50, max: 300 },
+    { stat: '일관성', value: player.consistency || 50, max: 300 },
+    { stat: '노력', value: player.work_ethic || 50, max: 300 },
+  ];
+
+  const radarData = abilityData.map(item => ({
+    subject: item.stat,
+    A: item.value,
+    fullMark: 300
+  }));
+
+  // 컨디션 그래프 데이터
+  const conditionChartData = conditionHistory.map(item => ({
+    date: new Date(item.recorded_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+    condition: item.condition_value
+  }));
 
   const handleLevelUp = async () => {
     const total = statAllocation.mental + statAllocation.teamfight + statAllocation.focus + statAllocation.laning;
@@ -120,6 +169,28 @@ export default function PlayerDetailModal({ player, onClose, onUpdate }: PlayerD
         </div>
 
         <div className="modal-body">
+          {/* 탭 메뉴 */}
+          <div className="player-tabs">
+            <button 
+              className={activeTab === 'stats' ? 'tab-active' : 'tab-btn'}
+              onClick={() => setActiveTab('stats')}
+            >
+              스탯
+            </button>
+            <button 
+              className={activeTab === 'abilities' ? 'tab-active' : 'tab-btn'}
+              onClick={() => setActiveTab('abilities')}
+            >
+              능력치
+            </button>
+            <button 
+              className={activeTab === 'condition' ? 'tab-active' : 'tab-btn'}
+              onClick={() => setActiveTab('condition')}
+            >
+              컨디션
+            </button>
+          </div>
+
           <div className="player-info-section">
             <div className="info-row">
               <span>포지션:</span>
@@ -157,105 +228,208 @@ export default function PlayerDetailModal({ player, onClose, onUpdate }: PlayerD
             )}
           </div>
 
-          <div className="stats-section">
-            <h3>현재 스탯</h3>
-            <div className="stats-grid">
-              <div className="stat-item">
-                <span>멘탈:</span>
-                <span>{player.mental} / 300</span>
+          {/* 스탯 탭 */}
+          {activeTab === 'stats' && (
+            <>
+              <div className="stats-section">
+                <h3>직접 올릴 수 있는 스탯</h3>
+                <div className="stats-grid">
+                  <div className="stat-item">
+                    <span>멘탈:</span>
+                    <span>{player.mental} / 300</span>
+                  </div>
+                  <div className="stat-item">
+                    <span>한타력:</span>
+                    <span>{player.teamfight} / 300</span>
+                  </div>
+                  <div className="stat-item">
+                    <span>집중력:</span>
+                    <span>{player.focus} / 300</span>
+                  </div>
+                  <div className="stat-item">
+                    <span>라인전:</span>
+                    <span>{player.laning} / 300</span>
+                  </div>
+                </div>
               </div>
-              <div className="stat-item">
-                <span>한타력:</span>
-                <span>{player.teamfight} / 300</span>
-              </div>
-              <div className="stat-item">
-                <span>집중력:</span>
-                <span>{player.focus} / 300</span>
-              </div>
-              <div className="stat-item">
-                <span>라인전:</span>
-                <span>{player.laning} / 300</span>
-              </div>
-            </div>
-          </div>
 
-          {player.stat_points > 0 && (
-            <div className="stat-allocation-section">
-              <h3>스탯 분배</h3>
-              <div className="allocation-inputs">
-                <div className="allocation-item">
-                  <label>멘탈:</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max={Math.min(300 - player.mental, remainingPoints + statAllocation.mental)}
-                    value={statAllocation.mental}
-                    onChange={(e) => setStatAllocation({ ...statAllocation, mental: parseInt(e.target.value) || 0 })}
-                  />
+              <div className="stats-section">
+                <h3>개인의지 스탯 (자동 성장)</h3>
+                <div className="stats-grid">
+                  <div className="stat-item">
+                    <span>리더십:</span>
+                    <span>{player.leadership || 50} / 300</span>
+                  </div>
+                  <div className="stat-item">
+                    <span>적응력:</span>
+                    <span>{player.adaptability || 50} / 300</span>
+                  </div>
+                  <div className="stat-item">
+                    <span>일관성:</span>
+                    <span>{player.consistency || 50} / 300</span>
+                  </div>
+                  <div className="stat-item">
+                    <span>노력:</span>
+                    <span>{player.work_ethic || 50} / 300</span>
+                  </div>
                 </div>
-                <div className="allocation-item">
-                  <label>한타력:</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max={Math.min(300 - player.teamfight, remainingPoints + statAllocation.teamfight)}
-                    value={statAllocation.teamfight}
-                    onChange={(e) => setStatAllocation({ ...statAllocation, teamfight: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-                <div className="allocation-item">
-                  <label>집중력:</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max={Math.min(300 - player.focus, remainingPoints + statAllocation.focus)}
-                    value={statAllocation.focus}
-                    onChange={(e) => setStatAllocation({ ...statAllocation, focus: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-                <div className="allocation-item">
-                  <label>라인전:</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max={Math.min(300 - player.laning, remainingPoints + statAllocation.laning)}
-                    value={statAllocation.laning}
-                    onChange={(e) => setStatAllocation({ ...statAllocation, laning: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
+                <p className="stat-note">※ 개인의지 스탯은 선수의 노력(work_ethic)에 따라 자동으로 성장합니다.</p>
               </div>
-              <p className="remaining-points">남은 포인트: {remainingPoints}</p>
-              <div className="stat-actions">
-                <button onClick={handleStatUpdate} className="btn-primary">
-                  스탯 적용
-                </button>
+
+              {player.stat_points > 0 && (
+                <div className="stat-allocation-section">
+                  <h3>스탯 분배</h3>
+                  <div className="allocation-inputs">
+                    <div className="allocation-item">
+                      <label>멘탈:</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max={Math.min(300 - player.mental, remainingPoints + statAllocation.mental)}
+                        value={statAllocation.mental}
+                        onChange={(e) => setStatAllocation({ ...statAllocation, mental: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div className="allocation-item">
+                      <label>한타력:</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max={Math.min(300 - player.teamfight, remainingPoints + statAllocation.teamfight)}
+                        value={statAllocation.teamfight}
+                        onChange={(e) => setStatAllocation({ ...statAllocation, teamfight: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div className="allocation-item">
+                      <label>집중력:</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max={Math.min(300 - player.focus, remainingPoints + statAllocation.focus)}
+                        value={statAllocation.focus}
+                        onChange={(e) => setStatAllocation({ ...statAllocation, focus: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div className="allocation-item">
+                      <label>라인전:</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max={Math.min(300 - player.laning, remainingPoints + statAllocation.laning)}
+                        value={statAllocation.laning}
+                        onChange={(e) => setStatAllocation({ ...statAllocation, laning: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                  </div>
+                  <p className="remaining-points">남은 포인트: {remainingPoints}</p>
+                  <div className="stat-actions">
+                    <button onClick={handleStatUpdate} className="btn-primary">
+                      스탯 적용
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="actions-section">
+                {canLevelUp && (
+                  <button onClick={() => setShowLevelUp(!showLevelUp)} className="btn-primary">
+                    레벨업 ({player.stat_points + 5} 포인트 획득)
+                  </button>
+                )}
+                {showLevelUp && canLevelUp && (
+                  <div className="levelup-section">
+                    <p>레벨업 시 스탯 포인트 5개를 추가로 획득합니다.</p>
+                    <button onClick={handleLevelUp} className="btn-primary">
+                      레벨업 실행
+                    </button>
+                  </div>
+                )}
+                {player.uniform_level < 10 && (
+                  <button onClick={handleUniformUpgrade} className="btn-primary">
+                    유니폼 강화 (비용: {(player.uniform_level + 1) * 5000} 골드)
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* 능력치 탭 */}
+          {activeTab === 'abilities' && (
+            <div className="abilities-section">
+              <h3>능력치 레이더 차트</h3>
+              <div className="chart-container">
+                <ResponsiveContainer width="100%" height={400}>
+                  <RadarChart data={radarData}>
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#fff' }} />
+                    <PolarRadiusAxis angle={90} domain={[0, 300]} tick={{ fill: '#fff' }} />
+                    <Radar
+                      name="능력치"
+                      dataKey="A"
+                      stroke="#60a5fa"
+                      fill="#60a5fa"
+                      fillOpacity={0.6}
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="ability-details">
+                {abilityData.map((item, index) => (
+                  <div key={index} className="ability-item">
+                    <span className="ability-label">{item.stat}:</span>
+                    <div className="ability-bar">
+                      <div 
+                        className="ability-fill" 
+                        style={{ width: `${(item.value / item.max) * 100}%` }}
+                      />
+                    </div>
+                    <span className="ability-value">{item.value} / {item.max}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          <div className="actions-section">
-            {canLevelUp && (
-              <button onClick={() => setShowLevelUp(!showLevelUp)} className="btn-primary">
-                레벨업 ({player.stat_points + 5} 포인트 획득)
-              </button>
-            )}
-            {showLevelUp && canLevelUp && (
-              <div className="levelup-section">
-                <p>레벨업 시 스탯 포인트 5개를 추가로 획득합니다.</p>
-                <button onClick={handleLevelUp} className="btn-primary">
-                  레벨업 실행
-                </button>
+          {/* 컨디션 탭 */}
+          {activeTab === 'condition' && (
+            <div className="condition-section">
+              <h3>최근 컨디션 변화</h3>
+              {conditionChartData.length > 0 ? (
+                <div className="chart-container">
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={conditionChartData}>
+                      <defs>
+                        <linearGradient id="colorCondition" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#60a5fa" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="date" tick={{ fill: '#fff' }} />
+                      <YAxis domain={[0, 100]} tick={{ fill: '#fff' }} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #1e3a8a', color: '#fff' }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="condition"
+                        stroke="#60a5fa"
+                        fillOpacity={1}
+                        fill="url(#colorCondition)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <p className="empty-message">컨디션 기록이 없습니다.</p>
+              )}
+              <div className="condition-info">
+                <p>현재 컨디션: <strong>{player.player_condition}%</strong></p>
+                <p className="info-note">컨디션은 경기, 훈련, 휴식에 따라 변화합니다.</p>
               </div>
-            )}
-            {player.uniform_level < 10 && (
-              <button onClick={handleUniformUpgrade} className="btn-primary">
-                유니폼 강화 (비용: {(player.uniform_level + 1) * 5000} 골드)
-              </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
