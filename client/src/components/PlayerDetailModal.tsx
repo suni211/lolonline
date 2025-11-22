@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { soundManager } from '../utils/soundManager';
-import { LineChart, Line, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Area, AreaChart } from 'recharts';
+import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, XAxis, YAxis, Tooltip, Area, AreaChart } from 'recharts';
 import './PlayerDetailModal.css';
 
 interface Player {

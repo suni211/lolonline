@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import './ContractNegotiationModal.css';
 
@@ -46,18 +46,6 @@ export default function ContractNegotiationModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
-  useEffect(() => {
-    checkExistingNegotiation();
-  }, [checkExistingNegotiation]);
-
-  useEffect(() => {
-    // 협상이 진행 중일 때만 주기적으로 확인
-    if (negotiation && (negotiation.status === 'PENDING' || negotiation.status === 'COUNTER_OFFER')) {
-      const interval = setInterval(checkExistingNegotiation, 3000); // 3초마다 확인
-      return () => clearInterval(interval);
-    }
-  }, [negotiation?.status, checkExistingNegotiation]);
-
   const checkExistingNegotiation = async () => {
     try {
       const response = await axios.get(`/api/contracts/${playerId}`);
@@ -70,6 +58,18 @@ export default function ContractNegotiationModal({
       }
     }
   };
+
+  useEffect(() => {
+    checkExistingNegotiation();
+  }, [playerId]);
+
+  useEffect(() => {
+    // 협상이 진행 중일 때만 주기적으로 확인
+    if (negotiation && (negotiation.status === 'PENDING' || negotiation.status === 'COUNTER_OFFER')) {
+      const interval = setInterval(checkExistingNegotiation, 3000); // 3초마다 확인
+      return () => clearInterval(interval);
+    }
+  }, [negotiation?.status]);
 
   const handlePropose = async () => {
     if (annualSalary <= 0 || contractYears < 1 || contractYears > 5) {
@@ -176,7 +176,7 @@ export default function ContractNegotiationModal({
     setError('');
 
     try {
-      const response = await axios.post(`/api/contracts/${negotiation.id}/counter`, {
+      await axios.post(`/api/contracts/${negotiation.id}/counter`, {
         annual_salary: annualSalary,
         contract_years: contractYears,
         signing_bonus: signingBonus

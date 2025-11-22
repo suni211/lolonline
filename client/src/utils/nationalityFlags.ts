@@ -61,13 +61,6 @@ export const nationalityFlags: Record<string, string> = {
   'GR': '🇬🇷', // 그리스
   'CZ': '🇨🇿', // 체코
   'HR': '🇭🇷', // 크로아티아
-  'SE': '🇸🇪', // 스웨덴
-  'DK': '🇩🇰', // 덴마크
-  'PL': '🇵🇱', // 폴란드
-  'ES': '🇪🇸', // 스페인
-  'DE': '🇩🇪', // 독일
-  'CA': '🇨🇦', // 캐나다
-  'AU': '🇦🇺', // 호주
 };
 
 // 국적 이름 매핑
@@ -133,13 +126,6 @@ export const nationalityNames: Record<string, string> = {
   'GR': '그리스',
   'CZ': '체코',
   'HR': '크로아티아',
-  'SE': '스웨덴',
-  'DK': '덴마크',
-  'PL': '폴란드',
-  'ES': '스페인',
-  'DE': '독일',
-  'CA': '캐나다',
-  'AU': '호주',
 };
 
 export function getNationalityFlag(nationality: string): string {
