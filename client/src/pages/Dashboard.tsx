@@ -25,9 +25,16 @@ interface LeagueInfo {
 // 날짜 포맷 헬퍼 함수
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return '-';
-  const date = new Date(dateString);
+  const normalized = dateString.replace(' ', 'T');
+  const date = new Date(normalized);
   if (isNaN(date.getTime())) return '-';
-  return date.toLocaleString('ko-KR');
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const hour12 = hours % 12 || 12;
+  return `${month}.${day} ${ampm} ${hour12}:${minutes}`;
 };
 
 export default function Dashboard() {
