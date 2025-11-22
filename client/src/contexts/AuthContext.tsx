@@ -14,6 +14,7 @@ interface Team {
   gold: number;
   diamond: number;
   fan_count: number;
+  logo_url: string | null;
 }
 
 interface AuthContextType {
@@ -25,6 +26,7 @@ interface AuthContextType {
   logout: () => void;
   loading: boolean;
   fetchUserInfo: () => Promise<void>;
+  refreshTeam: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -83,8 +85,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     delete axios.defaults.headers.common['Authorization'];
   };
 
+  const refreshTeam = async () => {
+    await fetchUserInfo();
+  };
+
   return (
-    <AuthContext.Provider value={{ user, team, token, login, register, logout, loading, fetchUserInfo }}>
+    <AuthContext.Provider value={{ user, team, token, login, register, logout, loading, fetchUserInfo, refreshTeam }}>
       {children}
     </AuthContext.Provider>
   );

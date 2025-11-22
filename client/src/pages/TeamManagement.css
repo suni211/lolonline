@@ -110,3 +110,126 @@
   cursor: not-allowed;
 }
 
+/* 메시지 */
+.message {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.message.success {
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid #22c55e;
+  color: #22c55e;
+}
+
+.message.error {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  color: #ef4444;
+}
+
+.message button {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+/* 로고 섹션 */
+.logo-section {
+  padding: 1rem 0;
+  border-bottom: 1px solid #333;
+  margin-bottom: 1rem;
+}
+
+.logo-section > label {
+  display: block;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 1rem;
+}
+
+.logo-preview {
+  width: 120px;
+  height: 120px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #222;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  border: 2px solid #333;
+}
+
+.logo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.no-logo {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.logo-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.upload-btn {
+  padding: 0.5rem 1rem;
+  background: var(--primary-blue);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.upload-btn:hover {
+  background: var(--light-blue);
+}
+
+.upload-btn input {
+  display: none;
+}
+
+.delete-btn {
+  padding: 0.5rem 1rem;
+  background: #ef4444;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.delete-btn:hover {
+  background: #dc2626;
+}
+
+.btn-primary {
+  margin-top: 1rem;
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--primary-blue);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background: var(--light-blue);
+}
+

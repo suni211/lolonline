@@ -2,8 +2,40 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import pool from '../database/db.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 const router = express.Router();
+
+// 로고 업로드 설정
+const logoStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(__dirname, '..', '..', '..', '..', 'client', 'public', 'logos');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const teamId = (req as AuthRequest).teamId;
+    const ext = path.extname(file.originalname);
+    cb(null, `team_${teamId}${ext}`);
+  }
+});
+
+const uploadLogo = multer({
+  storage: logoStorage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB 제한
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('이미지 파일만 업로드 가능합니다'));
+    }
+  }
+});
 
 // 팀 정보 가져오기
 router.get('/', authenticateToken, async (req: AuthRequest, res) => {
@@ -156,7 +188,7 @@ router.put('/', authenticateToken, async (req: AuthRequest, res) => {
     const { name, logo_url, team_color, home_stadium } = req.body;
 
     await pool.query(
-      `UPDATE teams 
+      `UPDATE teams
        SET name = COALESCE(?, name),
            logo_url = COALESCE(?, logo_url),
            team_color = COALESCE(?, team_color),
@@ -169,6 +201,65 @@ router.put('/', authenticateToken, async (req: AuthRequest, res) => {
   } catch (error: any) {
     console.error('Update team error:', error);
     res.status(500).json({ error: 'Failed to update team' });
+  }
+});
+
+// 팀 로고 업로드
+router.post('/logo', authenticateToken, uploadLogo.single('logo'), async (req: AuthRequest, res) => {
+  try {
+    if (!req.teamId) {
+      return res.status(400).json({ error: '팀이 없습니다' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: '로고 파일이 필요합니다' });
+    }
+
+    // 기존 로고 삭제
+    const teams = await pool.query('SELECT logo_url FROM teams WHERE id = ?', [req.teamId]);
+    if (teams.length > 0 && teams[0].logo_url) {
+      const oldPath = path.join(__dirname, '..', '..', '..', '..', 'client', 'public', teams[0].logo_url);
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
+    }
+
+    // 새 로고 경로 저장
+    const logoPath = `/logos/${req.file.filename}`;
+    await pool.query('UPDATE teams SET logo_url = ? WHERE id = ?', [logoPath, req.teamId]);
+
+    res.json({
+      success: true,
+      message: '로고가 업로드되었습니다',
+      logoUrl: logoPath
+    });
+  } catch (error: any) {
+    console.error('Upload logo error:', error);
+    res.status(500).json({ error: '로고 업로드 실패' });
+  }
+});
+
+// 팀 로고 삭제
+router.delete('/logo', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    if (!req.teamId) {
+      return res.status(400).json({ error: '팀이 없습니다' });
+    }
+
+    const teams = await pool.query('SELECT logo_url FROM teams WHERE id = ?', [req.teamId]);
+    if (teams.length > 0 && teams[0].logo_url) {
+      const filePath = path.join(__dirname, '..', '..', '..', '..', 'client', 'public', teams[0].logo_url);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    await pool.query('UPDATE teams SET logo_url = NULL WHERE id = ?', [req.teamId]);
+
+    res.json({ success: true, message: '로고가 삭제되었습니다' });
+  } catch (error: any) {
+    console.error('Delete logo error:', error);
+    res.status(500).json({ error: '로고 삭제 실패' });
   }
 });
 

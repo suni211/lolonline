@@ -151,8 +151,8 @@ router.post('/buy/:tradeId', authenticateToken, async (req: AuthRequest, res) =>
       [req.teamId]
     );
 
-    if (playerCount[0].count >= 23) {
-      return res.status(400).json({ error: 'Maximum player limit reached (23)' });
+    if (playerCount[0].count >= 10) {
+      return res.status(400).json({ error: '최대 보유 선수 수에 도달했습니다 (10명)' });
     }
 
     // 재화 확인

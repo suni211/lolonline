@@ -175,7 +175,7 @@ export default function Dashboard() {
             <>
               <div className="stat-card card-enter-delay-3">
                 <h3>보유 선수</h3>
-                <p className="stat-value">{teamStats.player_count} / 23</p>
+                <p className="stat-value">{teamStats.player_count} / 10</p>
               </div>
               <div className="stat-card card-enter-delay-1">
                 <h3>스타터</h3>

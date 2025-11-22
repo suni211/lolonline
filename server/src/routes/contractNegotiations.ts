@@ -45,14 +45,14 @@ router.post('/:playerId/propose', authenticateToken, async (req: AuthRequest, re
 
     const isFA = existingOwnership.length === 0;
 
-    // 최대 보유 수 확인 (23명)
+    // 최대 보유 수 확인 (10명)
     const playerCount = await pool.query(
       'SELECT COUNT(*) as count FROM player_ownership WHERE team_id = ?',
       [req.teamId]
     );
 
-    if (playerCount[0].count >= 23) {
-      return res.status(400).json({ error: '최대 보유 선수 수에 도달했습니다 (23명)' });
+    if (playerCount[0].count >= 10) {
+      return res.status(400).json({ error: '최대 보유 선수 수에 도달했습니다 (10명)' });
     }
 
     // 기존 협상 확인 (진행 중인 협상이 있으면 거부)
