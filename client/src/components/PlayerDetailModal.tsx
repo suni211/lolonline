@@ -15,7 +15,7 @@ interface Player {
   exp: number;
   exp_to_next: number;
   stat_points: number;
-  condition: number;
+  player_condition: number;
   uniform_level: number;
   injury_status: string;
   injury_recovery_days: number;
@@ -138,7 +138,7 @@ export default function PlayerDetailModal({ player, onClose, onUpdate }: PlayerD
             </div>
             <div className="info-row">
               <span>컨디션:</span>
-              <span>{player.condition}%</span>
+              <span>{player.player_condition}%</span>
             </div>
             <div className="info-row">
               <span>유니폼 강화:</span>
