@@ -325,7 +325,7 @@ CREATE TABLE IF NOT EXISTS leaderboards (
 );
 
 -- 인덱스 추가
-CREATE INDEX idx_players_overall ON players(mental + teamfight + focus + laning);
+-- idx_players_overall은 표현식 인덱스를 지원하지 않으므로 제거 (이미 idx_overall 복합 인덱스가 있음)
 CREATE INDEX idx_matches_status ON matches(status);
 CREATE INDEX idx_matches_scheduled ON matches(scheduled_at);
 CREATE INDEX idx_trades_status ON trades(status);
