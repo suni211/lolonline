@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { soundManager } from '../utils/soundManager';
 import PlayerDetailModal from '../components/PlayerDetailModal';
+import { getNationalityFlag, getNationalityName } from '../utils/nationalityFlags';
 import './Players.css';
 
 interface Player {
@@ -29,6 +30,7 @@ interface Player {
 interface SearchPlayer {
   id: number;
   name: string;
+  nationality: string;
   position: string;
   overall: number;
   owned_count: number;
