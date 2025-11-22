@@ -40,6 +40,7 @@ export default function Layout() {
     { path: '/sponsors', label: '스폰서/재정' },
     { path: '/training', label: '훈련' },
     { path: '/matches', label: '경기' },
+    { path: '/friendly', label: '친선전' },
     { path: '/leagues', label: '리그' },
     { path: '/transfer', label: '이적시장' },
     { path: '/missions', label: '미션' },

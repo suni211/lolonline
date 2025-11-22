@@ -631,16 +631,23 @@ async function finishMatch(match: any, matchData: any, io: Server) {
       winner: homeScore > awayScore ? 'home' : awayScore > homeScore ? 'away' : 'draw'
     });
 
-    // 경기 보상 (랜덤 선수 카드)
+    // 경기 보상
     const winnerTeamId = homeScore > awayScore ? match.home_team_id : match.away_team_id;
     const loserTeamId = homeScore > awayScore ? match.away_team_id : match.home_team_id;
-    
-    await giveMatchRewards(match, winnerTeamId);
-    
-    // 경험치 지급
-    await giveMatchExperience(match.id, winnerTeamId, true);
+
+    if (match.match_type === 'FRIENDLY') {
+      // 친선전 보상 - 골드 + 소량 경험치
+      await giveFriendlyMatchRewards(match, winnerTeamId, loserTeamId, homeScore, awayScore);
+    } else {
+      // 리그전 보상 - 랜덤 선수 카드
+      await giveMatchRewards(match, winnerTeamId);
+    }
+
+    // 경험치 지급 (친선전은 적은 양)
+    const expMultiplier = match.match_type === 'FRIENDLY' ? 0.5 : 1.0;
+    await giveMatchExperience(match.id, winnerTeamId, true, expMultiplier);
     if (homeScore !== awayScore) {
-      await giveMatchExperience(match.id, loserTeamId, false);
+      await giveMatchExperience(match.id, loserTeamId, false, expMultiplier);
     }
 
     // 경기 후 부상 체크 (모든 출전 선수)
@@ -669,7 +676,7 @@ async function giveMatchRewards(match: any, winnerTeamId: number) {
     // 승리 팀에게 랜덤 선수 카드 보상
     const positions = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
     const position = positions[Math.floor(Math.random() * positions.length)];
-    
+
     const baseOverall = 150 + Math.floor(Math.random() * 200);
     const mental = Math.floor(baseOverall * 0.25) + Math.floor(Math.random() * 30);
     const teamfight = Math.floor(baseOverall * 0.25) + Math.floor(Math.random() * 30);
@@ -681,11 +688,11 @@ async function giveMatchRewards(match: any, winnerTeamId: number) {
       'Knight', 'JackeyLove', '369', 'Tian', 'Doinb', 'Crisp', 'Nuguri', 'Canyon'
     ];
 
-    const name = playerNames[Math.floor(Math.random() * playerNames.length)] + 
+    const name = playerNames[Math.floor(Math.random() * playerNames.length)] +
                  Math.floor(Math.random() * 1000).toString();
 
     const result = await pool.query(
-      `INSERT INTO players (name, position, mental, teamfight, focus, laning, level, exp_to_next) 
+      `INSERT INTO players (name, position, mental, teamfight, focus, laning, level, exp_to_next)
        VALUES (?, ?, ?, ?, ?, ?, 1, 100)`,
       [name, position, Math.min(mental, 300), Math.min(teamfight, 300), Math.min(focus, 300), Math.min(laning, 300)]
     );
@@ -697,6 +704,40 @@ async function giveMatchRewards(match: any, winnerTeamId: number) {
     );
   } catch (error) {
     console.error('Error giving match rewards:', error);
+  }
+}
+
+// 친선전 보상 지급
+async function giveFriendlyMatchRewards(match: any, winnerTeamId: number, loserTeamId: number, homeScore: number, awayScore: number) {
+  try {
+    // 기본 보상
+    const winnerGold = 50000 + (homeScore > awayScore ? homeScore : awayScore) * 5000;
+    const loserGold = 20000;
+
+    // 승자 팀 골드 지급
+    await pool.query(
+      'UPDATE teams SET gold = gold + ? WHERE id = ?',
+      [winnerGold, winnerTeamId]
+    );
+
+    // 패자 팀도 소량의 골드 지급 (무승부가 아닌 경우)
+    if (homeScore !== awayScore) {
+      await pool.query(
+        'UPDATE teams SET gold = gold + ? WHERE id = ?',
+        [loserGold, loserTeamId]
+      );
+    } else {
+      // 무승부인 경우 양팀 동일 보상
+      const drawGold = 35000;
+      await pool.query(
+        'UPDATE teams SET gold = gold + ? WHERE id IN (?, ?)',
+        [drawGold, winnerTeamId, loserTeamId]
+      );
+    }
+
+    console.log(`Friendly match rewards: Winner ${winnerTeamId} +${winnerGold}G, Loser ${loserTeamId} +${loserGold}G`);
+  } catch (error) {
+    console.error('Error giving friendly match rewards:', error);
   }
 }
 

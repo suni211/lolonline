@@ -18,6 +18,7 @@ import MatchViewer from './pages/MatchViewer';
 import Tactics from './pages/Tactics';
 import Cards from './pages/Cards';
 import Transfer from './pages/Transfer';
+import FriendlyMatch from './pages/FriendlyMatch';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -60,6 +61,7 @@ function App() {
             <Route path="tactics" element={<Tactics />} />
             <Route path="cards" element={<Cards />} />
             <Route path="transfer" element={<Transfer />} />
+            <Route path="friendly" element={<FriendlyMatch />} />
           </Route>
         </Routes>
       </Router>

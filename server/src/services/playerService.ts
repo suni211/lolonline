@@ -1,7 +1,7 @@
 import pool from '../database/db.js';
 
 // 경기 후 선수 경험치 획득
-export async function giveMatchExperience(matchId: number, teamId: number, won: boolean) {
+export async function giveMatchExperience(matchId: number, teamId: number, won: boolean, multiplier: number = 1.0) {
   try {
     // 경기 참가 선수 가져오기
     const players = await pool.query(
@@ -11,11 +11,11 @@ export async function giveMatchExperience(matchId: number, teamId: number, won: 
       [teamId]
     );
 
-    // 승리 시 더 많은 경험치
-    const baseExp = won ? 50 : 30;
+    // 승리 시 더 많은 경험치 (multiplier로 조정 가능)
+    const baseExp = Math.floor((won ? 50 : 30) * multiplier);
 
     for (const player of players) {
-      const expGain = baseExp + Math.floor(Math.random() * 20);
+      const expGain = baseExp + Math.floor(Math.random() * 20 * multiplier);
       const newExp = player.exp + expGain;
 
       // 레벨업 체크
