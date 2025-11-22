@@ -12,8 +12,10 @@ interface League {
 }
 
 interface Standing {
+  team_id: number;
   team_name: string;
   logo_url: string | null;
+  is_ai: boolean;
   wins: number;
   losses: number;
   draws: number;
@@ -24,28 +26,30 @@ interface Standing {
 
 export default function Leagues() {
   const [leagues, setLeagues] = useState<League[]>([]);
-  const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
+  const [selectedTier, setSelectedTier] = useState<'SUPER' | 'FIRST' | 'SECOND'>('SUPER');
   const [standings, setStandings] = useState<Standing[]>([]);
   const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
   const [playoffBracket, setPlayoffBracket] = useState<any[]>([]);
+  const [currentLeague, setCurrentLeague] = useState<League | null>(null);
 
   useEffect(() => {
     fetchLeagues();
   }, []);
 
   useEffect(() => {
-    if (selectedLeague) {
-      fetchLeagueDetails(selectedLeague.id);
+    const league = leagues.find(l => l.region === selectedTier);
+    if (league) {
+      setCurrentLeague(league);
+      fetchLeagueDetails(league.id);
     }
-  }, [selectedLeague]);
+  }, [selectedTier, leagues]);
 
   const fetchLeagues = async () => {
     try {
       const response = await axios.get('/api/leagues');
-      setLeagues(response.data);
-      if (response.data.length > 0) {
-        setSelectedLeague(response.data[0]);
-      }
+      // LPO 리그만 필터링하고 현재 시즌만
+      const lpoLeagues = response.data.filter((l: League) => l.name.includes('LPO'));
+      setLeagues(lpoLeagues);
     } catch (error) {
       console.error('Failed to fetch leagues:', error);
     }
@@ -66,37 +70,84 @@ export default function Leagues() {
     }
   };
 
+  const getTierName = (tier: string) => {
+    switch (tier) {
+      case 'SUPER': return 'LPO SUPER LEAGUE';
+      case 'FIRST': return 'LPO 1 LEAGUE';
+      case 'SECOND': return 'LPO 2 LEAGUE';
+      default: return tier;
+    }
+  };
+
+  const getTierDescription = (tier: string) => {
+    switch (tier) {
+      case 'SUPER': return '1부 리그 - 최상위 10팀';
+      case 'FIRST': return '2부 리그 - 10팀';
+      case 'SECOND': return '3부 리그 - 12팀 (신규 팀 시작)';
+      default: return '';
+    }
+  };
+
+  const getPromotionInfo = (tier: string, rank: number, totalTeams: number) => {
+    if (tier === 'SUPER') {
+      if (rank >= totalTeams - 1) return 'relegation'; // 하위 2팀 강등
+    } else if (tier === 'FIRST') {
+      if (rank <= 2) return 'promotion'; // 상위 2팀 승격
+      if (rank >= totalTeams - 1) return 'relegation'; // 하위 2팀 강등
+    } else if (tier === 'SECOND') {
+      if (rank <= 2) return 'promotion'; // 상위 2팀 승격
+    }
+    return '';
+  };
+
   return (
     <div className="leagues-page">
-      <h1 className="page-title">리그</h1>
+      <h1 className="page-title">LPO LEAGUE</h1>
 
-      <div className="league-selector">
-        {leagues.map((league) => (
-          <button
-            key={league.id}
-            onClick={() => setSelectedLeague(league)}
-            className={`league-btn ${selectedLeague?.id === league.id ? 'active' : ''}`}
-          >
-            {league.name} - 시즌 {league.season} ({league.current_month}월)
-            {league.status === 'PLAYOFF' && ' - 플레이오프'}
-            {league.status === 'OFFSEASON' && ' - 스토브리그'}
-          </button>
-        ))}
+      <div className="tier-selector">
+        <button
+          onClick={() => setSelectedTier('SUPER')}
+          className={`tier-btn super ${selectedTier === 'SUPER' ? 'active' : ''}`}
+        >
+          <div className="tier-name">SUPER</div>
+          <div className="tier-sub">1부</div>
+        </button>
+        <button
+          onClick={() => setSelectedTier('FIRST')}
+          className={`tier-btn first ${selectedTier === 'FIRST' ? 'active' : ''}`}
+        >
+          <div className="tier-name">1 LEAGUE</div>
+          <div className="tier-sub">2부</div>
+        </button>
+        <button
+          onClick={() => setSelectedTier('SECOND')}
+          className={`tier-btn second ${selectedTier === 'SECOND' ? 'active' : ''}`}
+        >
+          <div className="tier-name">2 LEAGUE</div>
+          <div className="tier-sub">3부</div>
+        </button>
       </div>
 
-      {selectedLeague && (
+      {currentLeague && (
         <div className="league-content">
           <div className="league-info">
-            <h2>{selectedLeague.name}</h2>
-            <p>시즌 {selectedLeague.season} | {selectedLeague.current_month}월</p>
-            <p className={`status-badge ${selectedLeague.status.toLowerCase()}`}>
-              {selectedLeague.status === 'REGULAR' && '정규시즌'}
-              {selectedLeague.status === 'PLAYOFF' && '플레이오프'}
-              {selectedLeague.status === 'OFFSEASON' && '스토브리그'}
+            <h2>{getTierName(selectedTier)}</h2>
+            <p className="tier-desc">{getTierDescription(selectedTier)}</p>
+            <p>시즌 {currentLeague.season} | {currentLeague.current_month}월</p>
+            <p className={`status-badge ${currentLeague.status.toLowerCase()}`}>
+              {currentLeague.status === 'REGULAR' && '정규시즌'}
+              {currentLeague.status === 'PLAYOFF' && '플레이오프'}
+              {currentLeague.status === 'OFFSEASON' && '스토브리그'}
             </p>
           </div>
 
-          {selectedLeague.status === 'PLAYOFF' && playoffBracket.length > 0 && (
+          <div className="promotion-legend">
+            <span className="legend-item promotion">승격권</span>
+            <span className="legend-item relegation">강등권</span>
+            <span className="legend-item ai-team">AI 팀</span>
+          </div>
+
+          {currentLeague.status === 'PLAYOFF' && playoffBracket.length > 0 && (
             <div className="playoff-section">
               <h3>플레이오프 브래킷</h3>
               <div className="playoff-bracket">
@@ -138,54 +189,78 @@ export default function Leagues() {
                 </tr>
               </thead>
               <tbody>
-                {standings.map((standing, idx) => (
-                  <tr key={idx} className={standing.rank <= 4 ? 'top-four' : ''}>
-                    <td>{standing.rank || idx + 1}</td>
-                    <td className="team-cell">
-                      {standing.logo_url ? (
-                        <img src={standing.logo_url} alt="" className="team-logo-small" />
-                      ) : (
-                        <div className="team-logo-placeholder" />
-                      )}
-                      {standing.team_name}
-                    </td>
-                    <td>{standing.wins}</td>
-                    <td>{standing.draws}</td>
-                    <td>{standing.losses}</td>
-                    <td>{standing.goal_difference > 0 ? '+' : ''}{standing.goal_difference}</td>
-                    <td className="points">{standing.total_points}</td>
-                  </tr>
-                ))}
+                {standings.map((standing, idx) => {
+                  const rank = standing.rank || idx + 1;
+                  const promoStatus = getPromotionInfo(selectedTier, rank, standings.length);
+                  return (
+                    <tr
+                      key={idx}
+                      className={`
+                        ${promoStatus === 'promotion' ? 'promotion-zone' : ''}
+                        ${promoStatus === 'relegation' ? 'relegation-zone' : ''}
+                        ${standing.is_ai ? 'ai-team-row' : ''}
+                      `}
+                    >
+                      <td>{rank}</td>
+                      <td className="team-cell">
+                        {standing.logo_url ? (
+                          <img src={standing.logo_url} alt="" className="team-logo-small" />
+                        ) : (
+                          <div className="team-logo-placeholder" />
+                        )}
+                        <span className="team-name">
+                          {standing.team_name}
+                          {standing.is_ai && <span className="ai-badge">AI</span>}
+                        </span>
+                      </td>
+                      <td>{standing.wins}</td>
+                      <td>{standing.draws}</td>
+                      <td>{standing.losses}</td>
+                      <td>{standing.goal_difference > 0 ? '+' : ''}{standing.goal_difference}</td>
+                      <td className="points">{standing.total_points}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           <div className="upcoming-matches-section">
             <h3>다음 경기</h3>
-            <div className="matches-list">
-              {upcomingMatches.map((match) => (
-                <div key={match.id} className="match-item">
-                  <div className="match-teams">
-                    <span className="team-with-logo">
-                      {match.home_team_logo && <img src={match.home_team_logo} alt="" className="team-logo-small" />}
-                      {match.home_team_name}
-                    </span>
-                    <span className="vs">vs</span>
-                    <span className="team-with-logo">
-                      {match.away_team_logo && <img src={match.away_team_logo} alt="" className="team-logo-small" />}
-                      {match.away_team_name}
+            {upcomingMatches.length > 0 ? (
+              <div className="matches-list">
+                {upcomingMatches.map((match) => (
+                  <div key={match.id} className="match-item">
+                    <div className="match-teams">
+                      <span className="team-with-logo">
+                        {match.home_team_logo && <img src={match.home_team_logo} alt="" className="team-logo-small" />}
+                        {match.home_team_name}
+                      </span>
+                      <span className="vs">vs</span>
+                      <span className="team-with-logo">
+                        {match.away_team_logo && <img src={match.away_team_logo} alt="" className="team-logo-small" />}
+                        {match.away_team_name}
+                      </span>
+                    </div>
+                    <span className="match-time">
+                      {new Date(match.scheduled_at).toLocaleString('ko-KR')}
                     </span>
                   </div>
-                  <span className="match-time">
-                    {new Date(match.scheduled_at).toLocaleString('ko-KR')}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="no-matches">예정된 경기가 없습니다</p>
+            )}
           </div>
+        </div>
+      )}
+
+      {!currentLeague && leagues.length === 0 && (
+        <div className="no-league">
+          <p>리그가 아직 생성되지 않았습니다.</p>
+          <p className="sub-text">관리자가 LPO 리그를 초기화해야 합니다.</p>
         </div>
       )}
     </div>
   );
 }
-

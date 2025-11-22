@@ -71,7 +71,7 @@ router.get('/:leagueId', async (req, res) => {
 
     // 리그 참가 팀 및 순위
     const participants = await pool.query(
-      `SELECT lp.*, t.name as team_name, t.logo_url,
+      `SELECT lp.*, t.name as team_name, t.logo_url, t.is_ai,
               (lp.wins * 3 + lp.draws) as total_points
        FROM league_participants lp
        INNER JOIN teams t ON lp.team_id = t.id
