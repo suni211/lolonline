@@ -266,19 +266,74 @@ export class LPOLeagueService {
 
       const teamIds = teams.map((t: any) => t.team_id);
 
-      // 2홈 2어웨이 스케줄 생성
+      // 2홈 2어웨이 스케줄 생성 (라운드 로빈 방식)
       // SUPER/FIRST: 10팀 -> 각 팀 36경기 (9팀 * 4경기)
       // SECOND: 12팀 -> 각 팀 44경기 (11팀 * 4경기)
       const matches: { home: number; away: number }[] = [];
 
-      for (let i = 0; i < teamIds.length; i++) {
-        for (let j = i + 1; j < teamIds.length; j++) {
-          // 각 팀은 다른 팀과 4번 경기 (홈 2번, 어웨이 2번)
-          matches.push({ home: teamIds[i], away: teamIds[j] });
-          matches.push({ home: teamIds[i], away: teamIds[j] });
-          matches.push({ home: teamIds[j], away: teamIds[i] });
-          matches.push({ home: teamIds[j], away: teamIds[i] });
+      // 라운드 로빈 스케줄 생성 함수
+      const generateRoundRobin = (teams: number[], isHomeFirst: boolean) => {
+        const n = teams.length;
+        const rounds: { home: number; away: number }[][] = [];
+
+        // 홀수 팀이면 bye 추가
+        const teamList = [...teams];
+        if (n % 2 === 1) {
+          teamList.push(-1); // bye
         }
+
+        const numTeams = teamList.length;
+        const numRounds = numTeams - 1;
+        const matchesPerRound = numTeams / 2;
+
+        for (let round = 0; round < numRounds; round++) {
+          const roundMatches: { home: number; away: number }[] = [];
+
+          for (let match = 0; match < matchesPerRound; match++) {
+            const home = (round + match) % (numTeams - 1);
+            let away = (numTeams - 1 - match + round) % (numTeams - 1);
+
+            if (match === 0) {
+              away = numTeams - 1;
+            }
+
+            const team1 = teamList[home];
+            const team2 = teamList[away];
+
+            // bye 경기 제외
+            if (team1 !== -1 && team2 !== -1) {
+              if (isHomeFirst) {
+                roundMatches.push({ home: team1, away: team2 });
+              } else {
+                roundMatches.push({ home: team2, away: team1 });
+              }
+            }
+          }
+
+          rounds.push(roundMatches);
+        }
+
+        return rounds;
+      };
+
+      // 4사이클: 홈-어웨이-홈-어웨이
+      const cycle1 = generateRoundRobin(teamIds, true);  // 1라운드: 홈
+      const cycle2 = generateRoundRobin(teamIds, false); // 2라운드: 어웨이
+      const cycle3 = generateRoundRobin(teamIds, true);  // 3라운드: 홈
+      const cycle4 = generateRoundRobin(teamIds, false); // 4라운드: 어웨이
+
+      // 모든 경기를 순서대로 추가
+      for (const round of cycle1) {
+        matches.push(...round);
+      }
+      for (const round of cycle2) {
+        matches.push(...round);
+      }
+      for (const round of cycle3) {
+        matches.push(...round);
+      }
+      for (const round of cycle4) {
+        matches.push(...round);
       }
 
       // 경기 일정 생성
@@ -286,16 +341,18 @@ export class LPOLeagueService {
       // 1주(게임) = 1.5시간(현실) = 90분
       const REAL_MS_PER_GAME_WEEK = 90 * 60 * 1000; // 90분
 
-      const now = new Date();
+      const now = Date.now();
       for (let i = 0; i < matches.length; i++) {
         const match = matches[i];
         // 각 경기는 1주(게임) 간격 = 1.5시간(현실) 간격
-        const scheduledAt = new Date(now.getTime() + (i + 1) * REAL_MS_PER_GAME_WEEK);
+        const scheduledAt = new Date(now + (i + 1) * REAL_MS_PER_GAME_WEEK);
+        // MySQL 형식으로 변환
+        const scheduledAtStr = scheduledAt.toISOString().slice(0, 19).replace('T', ' ');
 
         await pool.query(
           `INSERT INTO matches (league_id, home_team_id, away_team_id, scheduled_at, status)
            VALUES (?, ?, ?, ?, 'SCHEDULED')`,
-          [leagueId, match.home, match.away, scheduledAt]
+          [leagueId, match.home, match.away, scheduledAtStr]
         );
       }
 
