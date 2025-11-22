@@ -58,15 +58,24 @@ export class LPOLeagueService {
         aiUserId = aiUser[0].id;
       }
 
-      // 기존 LPO 리그 확인
-      const existingLeagues = await pool.query(
-        "SELECT * FROM leagues WHERE name LIKE 'LPO%' AND season = 1"
+      // 기존 AI 팀 및 LPO 리그 삭제 (완전 초기화)
+      console.log('Cleaning up existing LPO data...');
+
+      // AI 팀의 선수들 삭제
+      await pool.query(
+        `DELETE FROM players WHERE team_id IN (SELECT id FROM teams WHERE is_ai = true)`
       );
 
-      if (existingLeagues.length >= 3) {
-        console.log('LPO Leagues already exist');
-        return;
-      }
+      // AI 팀의 리그 참가 기록 삭제
+      await pool.query(
+        `DELETE FROM league_participants WHERE team_id IN (SELECT id FROM teams WHERE is_ai = true)`
+      );
+
+      // AI 팀 삭제
+      await pool.query(`DELETE FROM teams WHERE is_ai = true`);
+
+      // 기존 LPO 리그 삭제
+      await pool.query(`DELETE FROM leagues WHERE name LIKE 'LPO%'`);
 
       // LPO 리그 생성
       const superLeague = await pool.query(
