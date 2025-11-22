@@ -1,0 +1,112 @@
+.team-management-page {
+  max-width: 1400px;
+}
+
+.team-info-section,
+.facilities-section {
+  margin-bottom: 3rem;
+}
+
+.team-info-section h2,
+.facilities-section h2 {
+  margin-bottom: 1.5rem;
+  color: var(--white);
+}
+
+.team-info-box {
+  background-color: #111;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 2rem;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid #333;
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-item label {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.info-item span {
+  color: var(--white);
+}
+
+.team-input {
+  flex: 1;
+  max-width: 300px;
+  padding: 0.75rem;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background-color: #222;
+  color: var(--white);
+  font-size: 1rem;
+}
+
+.team-input:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+}
+
+.facilities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.facility-card {
+  background-color: #111;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.facility-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(30, 58, 138, 0.3);
+}
+
+.facility-card h3 {
+  color: var(--white);
+  margin-bottom: 0.75rem;
+  font-size: 1.25rem;
+}
+
+.facility-level {
+  color: var(--light-blue);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.facility-effect {
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 1rem;
+}
+
+.upgrade-cost {
+  color: #F59E0B;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.facility-card button {
+  width: 100%;
+  padding: 0.75rem;
+}
+
+.facility-card button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
