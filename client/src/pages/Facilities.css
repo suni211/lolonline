@@ -75,9 +75,21 @@
 .stat-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 0.5rem 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.8);
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  gap: 1rem;
+}
+
+.stat-row span:first-child {
+  flex-shrink: 0;
+}
+
+.stat-row span:last-child {
+  text-align: right;
 }
 
 .stat-row:last-child {
