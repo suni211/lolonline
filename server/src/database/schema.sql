@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS players (
     injury_status ENUM('NONE', 'MINOR', 'MODERATE', 'SEVERE') DEFAULT 'NONE',
     injury_recovery_days INT DEFAULT 0,
     injury_started_at DATETIME,
+    face_image VARCHAR(255),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_position (position),
     INDEX idx_overall (mental, teamfight, focus, laning, leadership, adaptability, consistency, work_ethic)
