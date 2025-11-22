@@ -119,10 +119,64 @@ export class LPOLeagueService {
         }
       }
 
+      // 기존 플레이어 팀을 LPO 2 LEAGUE에 등록
+      const playerTeams = await pool.query(
+        `SELECT id FROM teams WHERE is_ai = false OR is_ai IS NULL`
+      );
+
+      if (playerTeams.length > 0) {
+        console.log(`Registering ${playerTeams.length} player teams to LPO 2 LEAGUE...`);
+
+        for (const team of playerTeams) {
+          // 팀의 리그를 SECOND로 업데이트
+          await pool.query(
+            `UPDATE teams SET league = 'SECOND' WHERE id = ?`,
+            [team.id]
+          );
+
+          // 리그 참가 등록
+          await pool.query(
+            `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
+             VALUES (?, ?, 0, 0, 0, 0, 0)`,
+            [secondLeague.insertId, team.id]
+          );
+
+          // AI 팀 하나 제거 (플레이어 팀이 대체)
+          const aiTeamToRemove = await pool.query(
+            `SELECT lp.team_id FROM league_participants lp
+             JOIN teams t ON lp.team_id = t.id
+             WHERE lp.league_id = ? AND t.is_ai = true
+             LIMIT 1`,
+            [secondLeague.insertId]
+          );
+
+          if (aiTeamToRemove.length > 0) {
+            const aiTeamId = aiTeamToRemove[0].team_id;
+
+            // AI 팀의 선수 삭제
+            await pool.query(
+              `DELETE FROM players WHERE id IN (
+                SELECT player_id FROM player_ownership WHERE team_id = ?
+              )`,
+              [aiTeamId]
+            );
+
+            // AI 팀 리그 참가 삭제
+            await pool.query(
+              `DELETE FROM league_participants WHERE team_id = ?`,
+              [aiTeamId]
+            );
+
+            // AI 팀 삭제
+            await pool.query(`DELETE FROM teams WHERE id = ?`, [aiTeamId]);
+          }
+        }
+      }
+
       console.log('LPO League system initialized successfully!');
       console.log('- LPO SUPER LEAGUE: 10 AI teams');
       console.log('- LPO 1 LEAGUE: 10 AI teams');
-      console.log('- LPO 2 LEAGUE: 12 AI teams');
+      console.log(`- LPO 2 LEAGUE: ${12 - playerTeams.length} AI teams + ${playerTeams.length} player teams`);
 
     } catch (error) {
       console.error('Failed to initialize LPO leagues:', error);
