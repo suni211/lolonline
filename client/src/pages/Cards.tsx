@@ -145,7 +145,8 @@ export default function Cards() {
     setLoading(true);
     try {
       const response = await axios.post(`/api/packs/${packId}/open`);
-      setOpenedCards(response.data.cards);
+      const cards = response.data.cards || response.data || [];
+      setOpenedCards(Array.isArray(cards) ? cards : [cards]);
       setShowOpenResult(true);
       await refreshTeam();
       await fetchCards();
@@ -506,7 +507,7 @@ export default function Cards() {
         </div>
       )}
 
-      {showOpenResult && openedCards.length > 0 && (
+      {showOpenResult && openedCards && openedCards.length > 0 && (
         <div className="pack-result-overlay" onClick={() => setShowOpenResult(false)}>
           <div className="pack-result" onClick={e => e.stopPropagation()}>
             <h2>팩 개봉 결과!</h2>
