@@ -118,17 +118,26 @@ export default function Players() {
     <div className="players-page">
       <div className="page-header">
         <h1 className="page-title">선수 관리</h1>
-        <div className="header-actions">
-          <button onClick={() => setActiveTab('my')} className={activeTab === 'my' ? 'tab-active' : 'tab-btn'}>
-            내 선수
-          </button>
-          <button onClick={() => setActiveTab('search')} className={activeTab === 'search' ? 'tab-active' : 'tab-btn'}>
-            선수 검색
-          </button>
-          <button onClick={() => setShowScout(!showScout)} className="btn-primary">
-            선수 스카우팅
-          </button>
-        </div>
+        <button onClick={() => setShowScout(!showScout)} className="btn-primary">
+          선수 스카우팅
+        </button>
+      </div>
+
+      <div className="tabs-container">
+        <button
+          type="button"
+          onClick={() => setActiveTab('my')}
+          className={activeTab === 'my' ? 'tab-active' : 'tab-btn'}
+        >
+          내 선수
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('search')}
+          className={activeTab === 'search' ? 'tab-active' : 'tab-btn'}
+        >
+          선수 검색
+        </button>
       </div>
 
       {showScout && (
@@ -189,103 +198,63 @@ export default function Players() {
 
           <div className="players-grid">
             {filteredPlayers.map((player, index) => (
-              <div 
-                key={player.id} 
-                className={`player-card card-enter${index % 4 === 0 ? '' : ` card-enter-delay-${(index % 4)}`}`}
+              <div
+                key={player.id}
+                className={`player-card ${player.is_starter ? 'starter' : ''}`}
                 onClick={() => setSelectedPlayer(player)}
-                style={{ animationDelay: `${(index % 4) * 0.1}s` }}
               >
                 <div className="player-header">
-                  <div className="player-header">
-                    <h3>{player.name}</h3>
-                    <div className="player-meta">
-                      <span className="nationality-flag" title={getNationalityName(player.nationality || 'KR')}>
-                        {getNationalityFlag(player.nationality || 'KR')}
-                      </span>
-                      <span className={`position-badge ${player.position}`}>{player.position}</span>
-                    </div>
+                  <h3>{player.name}</h3>
+                  <div className="player-meta">
+                    <span className="nationality-flag" title={getNationalityName(player.nationality || 'KR')}>
+                      {getNationalityFlag(player.nationality || 'KR')}
+                    </span>
+                    <span className={`position-badge ${player.position}`}>{player.position}</span>
                   </div>
                 </div>
-                <div className="player-stats">
-                  <div className="stat-row">
-                    <span>멘탈</span>
-                    <span className="stat-value">{player.mental}</span>
-                  </div>
-                  <div className="stat-row">
-                    <span>한타력</span>
-                    <span className="stat-value">{player.teamfight}</span>
-                  </div>
-                  <div className="stat-row">
-                    <span>집중력</span>
-                    <span className="stat-value">{player.focus}</span>
-                  </div>
-                  <div className="stat-row">
-                    <span>라인전</span>
-                    <span className="stat-value">{player.laning}</span>
-                  </div>
-                  <div className="stat-row">
-                    <span>리더십</span>
-                    <span className="stat-value will-stat">{player.leadership || 50}</span>
-                  </div>
-                  <div className="stat-row">
-                    <span>적응력</span>
-                    <span className="stat-value will-stat">{player.adaptability || 50}</span>
-                  </div>
-                  <div className="stat-row">
-                    <span>일관성</span>
-                    <span className="stat-value will-stat">{player.consistency || 50}</span>
-                  </div>
-                  <div className="stat-row">
-                    <span>노력</span>
-                    <span className="stat-value will-stat">{player.work_ethic || 50}</span>
-                  </div>
-                  <div className="stat-row overall">
-                    <span>총 오버롤</span>
-                    <span className="overall-value">{player.overall}</span>
-                  </div>
+                <div className="player-overall">
+                  <span className="overall-label">OVR</span>
+                  <span className="overall-value">{player.overall}</span>
                 </div>
-                <div className="player-info">
-                  <p>레벨: {player.level} | 경험치: {player.exp}/{player.exp_to_next}</p>
-                  <p>스탯 포인트: {player.stat_points} | 컨디션: {player.player_condition}%</p>
-                  <p>유니폼 강화: +{player.uniform_level}</p>
-                  {player.injury_status !== 'NONE' && (
-                    <p className="injury-status">
-                      부상: {player.injury_status === 'MINOR' ? '경미' : player.injury_status === 'MODERATE' ? '중상' : '중증'} 
-                      ({player.injury_recovery_days}일 남음)
-                    </p>
-                  )}
+                <div className="player-quick-info">
+                  <span>Lv.{player.level}</span>
+                  <span>{player.player_condition}%</span>
+                  {player.injury_status !== 'NONE' && <span className="injury-badge">부상</span>}
+                  {player.is_starter && <span className="starter-badge">주전</span>}
                 </div>
                 <div className="player-actions">
                   <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedPlayer(player);
                     }}
-                    className="btn-primary"
+                    className="btn-small"
                   >
-                    상세보기
+                    상세
                   </button>
-                  {!player.is_starter && (
+                  {!player.is_starter ? (
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleLineup(player.id, true);
                       }}
-                      className="btn-secondary"
+                      className="btn-small btn-starter"
                       disabled={players.filter(p => p.is_starter).length >= 5}
                     >
-                      스타터 등록
+                      주전
                     </button>
-                  )}
-                  {player.is_starter && (
+                  ) : (
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleLineup(player.id, false);
                       }}
-                      className="btn-secondary"
+                      className="btn-small btn-bench"
                     >
-                      벤치로
+                      벤치
                     </button>
                   )}
                 </div>
@@ -334,38 +303,31 @@ export default function Players() {
           </div>
 
           <div className="players-grid">
-            {searchResults.map((player, index) => (
-              <div 
-                key={player.id} 
-                className={`player-card card-enter${index % 4 === 0 ? '' : ` card-enter-delay-${(index % 4)}`}`}
-                style={{ animationDelay: `${(index % 4) * 0.1}s` }}
-              >
+            {searchResults.map((player) => (
+              <div key={player.id} className="player-card">
                 <div className="player-header">
-                  <div className="player-header">
-                    <h3>{player.name}</h3>
-                    <div className="player-meta">
-                      <span className="nationality-flag" title={getNationalityName(player.nationality || 'KR')}>
-                        {getNationalityFlag(player.nationality || 'KR')}
-                      </span>
-                      <span className={`position-badge ${player.position}`}>{player.position}</span>
-                    </div>
+                  <h3>{player.name}</h3>
+                  <div className="player-meta">
+                    <span className="nationality-flag" title={getNationalityName(player.nationality || 'KR')}>
+                      {getNationalityFlag(player.nationality || 'KR')}
+                    </span>
+                    <span className={`position-badge ${player.position}`}>{player.position}</span>
                   </div>
                 </div>
-                <div className="player-stats">
-                  <div className="stat-row overall">
-                    <span>총 오버롤</span>
-                    <span>{player.overall}</span>
-                  </div>
+                <div className="player-overall">
+                  <span className="overall-label">OVR</span>
+                  <span className="overall-value">{player.overall}</span>
                 </div>
-                <div className="player-info">
-                  <p>소유 팀 수: {player.owned_count}</p>
+                <div className="player-quick-info">
+                  <span>{player.owned_count > 0 ? `${player.owned_count}팀 보유` : 'FA'}</span>
                 </div>
                 <div className="player-actions">
                   <button
+                    type="button"
                     onClick={() => handleRecruit(player)}
-                    className="btn-primary"
+                    className="btn-small btn-recruit"
                   >
-                    연봉협상
+                    영입
                   </button>
                 </div>
               </div>

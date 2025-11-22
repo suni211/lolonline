@@ -15,14 +15,16 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   animation: fadeIn 0.5s ease-out;
 }
 
-.header-actions {
+.tabs-container {
   display: flex;
-  gap: 1rem;
-  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.5rem;
 }
 
 .tab-btn {
@@ -406,5 +408,90 @@
   flex: 1;
   padding: 0.5rem;
   font-size: 0.9rem;
+}
+
+/* 새로운 간결한 카드 스타일 */
+.player-overall {
+  text-align: center;
+  padding: 1rem 0;
+  margin-bottom: 0.5rem;
+}
+
+.overall-label {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 0.25rem;
+}
+
+.player-overall .overall-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--light-blue);
+  text-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+}
+
+.player-quick-info {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.player-quick-info .injury-badge {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.player-quick-info .starter-badge {
+  color: #34d399;
+  font-weight: 600;
+}
+
+.player-card.starter {
+  border-color: #34d399;
+  box-shadow: 0 4px 20px rgba(52, 211, 153, 0.3);
+}
+
+.btn-small {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  background: linear-gradient(135deg, #333 0%, #444 100%);
+  color: var(--white);
+}
+
+.btn-small:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.btn-small:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-small.btn-starter {
+  background: linear-gradient(135deg, #059669 0%, #34d399 100%);
+}
+
+.btn-small.btn-bench {
+  background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);
+}
+
+.btn-small.btn-recruit {
+  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--light-blue) 100%);
+}
+
+.empty-message {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 2rem;
 }
 

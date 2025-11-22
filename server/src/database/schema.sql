@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS teams (
     home_stadium VARCHAR(100),
     gold BIGINT DEFAULT 100000,
     diamond INT DEFAULT 100,
+    fan_count BIGINT DEFAULT 1000,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     UNIQUE KEY unique_user_team (user_id)

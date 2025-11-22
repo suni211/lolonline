@@ -29,8 +29,9 @@ export default function Layout() {
             {team && (
               <>
                 <span className="team-name">{team.name}</span>
-                <span className="currency">골드: {team.gold.toLocaleString()}</span>
-                <span className="currency">다이아: {team.diamond}</span>
+                <span className="currency fans">{(team.fan_count || 1000).toLocaleString()}명</span>
+                <span className="currency">{team.gold.toLocaleString()}원</span>
+                <span className="currency energy">{team.diamond} 에너지</span>
               </>
             )}
             <button onClick={logout} className="logout-btn">로그아웃</button>

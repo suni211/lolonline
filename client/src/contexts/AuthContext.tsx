@@ -13,6 +13,7 @@ interface Team {
   league: string;
   gold: number;
   diamond: number;
+  fan_count: number;
 }
 
 interface AuthContextType {
