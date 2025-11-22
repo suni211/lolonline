@@ -180,6 +180,12 @@ export class LPOLeagueService {
         }
       }
 
+      // 각 리그 스케줄 생성
+      console.log('Generating match schedules...');
+      await this.generateLeagueSchedule(superLeague.insertId);
+      await this.generateLeagueSchedule(firstLeague.insertId);
+      await this.generateLeagueSchedule(secondLeague.insertId);
+
       console.log('LPO League system initialized successfully!');
       console.log('- LPO SUPER LEAGUE: 10 AI teams');
       console.log('- LPO 1 LEAGUE: 10 AI teams');
@@ -187,6 +193,53 @@ export class LPOLeagueService {
 
     } catch (error) {
       console.error('Failed to initialize LPO leagues:', error);
+      throw error;
+    }
+  }
+
+  // 리그 스케줄 생성
+  static async generateLeagueSchedule(leagueId: number) {
+    try {
+      // 리그 참가팀 조회
+      const teams = await pool.query(
+        `SELECT team_id FROM league_participants WHERE league_id = ?`,
+        [leagueId]
+      );
+
+      if (teams.length < 2) {
+        console.log(`League ${leagueId}: Not enough teams for schedule`);
+        return;
+      }
+
+      const teamIds = teams.map((t: any) => t.team_id);
+
+      // 라운드 로빈 스케줄 생성 (각 팀이 다른 모든 팀과 홈/어웨이 1번씩)
+      const matches: { home: number; away: number; round: number }[] = [];
+
+      for (let i = 0; i < teamIds.length; i++) {
+        for (let j = i + 1; j < teamIds.length; j++) {
+          // 홈/어웨이 경기
+          matches.push({ home: teamIds[i], away: teamIds[j], round: 1 });
+          matches.push({ home: teamIds[j], away: teamIds[i], round: 2 });
+        }
+      }
+
+      // 경기 일정 생성 (현재 시간부터 1시간 간격)
+      const now = new Date();
+      for (let i = 0; i < matches.length; i++) {
+        const match = matches[i];
+        const scheduledAt = new Date(now.getTime() + (i + 1) * 60 * 60 * 1000); // 1시간 간격
+
+        await pool.query(
+          `INSERT INTO league_matches (league_id, home_team_id, away_team_id, scheduled_at, status)
+           VALUES (?, ?, ?, ?, 'SCHEDULED')`,
+          [leagueId, match.home, match.away, scheduledAt]
+        );
+      }
+
+      console.log(`League ${leagueId}: Generated ${matches.length} matches`);
+    } catch (error) {
+      console.error(`Failed to generate schedule for league ${leagueId}:`, error);
       throw error;
     }
   }
