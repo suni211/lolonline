@@ -400,7 +400,7 @@ export class ProPlayerService {
       // 일반 선수팩
       await pool.query(
         `INSERT INTO player_packs (name, price_gold, description, pack_type)
-         VALUES ('일반 선수팩', 10000000, '랜덤 선수 1명 획득', 'NORMAL')`
+         VALUES ('일반 선수팩', 10000, '랜덤 선수 1명 획득', 'NORMAL')`
       );
 
       console.log('Initialized player packs');
