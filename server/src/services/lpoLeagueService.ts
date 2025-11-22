@@ -127,6 +127,9 @@ export class LPOLeagueService {
       // AI 팀 삭제
       await pool.query(`DELETE FROM teams WHERE is_ai = true`);
 
+      // 기존 LPO 리그의 경기 삭제
+      await pool.query(`DELETE FROM matches WHERE league_id IN (SELECT id FROM leagues WHERE name LIKE 'LPO%')`);
+
       // 기존 LPO 리그 삭제
       await pool.query(`DELETE FROM leagues WHERE name LIKE 'LPO%'`);
 
@@ -284,7 +287,7 @@ export class LPOLeagueService {
         const scheduledAt = new Date(now.getTime() + (i + 1) * REAL_MS_PER_GAME_WEEK);
 
         await pool.query(
-          `INSERT INTO league_matches (league_id, home_team_id, away_team_id, scheduled_at, status)
+          `INSERT INTO matches (league_id, home_team_id, away_team_id, scheduled_at, status)
            VALUES (?, ?, ?, ?, 'SCHEDULED')`,
           [leagueId, match.home, match.away, scheduledAt]
         );
