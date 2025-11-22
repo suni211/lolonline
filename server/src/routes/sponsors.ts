@@ -141,6 +141,69 @@ router.post('/:contractId/terminate', authenticateToken, async (req: AuthRequest
     const { contractId } = req.params;
 
     const contracts = await pool.query(
+      `SELECT ts.*, s.name, s.tier FROM team_sponsors ts
+       INNER JOIN sponsors s ON ts.sponsor_id = s.id
+       WHERE ts.id = ? AND ts.team_id = ?`,
+      [contractId, req.teamId]
+    );
+
+    if (contracts.length === 0) {
+      return res.status(404).json({ error: 'Contract not found' });
+    }
+
+    const contract = contracts[0];
+
+    // 위약금 계산 (남은 기간에 따른 월 지급액의 50%)
+    const now = new Date();
+    const contractEnd = new Date(contract.contract_end);
+    const remainingMonths = Math.max(0, Math.ceil((contractEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+    const penaltyFee = Math.floor(contract.monthly_payment * remainingMonths * 0.5);
+
+    // 팀 골드 확인
+    const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);
+    if (teams.length === 0 || teams[0].gold < penaltyFee) {
+      return res.status(400).json({
+        error: `위약금 ${penaltyFee.toLocaleString()} 골드가 부족합니다. (보유: ${teams[0]?.gold?.toLocaleString() || 0} 골드)`
+      });
+    }
+
+    // 위약금 차감
+    if (penaltyFee > 0) {
+      await pool.query(
+        'UPDATE teams SET gold = gold - ? WHERE id = ?',
+        [penaltyFee, req.teamId]
+      );
+
+      // 재정 기록
+      await pool.query(
+        `INSERT INTO financial_records (team_id, record_type, category, amount, description)
+         VALUES (?, 'EXPENSE', 'OTHER', ?, ?)`,
+        [req.teamId, penaltyFee, `${contract.name} 스폰서 계약 해지 위약금`]
+      );
+    }
+
+    await pool.query(
+      `UPDATE team_sponsors SET status = 'TERMINATED' WHERE id = ?`,
+      [contractId]
+    );
+
+    res.json({
+      message: `${contract.name} 스폰서 계약 해지 완료`,
+      penaltyFee,
+      remainingMonths
+    });
+  } catch (error: any) {
+    console.error('Terminate sponsor error:', error);
+    res.status(500).json({ error: 'Failed to terminate contract' });
+  }
+});
+
+// 위약금 조회
+router.get('/:contractId/penalty', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { contractId } = req.params;
+
+    const contracts = await pool.query(
       `SELECT ts.*, s.name FROM team_sponsors ts
        INNER JOIN sponsors s ON ts.sponsor_id = s.id
        WHERE ts.id = ? AND ts.team_id = ?`,
@@ -151,15 +214,20 @@ router.post('/:contractId/terminate', authenticateToken, async (req: AuthRequest
       return res.status(404).json({ error: 'Contract not found' });
     }
 
-    await pool.query(
-      `UPDATE team_sponsors SET status = 'TERMINATED' WHERE id = ?`,
-      [contractId]
-    );
+    const contract = contracts[0];
+    const now = new Date();
+    const contractEnd = new Date(contract.contract_end);
+    const remainingMonths = Math.max(0, Math.ceil((contractEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+    const penaltyFee = Math.floor(contract.monthly_payment * remainingMonths * 0.5);
 
-    res.json({ message: `${contracts[0].name} 스폰서 계약 해지` });
+    res.json({
+      penaltyFee,
+      remainingMonths,
+      monthlyPayment: contract.monthly_payment
+    });
   } catch (error: any) {
-    console.error('Terminate sponsor error:', error);
-    res.status(500).json({ error: 'Failed to terminate contract' });
+    console.error('Get penalty error:', error);
+    res.status(500).json({ error: 'Failed to get penalty' });
   }
 });
 

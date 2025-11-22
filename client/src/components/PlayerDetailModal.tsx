@@ -171,21 +171,24 @@ export default function PlayerDetailModal({ player, onClose, onUpdate }: PlayerD
         <div className="modal-body">
           {/* 탭 메뉴 */}
           <div className="player-tabs">
-            <button 
+            <button
+              type="button"
               className={activeTab === 'stats' ? 'tab-active' : 'tab-btn'}
-              onClick={() => setActiveTab('stats')}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('stats'); }}
             >
               스탯
             </button>
-            <button 
+            <button
+              type="button"
               className={activeTab === 'abilities' ? 'tab-active' : 'tab-btn'}
-              onClick={() => setActiveTab('abilities')}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('abilities'); }}
             >
               능력치
             </button>
-            <button 
+            <button
+              type="button"
               className={activeTab === 'condition' ? 'tab-active' : 'tab-btn'}
-              onClick={() => setActiveTab('condition')}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab('condition'); }}
             >
               컨디션
             </button>

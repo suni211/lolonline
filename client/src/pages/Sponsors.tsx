@@ -128,12 +128,26 @@ export default function Sponsors() {
   };
 
   const handleTerminateContract = async (contractId: number) => {
-    if (!confirm('정말 계약을 해지하시겠습니까?')) return;
-
     setLoading(true);
     try {
+      // 먼저 위약금 조회
+      const penaltyResponse = await axios.get(`/api/sponsors/${contractId}/penalty`);
+      const { penaltyFee, remainingMonths } = penaltyResponse.data;
+
+      const confirmMessage = penaltyFee > 0
+        ? `정말 계약을 해지하시겠습니까?\n\n남은 기간: ${remainingMonths}개월\n위약금: ${penaltyFee.toLocaleString()} 골드`
+        : '정말 계약을 해지하시겠습니까?';
+
+      if (!confirm(confirmMessage)) {
+        setLoading(false);
+        return;
+      }
+
       const response = await axios.post(`/api/sponsors/${contractId}/terminate`);
-      alert(response.data.message);
+      const message = response.data.penaltyFee > 0
+        ? `${response.data.message}\n위약금 ${response.data.penaltyFee.toLocaleString()} 골드가 차감되었습니다.`
+        : response.data.message;
+      alert(message);
       fetchData();
     } catch (error: any) {
       alert(error.response?.data?.error || '해지 실패');
