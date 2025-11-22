@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { soundManager } from '../utils/soundManager';
 import PlayerDetailModal from '../components/PlayerDetailModal';
+import ContractNegotiationModal from '../components/ContractNegotiationModal';
 import { getNationalityFlag, getNationalityName } from '../utils/nationalityFlags';
 import './Players.css';
 
@@ -47,6 +48,7 @@ export default function Players() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchPosition, setSearchPosition] = useState('');
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [negotiatingPlayer, setNegotiatingPlayer] = useState<SearchPlayer | null>(null);
 
   useEffect(() => {
     fetchPlayers();
@@ -98,18 +100,8 @@ export default function Players() {
     }
   };
 
-  const handleRecruit = async (playerId: number) => {
-    if (!confirm('이 선수를 영입하시겠습니까?')) return;
-
-    try {
-      await axios.post(`/api/players/recruit/${playerId}`);
-      soundManager.playSound('click');
-      alert('선수 영입 완료!');
-      fetchPlayers();
-      handleSearch();
-    } catch (error: any) {
-      alert(error.response?.data?.error || '영입 실패');
-    }
+  const handleRecruit = (player: SearchPlayer) => {
+    setNegotiatingPlayer(player);
   };
 
   const filteredPlayers = players.filter(p => {
@@ -192,8 +184,13 @@ export default function Players() {
           </div>
 
           <div className="players-grid">
-            {filteredPlayers.map((player) => (
-              <div key={player.id} className="player-card" onClick={() => setSelectedPlayer(player)}>
+            {filteredPlayers.map((player, index) => (
+              <div 
+                key={player.id} 
+                className={`player-card card-enter${index % 4 === 0 ? '' : ` card-enter-delay-${(index % 4)}`}`}
+                onClick={() => setSelectedPlayer(player)}
+                style={{ animationDelay: `${(index % 4) * 0.1}s` }}
+              >
                 <div className="player-header">
                   <div className="player-header">
                     <h3>{player.name}</h3>
@@ -317,8 +314,12 @@ export default function Players() {
           </div>
 
           <div className="players-grid">
-            {searchResults.map((player) => (
-              <div key={player.id} className="player-card">
+            {searchResults.map((player, index) => (
+              <div 
+                key={player.id} 
+                className={`player-card card-enter${index % 4 === 0 ? '' : ` card-enter-delay-${(index % 4)}`}`}
+                style={{ animationDelay: `${(index % 4) * 0.1}s` }}
+              >
                 <div className="player-header">
                   <div className="player-header">
                     <h3>{player.name}</h3>
@@ -341,10 +342,10 @@ export default function Players() {
                 </div>
                 <div className="player-actions">
                   <button
-                    onClick={() => handleRecruit(player.id)}
+                    onClick={() => handleRecruit(player)}
                     className="btn-primary"
                   >
-                    영입
+                    연봉협상
                   </button>
                 </div>
               </div>
@@ -354,6 +355,20 @@ export default function Players() {
             )}
           </div>
         </div>
+      )}
+
+      {negotiatingPlayer && (
+        <ContractNegotiationModal
+          playerId={negotiatingPlayer.id}
+          playerName={negotiatingPlayer.name}
+          playerOverall={negotiatingPlayer.overall}
+          onClose={() => setNegotiatingPlayer(null)}
+          onSuccess={() => {
+            setNegotiatingPlayer(null);
+            fetchPlayers();
+            handleSearch();
+          }}
+        />
       )}
     </div>
   );

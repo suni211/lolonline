@@ -1,5 +1,14 @@
 .players-page {
   max-width: 1400px;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.page-title {
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  color: var(--white);
+  text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+  animation: fadeIn 0.5s ease-out, pulse 3s ease-in-out infinite;
 }
 
 .page-header {
@@ -7,6 +16,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
+  animation: fadeIn 0.5s ease-out;
 }
 
 .header-actions {
@@ -49,18 +59,45 @@
 }
 
 .btn-primary {
-  background-color: var(--primary-blue);
+  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--light-blue) 100%);
   color: var(--white);
   border: none;
   padding: 0.75rem 1.5rem;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
-  transition: background-color 0.2s;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: var(--light-blue);
+  background: linear-gradient(135deg, var(--light-blue) 0%, var(--primary-blue) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+}
+
+.btn-primary:hover:not(:disabled)::before {
+  width: 300px;
+  height: 300px;
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
 }
 
 .btn-primary:disabled {
@@ -69,18 +106,45 @@
 }
 
 .btn-secondary {
-  background-color: #333;
+  background: linear-gradient(135deg, #333 0%, #444 100%);
   color: var(--white);
-  border: none;
+  border: 1px solid #555;
   padding: 0.75rem 1.5rem;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
-  transition: background-color 0.2s;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-secondary::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
 }
 
 .btn-secondary:hover {
-  background-color: #444;
+  background: linear-gradient(135deg, #444 0%, #555 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-color: #666;
+}
+
+.btn-secondary:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.btn-secondary:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .scout-modal {
@@ -157,17 +221,40 @@
 }
 
 .player-card {
-  background-color: #111;
+  background: linear-gradient(135deg, #111 0%, #1a1a1a 100%);
   border: 1px solid #333;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 1.5rem;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.player-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1), transparent);
+  transition: left 0.5s;
 }
 
 .player-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(30, 58, 138, 0.3);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 12px 24px rgba(30, 58, 138, 0.4), 0 0 20px rgba(59, 130, 246, 0.2);
+  border-color: var(--light-blue);
+}
+
+.player-card:hover::before {
+  left: 100%;
+}
+
+.player-card:active {
+  transform: translateY(-4px) scale(1.01);
 }
 
 .player-header {
@@ -184,9 +271,17 @@
 
 .position-badge {
   padding: 0.25rem 0.75rem;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  animation: scaleIn 0.3s ease-out;
+}
+
+.position-badge:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .position-badge.TOP {
@@ -232,6 +327,19 @@
   border-bottom: 2px solid var(--primary-blue);
   margin-top: 0.5rem;
   padding-top: 0.75rem;
+  position: relative;
+  animation: glow 2s ease-in-out infinite;
+}
+
+.stat-row.overall::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary-blue), var(--light-blue));
+  animation: shimmer 2s infinite;
 }
 
 .player-info {

@@ -43,7 +43,7 @@ export default function Layout() {
                   to={item.path}
                   className={`nav-link ${location.pathname === item.path ? 'active' : ''}`}
                 >
-                  {item.label}
+                  <span>{item.label}</span>
                 </Link>
               </li>
             ))}

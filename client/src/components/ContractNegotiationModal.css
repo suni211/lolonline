@@ -1,0 +1,255 @@
+.contract-negotiation-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(5px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.contract-negotiation-modal {
+  background: linear-gradient(135deg, #1a1a2e 0%, #1e3a8a 100%);
+  border: 2px solid #3b82f6;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  color: white;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(59, 130, 246, 0.4);
+  animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.contract-negotiation-modal::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+  animation: rotate 15s linear infinite;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 2px solid #1e3a8a;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #60a5fa;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.modal-content {
+  padding: 20px;
+}
+
+.error-message {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.proposal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-section h3 {
+  color: #60a5fa;
+  margin-bottom: 16px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.form-input,
+.form-select {
+  width: 100%;
+  padding: 10px;
+  background: #0f172a;
+  border: 1px solid #1e3a8a;
+  border-radius: 6px;
+  color: white;
+  font-size: 16px;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+}
+
+.form-hint {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.form-hint .warning {
+  color: #fbbf24;
+}
+
+.form-hint .success {
+  color: #34d399;
+}
+
+.cost-summary {
+  background: #0f172a;
+  border: 1px solid #1e3a8a;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 20px 0;
+}
+
+.cost-summary h4 {
+  margin: 0 0 12px 0;
+  color: #60a5fa;
+}
+
+.total-cost {
+  font-size: 24px;
+  font-weight: bold;
+  color: #60a5fa;
+  margin: 8px 0;
+}
+
+.cost-breakdown {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 4px 0 0 0;
+}
+
+.btn-full {
+  width: 100%;
+  margin-top: 16px;
+}
+
+.negotiation-status {
+  padding: 20px 0;
+}
+
+.status-pending,
+.status-accepted,
+.status-rejected,
+.status-counter {
+  text-align: center;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.status-pending {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid #3b82f6;
+}
+
+.status-accepted {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid #22c55e;
+}
+
+.status-rejected {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid #ef4444;
+}
+
+.status-counter {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid #fbbf24;
+}
+
+.status-pending h3,
+.status-accepted h3,
+.status-rejected h3,
+.status-counter h3 {
+  margin: 0 0 12px 0;
+  color: white;
+}
+
+.accepted-details,
+.counter-offer-details {
+  text-align: left;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 16px;
+  border-radius: 6px;
+  margin: 16px 0;
+}
+
+.accepted-details p,
+.counter-offer-details p {
+  margin: 8px 0;
+  color: #cbd5e1;
+}
+
+.spinner {
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top: 3px solid #60a5fa;
+  border-right: 3px solid #3b82f6;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: rotate 1s linear infinite;
+  margin: 20px auto;
+  box-shadow: 0 0 20px rgba(96, 165, 250, 0.5);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.counter-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.counter-actions button {
+  flex: 1;
+}
+

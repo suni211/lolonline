@@ -43,26 +43,26 @@ export default function Dashboard() {
       
       {team && (
         <div className="stats-grid">
-          <div className="stat-card">
+          <div className="stat-card card-enter">
             <h3>팀 정보</h3>
             <p className="stat-value">{team.name}</p>
             <p className="stat-label">{team.league} LEAGUE</p>
           </div>
-          <div className="stat-card">
+          <div className="stat-card card-enter-delay-1">
             <h3>보유 골드</h3>
             <p className="stat-value">{team.gold.toLocaleString()}</p>
           </div>
-          <div className="stat-card">
+          <div className="stat-card card-enter-delay-2">
             <h3>보유 다이아몬드</h3>
             <p className="stat-value">{team.diamond}</p>
           </div>
           {teamStats && (
             <>
-              <div className="stat-card">
+              <div className="stat-card card-enter-delay-3">
                 <h3>보유 선수</h3>
                 <p className="stat-value">{teamStats.player_count} / 23</p>
               </div>
-              <div className="stat-card">
+              <div className="stat-card card-enter-delay-1">
                 <h3>스타터</h3>
                 <p className="stat-value">{teamStats.starter_count} / 5</p>
               </div>

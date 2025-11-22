@@ -119,74 +119,20 @@ router.post('/scout', authenticateToken, async (req: AuthRequest, res) => {
       await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [cost, req.teamId]);
     }
 
-    // 랜덤 선수 생성
-    const positions = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
-    const position = positions[Math.floor(Math.random() * positions.length)];
-    
-    // 포지션별 스탯 특화
-    const positionStats: Record<string, { mental: number; teamfight: number; focus: number; laning: number }> = {
-      'TOP': { mental: 0.2, teamfight: 0.3, focus: 0.25, laning: 0.25 },
-      'JUNGLE': { mental: 0.25, teamfight: 0.3, focus: 0.3, laning: 0.15 },
-      'MID': { mental: 0.2, teamfight: 0.25, focus: 0.3, laning: 0.25 },
-      'ADC': { mental: 0.15, teamfight: 0.35, focus: 0.25, laning: 0.25 },
-      'SUPPORT': { mental: 0.3, teamfight: 0.25, focus: 0.25, laning: 0.2 }
-    };
-
-    // 오버롤 200-600 사이 랜덤
-    const baseOverall = 200 + Math.floor(Math.random() * 400);
-    const statWeights = positionStats[position];
-    const mental = Math.floor(baseOverall * statWeights.mental) + Math.floor(Math.random() * 30);
-    const teamfight = Math.floor(baseOverall * statWeights.teamfight) + Math.floor(Math.random() * 30);
-    const focus = Math.floor(baseOverall * statWeights.focus) + Math.floor(Math.random() * 30);
-    const laning = baseOverall - mental - teamfight - focus;
-
-    // 국적 리스트 (주요 리그 국가만)
-    const nationalities = ['KR', 'CN', 'EU', 'NA', 'VN', 'TW', 'JP', 'BR', 'TR', 'RU', 'PH', 'ID', 'TH', 'MY', 'SG', 'FR', 'DE', 'ES', 'DK', 'PL', 'SE', 'NO', 'FI', 'IT', 'GB', 'CA', 'AU', 'MX', 'AR', 'CL'];
-    const nationality = nationalities[Math.floor(Math.random() * nationalities.length)];
-
-    // 이미 소유된 선수 이름 확인 (어떤 팀이든 소유 중이면 제외)
-    const ownedPlayers = await pool.query(
-      `SELECT DISTINCT p.name 
-       FROM players p 
-       INNER JOIN player_ownership po ON p.id = po.player_id`
+    // 이미 소유된 선수는 제외하고 랜덤 선수 선택 (FA 선수만)
+    const availablePlayers = await pool.query(
+      `SELECT p.* FROM players p
+       LEFT JOIN player_ownership po ON p.id = po.player_id
+       WHERE po.player_id IS NULL` // 소유권이 없는 선수만 선택
     );
-    const ownedNames = new Set(ownedPlayers.map((p: any) => p.name));
 
-    // 기본 선수 이름 리스트 (제공된 선수 + 추가 선수)
-    const allBaseNames = [
-      'Leadingsquash68', 'GaeNald', 'Vilrain', 'Onsoo', 't1romance', '03261592630',
-      'SquidFriend1', 'DOKyuN', 'CGG', 'KIO', 'Pizza', 'Yebin', 'LHW', 'Hyeseong',
-      'SoSo', 'MS1005', 'Laving', 'Mato', 'Frost', 'JeongMin', 'JUNHYUNG',
-      // 추가 가상 선수들
-      'Faker', 'Chovy', 'Deft', 'Keria', 'Zeus', 'Oner', 'Gumayusi', 'ShowMaker', 'Canyon',
-      'BeryL', 'Nuguri', 'TheShy', 'Rookie', 'Uzi', 'Caps', 'Perkz', 'Doublelift', 'Bjergsen'
-    ];
-    
-    // 소유되지 않은 이름만 필터링
-    const availableNames = allBaseNames.filter(name => !ownedNames.has(name));
-    
-    // 소유되지 않은 이름이 없으면 랜덤 이름 생성
-    let name: string;
-    if (availableNames.length > 0) {
-      const baseName = availableNames[Math.floor(Math.random() * availableNames.length)];
-      // 숫자가 이미 포함된 이름이면 숫자 추가 안함
-      name = /^\d/.test(baseName) || /\d$/.test(baseName) 
-        ? baseName 
-        : baseName + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    } else {
-      // 모든 기본 이름이 소유되었으면 완전히 새로운 랜덤 이름 생성
-      const randomNames = ['Player', 'Pro', 'Gamer', 'Star', 'Elite', 'Master', 'Champion', 'Legend'];
-      const randomName = randomNames[Math.floor(Math.random() * randomNames.length)];
-      name = randomName + Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    if (availablePlayers.length === 0) {
+      return res.status(400).json({ error: '스카우팅 가능한 선수가 없습니다' });
     }
 
-    const result = await pool.query(
-      `INSERT INTO players (name, nationality, position, mental, teamfight, focus, laning, level, exp_to_next) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, 1, 100)`,
-      [name, nationality, position, Math.min(mental, 300), Math.min(teamfight, 300), Math.min(focus, 300), Math.min(laning, 300)]
-    );
-
-    const playerId = result.insertId;
+    // 랜덤으로 선수 선택
+    const selectedPlayer = availablePlayers[Math.floor(Math.random() * availablePlayers.length)];
+    const playerId = selectedPlayer.id;
 
     // 선수 소유권 추가
     await pool.query(
@@ -203,63 +149,11 @@ router.post('/scout', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
-// 선수 영입 (검색 후)
-router.post('/recruit/:playerId', authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const playerId = parseInt(req.params.playerId);
-
-    // 선수 확인
-    const players = await pool.query('SELECT * FROM players WHERE id = ?', [playerId]);
-    if (players.length === 0) {
-      return res.status(404).json({ error: 'Player not found' });
-    }
-
-    // 이미 소유한 선수인지 확인
-    const ownership = await pool.query(
-      'SELECT * FROM player_ownership WHERE player_id = ? AND team_id = ?',
-      [playerId, req.teamId]
-    );
-
-    if (ownership.length > 0) {
-      return res.status(400).json({ error: 'You already own this player' });
-    }
-
-    // 최대 보유 수 확인 (23명)
-    const playerCount = await pool.query(
-      'SELECT COUNT(*) as count FROM player_ownership WHERE team_id = ?',
-      [req.teamId]
-    );
-
-    if (playerCount[0].count >= 23) {
-      return res.status(400).json({ error: 'Maximum player limit reached (23)' });
-    }
-
-    // 영입 비용 계산 (오버롤 * 100)
-    const player = players[0];
-    const overall = player.mental + player.teamfight + player.focus + player.laning;
-    const cost = overall * 100;
-
-    // 골드 확인
-    const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);
-    if (teams.length === 0 || teams[0].gold < cost) {
-      return res.status(400).json({ error: 'Insufficient gold' });
-    }
-
-    // 골드 차감
-    await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [cost, req.teamId]);
-
-    // 선수 소유권 추가
-    await pool.query(
-      'INSERT INTO player_ownership (player_id, team_id, is_benched) VALUES (?, ?, true)',
-      [playerId, req.teamId]
-    );
-
-    res.json({ message: 'Player recruited successfully' });
-  } catch (error: any) {
-    console.error('Recruit player error:', error);
-    res.status(500).json({ error: 'Failed to recruit player' });
-  }
-});
+// 선수 영입 (검색 후) - 이제 연봉협상을 통해 진행하므로 이 엔드포인트는 사용하지 않음
+// 연봉협상은 /api/contracts 엔드포인트를 사용
+// router.post('/recruit/:playerId', authenticateToken, async (req: AuthRequest, res) => {
+//   ... 기존 코드는 연봉협상 시스템으로 대체됨
+// });
 
 // 선수 레벨업
 router.post('/:playerId/levelup', authenticateToken, async (req: AuthRequest, res) => {

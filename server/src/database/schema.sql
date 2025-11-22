@@ -211,6 +211,29 @@ CREATE TABLE IF NOT EXISTS playoff_brackets (
     FOREIGN KEY (winner_id) REFERENCES teams(id) ON DELETE SET NULL
 );
 
+-- 연봉협상 테이블
+CREATE TABLE IF NOT EXISTS contract_negotiations (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    player_id INT NOT NULL,
+    team_id INT NOT NULL,
+    annual_salary BIGINT NOT NULL,
+    contract_years INT DEFAULT 1 CHECK (contract_years >= 1 AND contract_years <= 5),
+    signing_bonus BIGINT DEFAULT 0,
+    status ENUM('PENDING', 'ACCEPTED', 'REJECTED', 'COUNTER_OFFER', 'EXPIRED') DEFAULT 'PENDING',
+    ai_response_type ENUM('ACCEPT', 'REJECT', 'COUNTER') DEFAULT NULL,
+    ai_counter_salary BIGINT,
+    ai_counter_years INT,
+    ai_counter_bonus BIGINT,
+    negotiation_round INT DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    responded_at DATETIME,
+    expires_at DATETIME,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    INDEX idx_player_team (player_id, team_id),
+    INDEX idx_status (status)
+);
+
 -- 트레이드/이적 테이블
 CREATE TABLE IF NOT EXISTS trades (
     id INT PRIMARY KEY AUTO_INCREMENT,
