@@ -271,12 +271,11 @@ export class LPOLeagueService {
       // SECOND: 12팀 -> 각 팀 44경기 (11팀 * 4경기)
       const matches: { home: number; away: number }[] = [];
 
-      // 라운드 로빈 스케줄 생성 함수
-      const generateRoundRobin = (teams: number[], isHomeFirst: boolean) => {
+      // 1사이클 생성 (홈/어웨이 번갈아가며)
+      const generateCycle = (teams: number[], reverseHomeAway: boolean) => {
         const n = teams.length;
-        const rounds: { home: number; away: number }[][] = [];
+        const cycleMatches: { home: number; away: number }[] = [];
 
-        // 홀수 팀이면 bye 추가
         const teamList = [...teams];
         if (n % 2 === 1) {
           teamList.push(-1); // bye
@@ -287,8 +286,6 @@ export class LPOLeagueService {
         const matchesPerRound = numTeams / 2;
 
         for (let round = 0; round < numRounds; round++) {
-          const roundMatches: { home: number; away: number }[] = [];
-
           for (let match = 0; match < matchesPerRound; match++) {
             const home = (round + match) % (numTeams - 1);
             let away = (numTeams - 1 - match + round) % (numTeams - 1);
@@ -302,39 +299,31 @@ export class LPOLeagueService {
 
             // bye 경기 제외
             if (team1 !== -1 && team2 !== -1) {
-              if (isHomeFirst) {
-                roundMatches.push({ home: team1, away: team2 });
+              // 홈/어웨이 번갈아가며 (라운드 기준)
+              const isHome = (round % 2 === 0) !== reverseHomeAway;
+              if (isHome) {
+                cycleMatches.push({ home: team1, away: team2 });
               } else {
-                roundMatches.push({ home: team2, away: team1 });
+                cycleMatches.push({ home: team2, away: team1 });
               }
             }
           }
-
-          rounds.push(roundMatches);
         }
 
-        return rounds;
+        return cycleMatches;
       };
 
-      // 4사이클: 홈-어웨이-홈-어웨이
-      const cycle1 = generateRoundRobin(teamIds, true);  // 1라운드: 홈
-      const cycle2 = generateRoundRobin(teamIds, false); // 2라운드: 어웨이
-      const cycle3 = generateRoundRobin(teamIds, true);  // 3라운드: 홈
-      const cycle4 = generateRoundRobin(teamIds, false); // 4라운드: 어웨이
+      // 4사이클: 1사이클-2사이클(반대)-3사이클-4사이클(반대)
+      const cycle1 = generateCycle(teamIds, false); // 1사이클
+      const cycle2 = generateCycle(teamIds, true);  // 2사이클 (홈/어웨이 반대)
+      const cycle3 = generateCycle(teamIds, false); // 3사이클
+      const cycle4 = generateCycle(teamIds, true);  // 4사이클 (홈/어웨이 반대)
 
       // 모든 경기를 순서대로 추가
-      for (const round of cycle1) {
-        matches.push(...round);
-      }
-      for (const round of cycle2) {
-        matches.push(...round);
-      }
-      for (const round of cycle3) {
-        matches.push(...round);
-      }
-      for (const round of cycle4) {
-        matches.push(...round);
-      }
+      matches.push(...cycle1);
+      matches.push(...cycle2);
+      matches.push(...cycle3);
+      matches.push(...cycle4);
 
       // 경기 일정 생성
       // 게임 시간: 6시간(현실) = 1달(게임) = 4주
