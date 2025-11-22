@@ -6,6 +6,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import LPOLeagueService from '../services/lpoLeagueService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -137,36 +138,38 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: '이미 팀이 존재합니다' });
     }
 
-    const { name, logo_url, team_color, league } = req.body;
+    const { name, logo_url, team_color } = req.body;
 
-    if (!name || !league) {
-      return res.status(400).json({ error: '팀 이름과 리그를 입력해주세요' });
+    if (!name) {
+      return res.status(400).json({ error: '팀 이름을 입력해주세요' });
     }
 
-    if (!['EAST', 'WEST'].includes(league)) {
-      return res.status(400).json({ error: '올바른 리그를 선택해주세요' });
-    }
-
-    // 팀 생성
+    // 팀 생성 (자동으로 LPO 2 LEAGUE로 배정)
     const teamResult = await pool.query(
-      `INSERT INTO teams (user_id, name, league, logo_url, team_color, gold, diamond) 
-       VALUES (?, ?, ?, ?, ?, 100000, 100)`,
-      [req.userId, name, league, logo_url || null, team_color || '#1E3A8A']
+      `INSERT INTO teams (user_id, name, league, logo_url, team_color, gold, diamond, is_ai)
+       VALUES (?, ?, 'SECOND', ?, ?, 100000, 100, false)`,
+      [req.userId, name, logo_url || null, team_color || '#1E3A8A']
     );
 
     const teamId = teamResult.insertId;
 
-    // 리그 참가
-    const leagueResult = await pool.query(
-      'SELECT id FROM leagues WHERE region = ? AND season = (SELECT MAX(season) FROM leagues WHERE region = ?)',
-      [league, league]
-    );
-
-    if (leagueResult.length > 0) {
-      await pool.query(
-        'INSERT INTO league_participants (league_id, team_id) VALUES (?, ?)',
-        [leagueResult[0].id, teamId]
+    // AI 팀 대체 (LPO 2 LEAGUE에서 AI 팀 하나를 대체)
+    try {
+      const replacement = await LPOLeagueService.replaceAITeam(teamId);
+      console.log(`Team ${name} replaced AI team: ${replacement.replacedTeam}`);
+    } catch (replaceError: any) {
+      console.error('AI team replacement failed:', replaceError.message);
+      // 대체 실패 시 직접 리그에 등록
+      const leagueResult = await pool.query(
+        "SELECT id FROM leagues WHERE region = 'SECOND' AND season = (SELECT MAX(season) FROM leagues WHERE region = 'SECOND')"
       );
+
+      if (leagueResult.length > 0) {
+        await pool.query(
+          'INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference) VALUES (?, ?, 0, 0, 0, 0, 0)',
+          [leagueResult[0].id, teamId]
+        );
+      }
     }
 
     // 새로운 JWT 토큰 생성 (teamId 포함)
@@ -176,7 +179,7 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
       { expiresIn: '30d' }
     );
 
-    res.json({ teamId, token: newToken, message: '팀이 생성되었습니다' });
+    res.json({ teamId, token: newToken, message: '팀이 생성되었습니다. LPO 2 LEAGUE에 배정되었습니다.' });
   } catch (error: any) {
     console.error('Create team error:', error);
     res.status(500).json({ error: '팀 생성에 실패했습니다: ' + (error.message || '알 수 없는 오류') });

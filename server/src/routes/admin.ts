@@ -6,6 +6,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import LPOLeagueService from '../services/lpoLeagueService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -624,6 +625,64 @@ router.delete('/players/:playerId/face', authenticateToken, adminMiddleware, asy
   } catch (error) {
     console.error('Delete face image error:', error);
     res.status(500).json({ error: '이미지 삭제 실패' });
+  }
+});
+
+// LPO 리그 초기화
+router.post('/lpo/initialize', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    await LPOLeagueService.initializeLPOLeagues();
+    res.json({ success: true, message: 'LPO 리그가 초기화되었습니다' });
+  } catch (error: any) {
+    console.error('Initialize LPO error:', error);
+    res.status(500).json({ error: 'LPO 리그 초기화 실패: ' + error.message });
+  }
+});
+
+// 다음 시즌 시작
+router.post('/lpo/next-season', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const { currentSeason } = req.body;
+
+    if (!currentSeason) {
+      return res.status(400).json({ error: '현재 시즌을 입력해주세요' });
+    }
+
+    await LPOLeagueService.startNewSeason(currentSeason);
+    res.json({ success: true, message: `시즌 ${currentSeason + 1}이 시작되었습니다` });
+  } catch (error: any) {
+    console.error('Start new season error:', error);
+    res.status(500).json({ error: '시즌 시작 실패: ' + error.message });
+  }
+});
+
+// LPO 리그 현황 조회
+router.get('/lpo/status', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const leagues = await pool.query(
+      `SELECT l.*,
+              (SELECT COUNT(*) FROM league_participants lp WHERE lp.league_id = l.id) as team_count,
+              (SELECT COUNT(*) FROM league_participants lp
+               JOIN teams t ON lp.team_id = t.id
+               WHERE lp.league_id = l.id AND t.is_ai = true) as ai_team_count,
+              (SELECT COUNT(*) FROM league_participants lp
+               JOIN teams t ON lp.team_id = t.id
+               WHERE lp.league_id = l.id AND t.is_ai = false) as player_team_count
+       FROM leagues l
+       WHERE l.name LIKE 'LPO%'
+       ORDER BY
+         CASE l.region
+           WHEN 'SUPER' THEN 1
+           WHEN 'FIRST' THEN 2
+           WHEN 'SECOND' THEN 3
+         END,
+         l.season DESC`
+    );
+
+    res.json(leagues);
+  } catch (error) {
+    console.error('Get LPO status error:', error);
+    res.status(500).json({ error: 'LPO 현황 조회 실패' });
   }
 });
 

@@ -8,7 +8,6 @@ export default function CreateTeam() {
   const [teamName, setTeamName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [teamColor, setTeamColor] = useState('#1E3A8A');
-  const [league, setLeague] = useState<'EAST' | 'WEST'>('EAST');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { fetchUserInfo } = useAuth();
@@ -29,8 +28,7 @@ export default function CreateTeam() {
       const response = await axios.post('/api/teams/create', {
         name: teamName,
         logo_url: logoUrl || null,
-        team_color: teamColor,
-        league
+        team_color: teamColor
       });
 
       // 새로운 토큰이 있으면 저장
@@ -72,22 +70,13 @@ export default function CreateTeam() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="league">리그 선택 *</label>
-            <div className="league-buttons">
-              <button
-                type="button"
-                className={`league-btn ${league === 'EAST' ? 'active' : ''}`}
-                onClick={() => setLeague('EAST')}
-              >
-                EAST LEAGUE
-              </button>
-              <button
-                type="button"
-                className={`league-btn ${league === 'WEST' ? 'active' : ''}`}
-                onClick={() => setLeague('WEST')}
-              >
-                WEST LEAGUE
-              </button>
+            <label>리그 배정</label>
+            <div className="league-info-box">
+              <div className="league-name">LPO 2 LEAGUE</div>
+              <div className="league-desc">
+                모든 신규 팀은 LPO 2 LEAGUE (3부 리그)에서 시작합니다.
+                <br />시즌 종료 시 상위 2팀이 LPO 1 LEAGUE로 승격됩니다.
+              </div>
             </div>
           </div>
 

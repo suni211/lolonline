@@ -185,3 +185,23 @@
   cursor: not-allowed;
 }
 
+.league-info-box {
+  background-color: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.league-info-box .league-name {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: var(--light-blue);
+  margin-bottom: 0.5rem;
+}
+
+.league-info-box .league-desc {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
