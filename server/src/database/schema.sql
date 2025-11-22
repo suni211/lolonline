@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS teams (
     gold BIGINT DEFAULT 1000,
     diamond INT DEFAULT 100,
     fan_count BIGINT DEFAULT 1000,
+    is_ai BOOLEAN DEFAULT FALSE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     UNIQUE KEY unique_user_team (user_id)
