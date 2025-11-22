@@ -213,14 +213,15 @@ export class LPOLeagueService {
 
       const teamIds = teams.map((t: any) => t.team_id);
 
-      // 라운드 로빈 스케줄 생성 (각 팀이 다른 모든 팀과 홈/어웨이 1번씩)
-      const matches: { home: number; away: number; round: number }[] = [];
+      // 라운드 로빈 스케줄 생성 (각 팀이 다른 모든 팀과 1번씩)
+      // SUPER/FIRST: 10팀 -> 각 팀 8경기 (팀당 8경기, 총 36경기 = 9*8/2)
+      // SECOND: 12팀 -> 각 팀 8경기 (팀당 8경기, 총 44경기 = 11*8/2)
+      const matches: { home: number; away: number }[] = [];
 
       for (let i = 0; i < teamIds.length; i++) {
         for (let j = i + 1; j < teamIds.length; j++) {
-          // 홈/어웨이 경기
-          matches.push({ home: teamIds[i], away: teamIds[j], round: 1 });
-          matches.push({ home: teamIds[j], away: teamIds[i], round: 2 });
+          // 각 팀은 다른 팀과 1번만 경기
+          matches.push({ home: teamIds[i], away: teamIds[j] });
         }
       }
 
