@@ -1053,7 +1053,7 @@ async function giveMatchRewards(match: any, winnerTeamId: number) {
     const positions = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
     const position = positions[Math.floor(Math.random() * positions.length)];
 
-    const baseOverall = 150 + Math.floor(Math.random() * 200);
+    const baseOverall = 130 + Math.floor(Math.random() * 200);
     const mental = Math.floor(baseOverall * 0.25) + Math.floor(Math.random() * 30);
     const teamfight = Math.floor(baseOverall * 0.25) + Math.floor(Math.random() * 30);
     const focus = Math.floor(baseOverall * 0.25) + Math.floor(Math.random() * 30);

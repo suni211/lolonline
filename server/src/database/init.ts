@@ -493,8 +493,8 @@ async function createInitialPlayers() {
     };
 
     for (const player of initialPlayers) {
-      // 오버롤 300-500 사이 랜덤 (기본 선수는 조금 더 높은 스탯)
-      const baseOverall = 300 + Math.floor(Math.random() * 200);
+      // 오버롤 280-480 사이 랜덤 (기본 선수는 조금 더 높은 스탯)
+      const baseOverall = 280 + Math.floor(Math.random() * 200);
       const statWeights = positionStats[player.position];
       const mental = Math.floor(baseOverall * statWeights.mental) + Math.floor(Math.random() * 20);
       const teamfight = Math.floor(baseOverall * statWeights.teamfight) + Math.floor(Math.random() * 20);

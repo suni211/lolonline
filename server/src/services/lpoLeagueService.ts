@@ -382,11 +382,11 @@ export class LPOLeagueService {
   static async createAIPlayers(teamId: number, tier: string) {
     const positions = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
 
-    // 티어별 스탯 범위
+    // 티어별 스탯 범위 (각 스탯 기준, 오버롤 = 4개 합산)
     const statRanges: { [key: string]: { min: number; max: number } } = {
-      'SUPER': { min: 60, max: 85 },
-      'FIRST': { min: 45, max: 70 },
-      'SECOND': { min: 30, max: 55 }
+      'SUPER': { min: 55, max: 80 },
+      'FIRST': { min: 40, max: 65 },
+      'SECOND': { min: 25, max: 50 }
     };
 
     const range = statRanges[tier] || statRanges['SECOND'];
