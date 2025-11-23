@@ -449,8 +449,8 @@ async function generateEvents(
   // 이벤트 타입 선택 (가중치 적용)
   const eventPool: string[] = [];
 
-  // 기본 이벤트 (항상) - 킬 빈도 감소
-  eventPool.push('KILL', 'CS', 'CS', 'CS', 'GOLD', 'GOLD');
+  // 기본 이벤트 (항상)
+  eventPool.push('KILL', 'KILL', 'GOLD');
 
   // 시간대별 이벤트
   if (gameMinutes >= 3) eventPool.push('GANK', 'LANE_PUSH');
@@ -585,12 +585,7 @@ async function generateEvents(
       break;
 
     case 'CS':
-      const csGained = 10 + Math.floor(Math.random() * 20);
-      event = createEvent(gameTime, 'CS', `${killer.name}(이)가 CS ${csGained}개를 획득했습니다.`, {
-        team: winningTeam,
-        player_name: killer.name,
-        cs: csGained
-      });
+      // CS는 updatePlayerStatsLOL에서 자동 증가하므로 이벤트만 생성 (실제 증가 없음)
       break;
 
     case 'GOLD':
@@ -656,9 +651,11 @@ async function updatePlayerStatsLOL(matchId: number, homePlayers: any[], awayPla
   for (const player of allPlayers) {
     const isSupport = player.position === 'SUPPORT';
 
-    // CS 증가 (분당)
-    const csPerMin = isSupport ? 1 : (7 + Math.random() * 3);
-    const csIncrease = Math.floor(csPerMin / 6); // 10초당
+    // CS 증가 (분당 7-10, 서폿은 1-2)
+    // 28분 기준: 라이너 약 250-300 CS, 서폿 약 30-50 CS
+    // 10초마다 호출되므로 분당 CS / 6
+    const csPerMin = isSupport ? (1 + Math.random()) : (7 + Math.random() * 3);
+    const csIncrease = Math.max(1, Math.floor(csPerMin / 6));
 
     // 골드 증가
     const goldPerMin = isSupport ? 200 : (350 + Math.random() * 100);
