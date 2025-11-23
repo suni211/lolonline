@@ -1139,8 +1139,8 @@ router.post('/test-match', authenticateToken, adminMiddleware, async (req: AuthR
     for (const card of [...homeCards, ...awayCards]) {
       const teamId = homeCards.includes(card) ? homeTeamId : awayTeamId;
       await pool.query(
-        `INSERT INTO match_stats (match_id, player_id, team_id, kills, deaths, assists, cs, gold_earned, damage_dealt, damage_taken, vision_score, wards_placed, wards_destroyed, turret_damage, first_blood)
-         VALUES (?, ?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)`,
+        `INSERT INTO match_stats (match_id, player_id, team_id, kills, deaths, assists, cs, gold_earned, damage_dealt, damage_taken, vision_score, wards_placed, wards_destroyed, turret_kills, first_blood)
+         VALUES (?, ?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, FALSE)`,
         [matchId, card.id, teamId]
       );
     }

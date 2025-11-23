@@ -1129,12 +1129,23 @@ async function giveLeagueMatchRewards(match: any, winnerTeamId: number, loserTea
       // 경기장이 없으면 입장료 수익 없음
       console.log(`Team ${homeTeamId} has no stadium - no ticket revenue`);
 
-      // 승리 보너스만 지급
+      // 승리/패배/무승부 보너스 지급
       const winBonus = 30000;
+      const loseBonus = 10000;
+      const drawBonus = 15000;
+
       if (homeScore > awayScore) {
+        // 홈팀 승리
         await pool.query('UPDATE teams SET gold = gold + ? WHERE id = ?', [winBonus, homeTeamId]);
+        await pool.query('UPDATE teams SET gold = gold + ? WHERE id = ?', [loseBonus, match.away_team_id]);
       } else if (awayScore > homeScore) {
+        // 원정팀 승리
+        await pool.query('UPDATE teams SET gold = gold + ? WHERE id = ?', [loseBonus, homeTeamId]);
         await pool.query('UPDATE teams SET gold = gold + ? WHERE id = ?', [winBonus, match.away_team_id]);
+      } else {
+        // 무승부
+        await pool.query('UPDATE teams SET gold = gold + ? WHERE id = ?', [drawBonus, homeTeamId]);
+        await pool.query('UPDATE teams SET gold = gold + ? WHERE id = ?', [drawBonus, match.away_team_id]);
       }
       return;
     }
