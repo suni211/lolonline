@@ -107,8 +107,8 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
     const scheduledAt = new Date(Date.now() + 60 * 1000);
 
     const result = await pool.query(
-      `INSERT INTO matches (home_team_id, away_team_id, match_type, status, scheduled_at)
-       VALUES (?, ?, 'FRIENDLY', 'SCHEDULED', ?)`,
+      `INSERT INTO matches (league_id, home_team_id, away_team_id, match_type, status, scheduled_at)
+       VALUES (NULL, ?, ?, 'FRIENDLY', 'SCHEDULED', ?)`,
       [req.teamId, opponent_team_id, scheduledAt]
     );
 
