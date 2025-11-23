@@ -126,13 +126,15 @@ export default function Matches() {
   // 경기 분류
   const cupMatches = filteredMatches.filter(m => m.match_type === 'CUP');
   const superLeagueMatches = filteredMatches.filter(m =>
-    m.league_name && (m.league_name.includes('SUPER') || m.league_name.includes('슈퍼'))
+    m.league_name && (m.league_name.toUpperCase().includes('SUPER') || m.league_name.includes('슈퍼'))
   );
   const firstLeagueMatches = filteredMatches.filter(m =>
-    m.league_name && (m.league_name.includes('1 ') || m.league_name.includes('FIRST') || m.league_name === 'LPO 1')
+    m.league_name && !m.league_name.toUpperCase().includes('SUPER') &&
+    (m.league_name.includes('1') || m.league_name.toUpperCase().includes('FIRST'))
   );
   const secondLeagueMatches = filteredMatches.filter(m =>
-    m.league_name && (m.league_name.includes('2 ') || m.league_name.includes('SECOND') || m.league_name === 'LPO 2')
+    m.league_name && !m.league_name.toUpperCase().includes('SUPER') &&
+    (m.league_name.includes('2') || m.league_name.toUpperCase().includes('SECOND'))
   );
   const friendlyMatches = filteredMatches.filter(m => m.match_type === 'FRIENDLY');
 
@@ -140,7 +142,7 @@ export default function Matches() {
   const otherLeagueMatches = filteredMatches.filter(m =>
     m.match_type !== 'CUP' &&
     m.match_type !== 'FRIENDLY' &&
-    m.league_name &&
+    !cupMatches.includes(m) &&
     !superLeagueMatches.includes(m) &&
     !firstLeagueMatches.includes(m) &&
     !secondLeagueMatches.includes(m)

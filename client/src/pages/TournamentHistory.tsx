@@ -143,13 +143,26 @@ const TournamentHistory: React.FC = () => {
   // 경기 분류
   const cupMatches = matches.filter(m => m.match_type === 'CUP');
   const superLeagueMatches = matches.filter(m =>
-    m.league_name && (m.league_name.includes('SUPER') || m.league_name.includes('슈퍼'))
+    m.league_name && (m.league_name.toUpperCase().includes('SUPER') || m.league_name.includes('슈퍼'))
   );
   const firstLeagueMatches = matches.filter(m =>
-    m.league_name && (m.league_name.includes('1 ') || m.league_name.includes('FIRST') || m.league_name === 'LPO 1')
+    m.league_name && !m.league_name.toUpperCase().includes('SUPER') &&
+    (m.league_name.includes('1') || m.league_name.toUpperCase().includes('FIRST'))
   );
   const secondLeagueMatches = matches.filter(m =>
-    m.league_name && (m.league_name.includes('2 ') || m.league_name.includes('SECOND') || m.league_name === 'LPO 2')
+    m.league_name && !m.league_name.toUpperCase().includes('SUPER') &&
+    (m.league_name.includes('2') || m.league_name.toUpperCase().includes('SECOND'))
+  );
+  const friendlyMatches = matches.filter(m => m.match_type === 'FRIENDLY');
+
+  // 분류되지 않은 리그 경기
+  const otherLeagueMatches = matches.filter(m =>
+    m.match_type !== 'CUP' &&
+    m.match_type !== 'FRIENDLY' &&
+    !cupMatches.includes(m) &&
+    !superLeagueMatches.includes(m) &&
+    !firstLeagueMatches.includes(m) &&
+    !secondLeagueMatches.includes(m)
   );
 
   const getRegionName = (region: string) => {
@@ -232,10 +245,13 @@ const TournamentHistory: React.FC = () => {
 
       {activeTab === 'schedule' && (
         <div className="schedule-container">
-          {renderMatchSection(cupMatches, 'LPO 컵')}
-          {renderMatchSection(superLeagueMatches, 'LPO SUPER LEAGUE')}
-          {renderMatchSection(firstLeagueMatches, 'LPO 1 LEAGUE')}
-          {renderMatchSection(secondLeagueMatches, 'LPO 2 LEAGUE')}
+          {cupMatches.length > 0 && renderMatchSection(cupMatches, 'LPO 컵')}
+          {superLeagueMatches.length > 0 && renderMatchSection(superLeagueMatches, 'LPO SUPER LEAGUE')}
+          {firstLeagueMatches.length > 0 && renderMatchSection(firstLeagueMatches, 'LPO 1 LEAGUE')}
+          {secondLeagueMatches.length > 0 && renderMatchSection(secondLeagueMatches, 'LPO 2 LEAGUE')}
+          {otherLeagueMatches.length > 0 && renderMatchSection(otherLeagueMatches, '기타 리그')}
+          {friendlyMatches.length > 0 && renderMatchSection(friendlyMatches, '친선전')}
+
           {matches.length === 0 && <div className="no-data">경기가 없습니다</div>}
         </div>
       )}
