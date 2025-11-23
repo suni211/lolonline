@@ -181,13 +181,20 @@ async function updateLiveMatches(io: Server) {
 
 async function simulateMatchProgress(match: any, io: Server) {
   try {
-    const matchData = match.match_data ? JSON.parse(match.match_data) : { 
-      game_time: 0, 
-      home_score: 0, 
-      away_score: 0, 
-      events: [],
-      player_stats: {}
-    };
+    let matchData;
+    if (!match.match_data) {
+      matchData = {
+        game_time: 0,
+        home_score: 0,
+        away_score: 0,
+        events: [],
+        player_stats: {}
+      };
+    } else if (typeof match.match_data === 'string') {
+      matchData = JSON.parse(match.match_data);
+    } else {
+      matchData = match.match_data;
+    }
     
     matchData.game_time += 10; // 10초씩 진행
 
