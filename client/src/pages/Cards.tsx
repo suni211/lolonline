@@ -158,13 +158,13 @@ export default function Cards() {
   };
 
   const contractCard = async (cardId: number, ovr: number) => {
-    // 계약된 카드 수 확인 - 5명 미만이면 무료
-    const contractedCount = cards.filter(c => c.is_contracted).length;
-    const isFree = contractedCount < 5;
+    // 팀의 무료 계약 사용 횟수 확인
+    const freeContractsUsed = team?.free_contracts_used || 0;
+    const isFree = freeContractsUsed < 5;
     const cost = isFree ? 0 : Math.floor(ovr * 50000);
 
     const message = isFree
-      ? `이 카드와 무료로 계약하시겠습니까?\n(초반 5명 무료 계약 - ${contractedCount + 1}/5)\n(1시즌 동안 유효)`
+      ? `이 카드와 무료로 계약하시겠습니까?\n(무료 계약 ${freeContractsUsed + 1}/5 사용)\n(1시즌 동안 유효)`
       : `이 카드와 계약하시겠습니까?\n계약 비용: ${cost.toLocaleString()}원\n(1시즌 동안 유효)`;
 
     if (!confirm(message)) {

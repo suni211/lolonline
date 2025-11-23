@@ -7,15 +7,14 @@ const router = express.Router();
 // AI 팀 목록 조회
 router.get('/ai-opponents', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    // AI 팀 목록 조회 (is_ai = true인 팀들)
+    // AI 팀 목록 조회 (is_ai = true인 팀들) - player_cards 테이블 사용
     const aiTeams = await pool.query(
       `SELECT t.id, t.name, t.league, t.logo_url, t.team_color,
-              (SELECT COUNT(*) FROM player_ownership po
-               WHERE po.team_id = t.id AND po.is_starter = true) as starter_count,
-              (SELECT COALESCE(AVG(p.mental + p.teamfight + p.focus + p.laning), 0)
-               FROM player_ownership po
-               INNER JOIN players p ON po.player_id = p.id
-               WHERE po.team_id = t.id AND po.is_starter = true) as avg_overall
+              (SELECT COUNT(*) FROM player_cards pc
+               WHERE pc.team_id = t.id AND pc.is_starter = true AND pc.is_contracted = true) as starter_count,
+              (SELECT COALESCE(AVG(pc.ovr), 0)
+               FROM player_cards pc
+               WHERE pc.team_id = t.id AND pc.is_starter = true AND pc.is_contracted = true) as avg_overall
        FROM teams t
        WHERE t.is_ai = true AND t.id != ?
        ORDER BY avg_overall ASC`,
@@ -34,12 +33,11 @@ router.get('/available-teams', authenticateToken, async (req: AuthRequest, res) 
   try {
     const teams = await pool.query(
       `SELECT t.id, t.name, t.league, t.logo_url, t.team_color, t.is_ai,
-              (SELECT COUNT(*) FROM player_ownership po
-               WHERE po.team_id = t.id AND po.is_starter = true) as starter_count,
-              (SELECT COALESCE(AVG(p.mental + p.teamfight + p.focus + p.laning), 0)
-               FROM player_ownership po
-               INNER JOIN players p ON po.player_id = p.id
-               WHERE po.team_id = t.id AND po.is_starter = true) as avg_overall
+              (SELECT COUNT(*) FROM player_cards pc
+               WHERE pc.team_id = t.id AND pc.is_starter = true AND pc.is_contracted = true) as starter_count,
+              (SELECT COALESCE(AVG(pc.ovr), 0)
+               FROM player_cards pc
+               WHERE pc.team_id = t.id AND pc.is_starter = true AND pc.is_contracted = true) as avg_overall
        FROM teams t
        WHERE t.id != ?
        ORDER BY t.is_ai DESC, avg_overall ASC

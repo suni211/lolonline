@@ -15,6 +15,7 @@ interface Team {
   diamond: number;
   fan_count: number;
   logo_url: string | null;
+  free_contracts_used: number;
 }
 
 interface AuthContextType {

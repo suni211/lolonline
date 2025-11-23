@@ -51,20 +51,22 @@ async function processScheduledMatches(io: Server) {
 
 async function startMatch(match: any, io: Server) {
   try {
-    // 팀 선수 정보 가져오기 (스타터 체크)
+    // 팀 선수 정보 가져오기 (스타터 체크) - player_cards 테이블 사용
     const homePlayers = await pool.query(
-      `SELECT p.* FROM players p
-       INNER JOIN player_ownership po ON p.id = po.player_id
-       WHERE po.team_id = ? AND po.is_starter = true
-       ORDER BY p.position`,
+      `SELECT pc.id, pc.name, pc.team, pc.position, pc.league, pc.nationality,
+              pc.mental, pc.teamfight, pc.focus, pc.laning, pc.ovr
+       FROM player_cards pc
+       WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true
+       ORDER BY pc.position`,
       [match.home_team_id]
     );
 
     const awayPlayers = await pool.query(
-      `SELECT p.* FROM players p
-       INNER JOIN player_ownership po ON p.id = po.player_id
-       WHERE po.team_id = ? AND po.is_starter = true
-       ORDER BY p.position`,
+      `SELECT pc.id, pc.name, pc.team, pc.position, pc.league, pc.nationality,
+              pc.mental, pc.teamfight, pc.focus, pc.laning, pc.ovr
+       FROM player_cards pc
+       WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true
+       ORDER BY pc.position`,
       [match.away_team_id]
     );
 

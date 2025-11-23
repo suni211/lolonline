@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS teams (
     fan_morale INT DEFAULT 50 CHECK (fan_morale >= 0 AND fan_morale <= 100),
     ticket_price INT DEFAULT 1000 CHECK (ticket_price >= 500 AND ticket_price <= 50000),
     is_ai BOOLEAN DEFAULT FALSE,
+    free_contracts_used INT DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     UNIQUE KEY unique_user_team (user_id)
