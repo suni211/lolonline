@@ -5,7 +5,10 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(find:*)",
-      "Bash(git show:*)"
+      "Bash(git show:*)",
+      "Bash(mysql:*)",
+      "Bash(temp_layout.css)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
