@@ -27,7 +27,7 @@ router.get('/history/winners', authenticateToken, async (req: AuthRequest, res) 
   try {
     const winners = await pool.query(`
       SELECT ct.id, ct.name, ct.season, ct.prize_pool, ct.trophy_image,
-             t.id as team_id, t.name as team_name, t.logo_url as team_logo
+             t.id as team_id, t.name as team_name, t.abbreviation as team_abbr, t.logo_url as team_logo
       FROM cup_tournaments ct
       JOIN teams t ON ct.winner_team_id = t.id
       WHERE ct.status = 'COMPLETED'
@@ -47,7 +47,7 @@ router.get('/history/league-winners', authenticateToken, async (req: AuthRequest
     // 각 시즌별 리그 1위 팀 조회
     const winners = await pool.query(`
       SELECT l.id as league_id, l.name as league_name, l.region, l.season,
-             t.id as team_id, t.name as team_name, t.logo_url as team_logo,
+             t.id as team_id, t.name as team_name, t.abbreviation as team_abbr, t.logo_url as team_logo,
              lp.points, lp.wins, lp.draws, lp.losses, lp.goal_difference
       FROM leagues l
       JOIN league_participants lp ON l.id = lp.league_id

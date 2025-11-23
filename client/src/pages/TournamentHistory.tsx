@@ -10,6 +10,7 @@ interface CupWinner {
   trophy_image: string | null;
   team_id: number;
   team_name: string;
+  team_abbr: string | null;
   team_logo: string | null;
 }
 
@@ -20,6 +21,7 @@ interface LeagueWinner {
   season: number;
   team_id: number;
   team_name: string;
+  team_abbr: string | null;
   team_logo: string | null;
   points: number;
   wins: number;
@@ -27,6 +29,12 @@ interface LeagueWinner {
   losses: number;
   goal_difference: number;
 }
+
+// 팀 약자 표시 (약자가 없으면 팀 이름 앞 3글자)
+const getTeamAbbr = (name: string, abbr: string | null) => {
+  if (abbr) return abbr;
+  return name.replace(/[^A-Za-z0-9가-힣]/g, '').substring(0, 3).toUpperCase();
+};
 
 const TournamentHistory: React.FC = () => {
   const { token } = useAuth();
@@ -134,7 +142,9 @@ const TournamentHistory: React.FC = () => {
                       {winner.team_logo && (
                         <img src={winner.team_logo} alt={winner.team_name} className="team-logo" />
                       )}
-                      <span className="team-name">{winner.team_name}</span>
+                      <span className="team-name" title={winner.team_name}>
+                        {getTeamAbbr(winner.team_name, winner.team_abbr)}
+                      </span>
                     </div>
                     <div className="prize">상금: {formatPrize(winner.prize_pool)}</div>
                   </div>
@@ -172,7 +182,9 @@ const TournamentHistory: React.FC = () => {
                               {winner.team_logo && (
                                 <img src={winner.team_logo} alt={winner.team_name} className="team-logo" />
                               )}
-                              <span className="team-name">{winner.team_name}</span>
+                              <span className="team-name" title={winner.team_name}>
+                                {getTeamAbbr(winner.team_name, winner.team_abbr)}
+                              </span>
                             </div>
                             <div className="stats">
                               <span>{winner.wins}승 {winner.draws}무 {winner.losses}패</span>
