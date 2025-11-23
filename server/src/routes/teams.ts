@@ -259,17 +259,21 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: '이미 팀이 존재합니다' });
     }
 
-    const { name, logo_url, team_color } = req.body;
+    const { name, abbreviation, logo_url, team_color } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: '팀 이름을 입력해주세요' });
     }
 
+    // 약자 생성 (입력값 또는 팀 이름 앞 3글자)
+    const teamAbbr = abbreviation?.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 3) ||
+                     name.replace(/[^A-Za-z0-9]/g, '').substring(0, 3).toUpperCase();
+
     // 팀 생성 (자동으로 LPO 2 LEAGUE로 배정, 기본 1억 골드)
     const teamResult = await pool.query(
-      `INSERT INTO teams (user_id, name, league, logo_url, team_color, gold, diamond)
-       VALUES (?, ?, 'SECOND', ?, ?, 100000000, 100)`,
-      [req.userId, name, logo_url || null, team_color || '#1E3A8A']
+      `INSERT INTO teams (user_id, name, abbreviation, league, logo_url, team_color, gold, diamond)
+       VALUES (?, ?, ?, 'SECOND', ?, ?, 100000000, 100)`,
+      [req.userId, name, teamAbbr, logo_url || null, team_color || '#1E3A8A']
     );
 
     const teamId = teamResult.insertId;
@@ -314,16 +318,20 @@ router.put('/', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: '팀이 없습니다' });
     }
 
-    const { name, logo_url, team_color, home_stadium } = req.body;
+    const { name, abbreviation, logo_url, team_color, home_stadium } = req.body;
+
+    // 약자 처리 (입력값 정리)
+    const teamAbbr = abbreviation ? abbreviation.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 3) : null;
 
     await pool.query(
       `UPDATE teams
        SET name = COALESCE(?, name),
+           abbreviation = COALESCE(?, abbreviation),
            logo_url = COALESCE(?, logo_url),
            team_color = COALESCE(?, team_color),
            home_stadium = COALESCE(?, home_stadium)
        WHERE id = ?`,
-      [name, logo_url, team_color, home_stadium, req.teamId]
+      [name, teamAbbr, logo_url, team_color, home_stadium, req.teamId]
     );
 
     res.json({ message: 'Team updated successfully' });

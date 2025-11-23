@@ -6,6 +6,7 @@ import './TeamManagement.css';
 export default function TeamManagement() {
   const { team, refreshTeam } = useAuth();
   const [teamName, setTeamName] = useState('');
+  const [abbreviation, setAbbreviation] = useState('');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
@@ -13,13 +14,17 @@ export default function TeamManagement() {
   useEffect(() => {
     if (team) {
       setTeamName(team.name);
+      setAbbreviation(team.abbreviation || '');
       setLogoUrl(team.logo_url);
     }
   }, [team]);
 
   const handleUpdateTeam = async () => {
     try {
-      await axios.put('/api/teams', { name: teamName });
+      await axios.put('/api/teams', {
+        name: teamName,
+        abbreviation: abbreviation || undefined
+      });
       setMessage('팀 정보가 업데이트되었습니다.');
       refreshTeam();
     } catch (error: any) {
@@ -111,6 +116,18 @@ export default function TeamManagement() {
               value={teamName}
               onChange={(e) => setTeamName(e.target.value)}
               className="team-input"
+            />
+          </div>
+
+          <div className="info-item">
+            <label>팀 약자 (2-3자)</label>
+            <input
+              type="text"
+              value={abbreviation}
+              onChange={(e) => setAbbreviation(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+              placeholder="예: HLE, T1, GEN"
+              maxLength={3}
+              className="team-input abbreviation-input"
             />
           </div>
           {team && (

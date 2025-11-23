@@ -6,6 +6,7 @@ import './CreateTeam.css';
 
 export default function CreateTeam() {
   const [teamName, setTeamName] = useState('');
+  const [abbreviation, setAbbreviation] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [teamColor, setTeamColor] = useState('#1E3A8A');
   const [error, setError] = useState('');
@@ -27,6 +28,7 @@ export default function CreateTeam() {
     try {
       const response = await axios.post('/api/teams/create', {
         name: teamName,
+        abbreviation: abbreviation.toUpperCase() || teamName.substring(0, 3).toUpperCase(),
         logo_url: logoUrl || null,
         team_color: teamColor
       });
@@ -67,6 +69,22 @@ export default function CreateTeam() {
               required
               className="form-input"
             />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="abbreviation">팀 약자 (2-3자)</label>
+            <input
+              id="abbreviation"
+              type="text"
+              value={abbreviation}
+              onChange={(e) => setAbbreviation(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+              placeholder="예: HLE, T1, GEN"
+              maxLength={3}
+              className="form-input"
+            />
+            <small style={{ color: '#888', fontSize: '0.8rem' }}>
+              미입력 시 팀 이름 앞 3글자로 자동 생성
+            </small>
           </div>
 
           <div className="form-group">

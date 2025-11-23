@@ -335,7 +335,8 @@ export class CupService {
       // 경기 목록 조회
       const matches = await pool.query(
         `SELECT cm.*,
-                ht.name as home_team_name, at.name as away_team_name,
+                ht.name as home_team_name, ht.abbreviation as home_team_abbr,
+                at.name as away_team_name, at.abbreviation as away_team_abbr,
                 wt.name as winner_name
          FROM cup_matches cm
          JOIN teams ht ON cm.home_team_id = ht.id

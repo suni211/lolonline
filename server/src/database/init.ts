@@ -300,6 +300,16 @@ export async function initializeDatabase() {
       }
     }
 
+    // 팀 약자 컬럼 추가
+    try {
+      await pool.query(`ALTER TABLE teams ADD COLUMN abbreviation VARCHAR(5)`);
+      console.log('Added abbreviation column to teams table');
+    } catch (error: any) {
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        console.error('Error adding morale column:', error);
+      }
+    }
+
     // scout_history 테이블 생성
     try {
       await pool.query(`

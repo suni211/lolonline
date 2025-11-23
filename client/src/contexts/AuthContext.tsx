@@ -10,6 +10,7 @@ interface User {
 interface Team {
   id: number;
   name: string;
+  abbreviation: string | null;
   league: string;
   gold: number;
   diamond: number;

@@ -9,7 +9,9 @@ interface CupMatch {
   home_team_id: number;
   away_team_id: number;
   home_team_name: string;
+  home_team_abbr: string | null;
   away_team_name: string;
+  away_team_abbr: string | null;
   home_score: number;
   away_score: number;
   winner_team_id: number | null;
@@ -94,6 +96,12 @@ const Cup: React.FC = () => {
     });
   };
 
+  // 팀 이름을 약자로 표시 (약자가 없으면 팀 이름 앞 3글자)
+  const getTeamAbbr = (name: string, abbr: string | null) => {
+    if (abbr) return abbr;
+    return name.replace(/[^A-Za-z0-9가-힣]/g, '').substring(0, 3).toUpperCase();
+  };
+
   const filteredMatches = cup?.matches.filter(match =>
     selectedRound === 'all' || match.round === selectedRound
   ) || [];
@@ -169,13 +177,17 @@ const Cup: React.FC = () => {
                     <div className="match-time">{formatDate(match.scheduled_at)}</div>
                     <div className="match-teams">
                       <div className={`team home ${match.winner_team_id === match.home_team_id ? 'winner' : ''}`}>
-                        <span className="team-name">{match.home_team_name}</span>
+                        <span className="team-name" title={match.home_team_name}>
+                          {getTeamAbbr(match.home_team_name, match.home_team_abbr)}
+                        </span>
                         <span className="score">{match.home_score}</span>
                       </div>
                       <div className="vs">VS</div>
                       <div className={`team away ${match.winner_team_id === match.away_team_id ? 'winner' : ''}`}>
                         <span className="score">{match.away_score}</span>
-                        <span className="team-name">{match.away_team_name}</span>
+                        <span className="team-name" title={match.away_team_name}>
+                          {getTeamAbbr(match.away_team_name, match.away_team_abbr)}
+                        </span>
                       </div>
                     </div>
                     {getStatusBadge(match.status)}
