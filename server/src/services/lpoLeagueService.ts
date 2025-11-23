@@ -1,4 +1,5 @@
 import pool from '../database/db.js';
+import { CupService } from './cupService.js';
 
 // AI 선수 카운터
 let aiPlayerCounter = 0;

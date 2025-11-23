@@ -45,6 +45,35 @@ const upload = multer({
   }
 });
 
+// 트로피 이미지 업로드 설정
+const trophyStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(__dirname, '..', '..', 'uploads', 'trophies');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const cupId = (req as any).params.cupId;
+    const ext = path.extname(file.originalname);
+    cb(null, `cup_${cupId}${ext}`);
+  }
+});
+
+const trophyUpload = multer({
+  storage: trophyStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('이미지 파일만 업로드 가능합니다'));
+    }
+  }
+});
+
 // 어드민 인증 미들웨어
 const adminMiddleware = async (req: AuthRequest, res: any, next: any) => {
   try {
@@ -813,6 +842,64 @@ router.post('/cup/:cupId/next-round', authenticateToken, adminMiddleware, async 
   } catch (error: any) {
     console.error('Next round error:', error);
     res.status(500).json({ error: '다음 라운드 생성 실패: ' + error.message });
+  }
+});
+
+// 컵 트로피 이미지 업로드
+router.post('/cup/:cupId/trophy', authenticateToken, adminMiddleware, trophyUpload.single('image'), async (req: AuthRequest, res) => {
+  try {
+    const cupId = parseInt(req.params.cupId);
+
+    if (!req.file) {
+      return res.status(400).json({ error: '이미지 파일이 필요합니다' });
+    }
+
+    // 기존 이미지 삭제
+    const existing = await pool.query('SELECT trophy_image FROM cup_tournaments WHERE id = ?', [cupId]);
+    if (existing.length > 0 && existing[0].trophy_image) {
+      const oldPath = path.join(__dirname, '..', '..', existing[0].trophy_image.replace('/uploads/', 'uploads/'));
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
+    }
+
+    // 이미지 경로 저장
+    const imagePath = `/uploads/trophies/${req.file.filename}`;
+    await pool.query('UPDATE cup_tournaments SET trophy_image = ? WHERE id = ?', [imagePath, cupId]);
+
+    res.json({
+      success: true,
+      message: '트로피 이미지가 업로드되었습니다',
+      trophy_image: imagePath
+    });
+  } catch (error: any) {
+    console.error('Upload trophy image error:', error);
+    res.status(500).json({ error: '트로피 이미지 업로드 실패' });
+  }
+});
+
+// 컵 트로피 이미지 삭제
+router.delete('/cup/:cupId/trophy', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const cupId = parseInt(req.params.cupId);
+
+    const existing = await pool.query('SELECT trophy_image FROM cup_tournaments WHERE id = ?', [cupId]);
+    if (existing.length > 0 && existing[0].trophy_image) {
+      const filePath = path.join(__dirname, '..', '..', existing[0].trophy_image.replace('/uploads/', 'uploads/'));
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    await pool.query('UPDATE cup_tournaments SET trophy_image = NULL WHERE id = ?', [cupId]);
+
+    res.json({
+      success: true,
+      message: '트로피 이미지가 삭제되었습니다'
+    });
+  } catch (error: any) {
+    console.error('Delete trophy image error:', error);
+    res.status(500).json({ error: '트로피 이미지 삭제 실패' });
   }
 });
 

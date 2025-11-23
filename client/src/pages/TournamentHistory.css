@@ -1,0 +1,208 @@
+.tournament-history-page {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.tournament-history-page h1 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #f0f0f0;
+}
+
+.history-tabs {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.history-tabs button {
+  padding: 0.75rem 2rem;
+  border: none;
+  border-radius: 8px;
+  background: #333;
+  color: #ccc;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.history-tabs button:hover {
+  background: #444;
+}
+
+.history-tabs button.active {
+  background: #3b82f6;
+  color: white;
+}
+
+.winners-section h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #f0f0f0;
+}
+
+.no-data {
+  text-align: center;
+  color: #888;
+  padding: 3rem;
+}
+
+/* Cup Winners */
+.cup-winners-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.cup-winner-card {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: transform 0.2s;
+}
+
+.cup-winner-card:hover {
+  transform: translateY(-4px);
+  border-color: #f59e0b;
+}
+
+.trophy-image {
+  margin-bottom: 1rem;
+}
+
+.trophy-image img {
+  max-width: 120px;
+  max-height: 120px;
+  object-fit: contain;
+}
+
+.winner-info .season-badge {
+  display: inline-block;
+  background: #f59e0b;
+  color: #000;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.winner-info .cup-name {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #f0f0f0;
+  margin-bottom: 0.75rem;
+}
+
+.winner-info .team-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.winner-info .team-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
+.winner-info .team-name {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #3b82f6;
+}
+
+.winner-info .prize {
+  color: #10b981;
+  font-weight: 500;
+}
+
+/* League Winners */
+.season-group {
+  margin-bottom: 2rem;
+}
+
+.season-group h3 {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: #f59e0b;
+  font-size: 1.25rem;
+}
+
+.league-winners-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.league-winner-card {
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.league-winner-card .league-name {
+  font-size: 0.875rem;
+  color: #888;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.league-winner-card .team-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.league-winner-card .team-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
+.league-winner-card .team-name {
+  font-weight: bold;
+  color: #f0f0f0;
+}
+
+.league-winner-card .stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: #888;
+}
+
+.loading, .error {
+  text-align: center;
+  padding: 3rem;
+  color: #888;
+}
+
+.error {
+  color: #ef4444;
+}
+
+@media (max-width: 768px) {
+  .tournament-history-page {
+    padding: 1rem;
+  }
+
+  .cup-winners-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .league-winners-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -56,6 +56,7 @@ export default function Admin() {
   const [uploadingPlayerId, setUploadingPlayerId] = useState<number | null>(null);
   const [lpoStatus, setLpoStatus] = useState<LPOStatus | null>(null);
   const [statAdjustment, setStatAdjustment] = useState<number>(-20);
+  const [cupSeason, setCupSeason] = useState<number>(1);
 
   useEffect(() => {
     fetchData();
@@ -230,6 +231,19 @@ export default function Admin() {
     }
   };
 
+  const createCupTournament = async () => {
+    if (!confirm(`시즌 ${cupSeason} 컵 대회를 생성하시겠습니까?`)) return;
+    try {
+      setLoading(true);
+      const res = await axios.post('/api/admin/cup/create', { season: cupSeason });
+      setMessage(res.data.message);
+    } catch (error: any) {
+      setMessage(error.response?.data?.error || '컵 대회 생성 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="admin-page">
       <h1>어드민 관리</h1>
@@ -312,6 +326,22 @@ export default function Admin() {
               </button>
             </div>
             <p className="hint">음수: 스탯 감소, 양수: 스탯 증가 (모든 pro_players, player_cards, players에 적용)</p>
+          </div>
+
+          <div className="cup-creation-section">
+            <h3>컵 대회 생성</h3>
+            <div className="cup-creation-controls">
+              <label>시즌:</label>
+              <input
+                type="number"
+                value={cupSeason}
+                onChange={(e) => setCupSeason(parseInt(e.target.value) || 1)}
+                min="1"
+              />
+              <button onClick={createCupTournament} disabled={loading} className="primary">
+                컵 대회 생성
+              </button>
+            </div>
           </div>
 
           <h2>리그 목록</h2>

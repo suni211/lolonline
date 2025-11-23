@@ -404,11 +404,18 @@ export async function initializeDatabase() {
           status ENUM('UPCOMING', 'ROUND_32', 'ROUND_16', 'QUARTER', 'SEMI', 'FINAL', 'COMPLETED') DEFAULT 'UPCOMING',
           prize_pool BIGINT DEFAULT 100000000,
           winner_team_id INT,
+          trophy_image VARCHAR(500),
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (winner_team_id) REFERENCES teams(id) ON DELETE SET NULL,
           INDEX idx_cup_season (season)
         )
       `);
+      // trophy_image 컬럼 추가 (기존 테이블용)
+      try {
+        await pool.query(`ALTER TABLE cup_tournaments ADD COLUMN trophy_image VARCHAR(500)`);
+      } catch (e) {
+        // 이미 존재하면 무시
+      }
       console.log('Cup tournaments table created/verified');
     } catch (error: any) {
       if (error.code !== 'ER_TABLE_EXISTS_ERROR') {

@@ -22,6 +22,50 @@ router.get('/current', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
+// 역대 컵 우승팀 조회
+router.get('/history/winners', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const winners = await pool.query(`
+      SELECT ct.id, ct.name, ct.season, ct.prize_pool, ct.trophy_image,
+             t.id as team_id, t.name as team_name, t.logo_url as team_logo
+      FROM cup_tournaments ct
+      JOIN teams t ON ct.winner_team_id = t.id
+      WHERE ct.status = 'COMPLETED'
+      ORDER BY ct.season DESC
+    `);
+
+    res.json(winners);
+  } catch (error: any) {
+    console.error('Get cup winners error:', error);
+    res.status(500).json({ error: '역대 우승팀 조회에 실패했습니다' });
+  }
+});
+
+// 역대 리그 우승팀 조회
+router.get('/history/league-winners', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    // 각 시즌별 리그 1위 팀 조회
+    const winners = await pool.query(`
+      SELECT l.id as league_id, l.name as league_name, l.region, l.season,
+             t.id as team_id, t.name as team_name, t.logo_url as team_logo,
+             lp.points, lp.wins, lp.draws, lp.losses, lp.goal_difference
+      FROM leagues l
+      JOIN league_participants lp ON l.id = lp.league_id
+      JOIN teams t ON lp.team_id = t.id
+      WHERE l.status = 'OFFSEASON'
+        AND lp.points = (
+          SELECT MAX(lp2.points) FROM league_participants lp2 WHERE lp2.league_id = l.id
+        )
+      ORDER BY l.season DESC, l.region
+    `);
+
+    res.json(winners);
+  } catch (error: any) {
+    console.error('Get league winners error:', error);
+    res.status(500).json({ error: '역대 리그 우승팀 조회에 실패했습니다' });
+  }
+});
+
 // 특정 컵 대회 조회
 router.get('/:cupId', authenticateToken, async (req: AuthRequest, res) => {
   try {

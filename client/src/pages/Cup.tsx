@@ -26,6 +26,7 @@ interface CupTournament {
   prize_pool: number;
   winner_team_id: number | null;
   winner_name: string | null;
+  trophy_image: string | null;
   matches: CupMatch[];
 }
 
@@ -117,6 +118,11 @@ const Cup: React.FC = () => {
   return (
     <div className="cup-page">
       <div className="cup-header">
+        {cup.trophy_image && (
+          <div className="trophy-display">
+            <img src={cup.trophy_image} alt="Trophy" />
+          </div>
+        )}
         <h1>{cup.name}</h1>
         <div className="cup-info">
           <span className="prize">우승 상금: {(cup.prize_pool / 100000000).toFixed(1)}억</span>

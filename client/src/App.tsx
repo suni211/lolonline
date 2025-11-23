@@ -10,6 +10,7 @@ import Sponsors from './pages/Sponsors';
 import Matches from './pages/Matches';
 import Leagues from './pages/Leagues';
 import Cup from './pages/Cup';
+import TournamentHistory from './pages/TournamentHistory';
 import Trades from './pages/Trades';
 import Missions from './pages/Missions';
 import TeamManagement from './pages/TeamManagement';
@@ -55,6 +56,7 @@ function App() {
             <Route path="matches" element={<Matches />} />
             <Route path="leagues" element={<Leagues />} />
             <Route path="cup" element={<Cup />} />
+            <Route path="history" element={<TournamentHistory />} />
             <Route path="trades" element={<Trades />} />
             <Route path="missions" element={<Missions />} />
             <Route path="team" element={<TeamManagement />} />

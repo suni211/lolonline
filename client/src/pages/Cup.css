@@ -11,6 +11,16 @@
   text-align: center;
 }
 
+.trophy-display {
+  margin-bottom: 1rem;
+}
+
+.trophy-display img {
+  max-width: 150px;
+  max-height: 150px;
+  object-fit: contain;
+}
+
 .cup-header h1 {
   font-size: 2rem;
   color: #ffd700;
