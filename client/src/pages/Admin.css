@@ -469,6 +469,91 @@
   outline: none;
 }
 
+.trophy-management-section {
+  background: rgba(147, 51, 234, 0.1);
+  border: 1px solid #9333ea;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.trophy-management-section h3 {
+  margin: 0 0 0.75rem 0;
+  color: #9333ea;
+  font-size: 1rem;
+}
+
+.cups-trophy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.cup-trophy-card {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.cup-trophy-image {
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+.cup-trophy-image img {
+  max-width: 80px;
+  max-height: 80px;
+  object-fit: contain;
+}
+
+.cup-trophy-image .no-trophy {
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.cup-trophy-info {
+  margin-bottom: 0.5rem;
+}
+
+.cup-trophy-info .cup-name {
+  font-weight: bold;
+  font-size: 0.875rem;
+  color: #f0f0f0;
+  margin-bottom: 0.25rem;
+}
+
+.cup-trophy-info .cup-status {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.cup-trophy-info .cup-winner {
+  font-size: 0.75rem;
+  color: #f59e0b;
+  margin-top: 0.25rem;
+}
+
+.cup-trophy-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.cup-trophy-actions .upload-btn {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.cup-trophy-actions button {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+}
+
 @media (max-width: 768px) {
   .form-row {
     flex-direction: column;

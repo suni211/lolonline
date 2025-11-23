@@ -45,6 +45,15 @@ interface Player {
   team_name: string | null;
 }
 
+interface CupTournament {
+  id: number;
+  name: string;
+  season: number;
+  status: string;
+  trophy_image: string | null;
+  winner_name: string | null;
+}
+
 export default function Admin() {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -57,6 +66,8 @@ export default function Admin() {
   const [lpoStatus, setLpoStatus] = useState<LPOStatus | null>(null);
   const [statAdjustment, setStatAdjustment] = useState<number>(-20);
   const [cupSeason, setCupSeason] = useState<number>(1);
+  const [cups, setCups] = useState<CupTournament[]>([]);
+  const [uploadingCupId, setUploadingCupId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -65,18 +76,20 @@ export default function Admin() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [leaguesRes, usersRes, teamsRes, playersRes, lpoStatusRes] = await Promise.all([
+      const [leaguesRes, usersRes, teamsRes, playersRes, lpoStatusRes, cupsRes] = await Promise.all([
         axios.get('/api/leagues'),
         axios.get('/api/admin/users'),
         axios.get('/api/admin/teams'),
         axios.get('/api/admin/players'),
-        axios.get('/api/admin/lpo/status').catch(() => ({ data: null }))
+        axios.get('/api/admin/lpo/status').catch(() => ({ data: null })),
+        axios.get('/api/admin/cups').catch(() => ({ data: [] }))
       ]);
       setLeagues(leaguesRes.data);
       setUsers(usersRes.data);
       setTeams(teamsRes.data);
       setPlayers(playersRes.data);
       setLpoStatus(lpoStatusRes.data);
+      setCups(cupsRes.data);
     } catch (error: any) {
       setMessage(error.response?.data?.error || '데이터 로드 실패');
     } finally {
@@ -237,10 +250,41 @@ export default function Admin() {
       setLoading(true);
       const res = await axios.post('/api/admin/cup/create', { season: cupSeason });
       setMessage(res.data.message);
+      fetchData();
     } catch (error: any) {
       setMessage(error.response?.data?.error || '컵 대회 생성 실패');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTrophyUpload = async (cupId: number, file: File) => {
+    try {
+      setUploadingCupId(cupId);
+      const formData = new FormData();
+      formData.append('image', file);
+
+      await axios.post(`/api/admin/cup/${cupId}/trophy`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      setMessage('트로피 이미지 업로드 완료');
+      fetchData();
+    } catch (error: any) {
+      setMessage(error.response?.data?.error || '트로피 이미지 업로드 실패');
+    } finally {
+      setUploadingCupId(null);
+    }
+  };
+
+  const deleteTrophy = async (cupId: number) => {
+    if (!confirm('트로피 이미지를 삭제하시겠습니까?')) return;
+    try {
+      await axios.delete(`/api/admin/cup/${cupId}/trophy`);
+      setMessage('트로피 이미지 삭제 완료');
+      fetchData();
+    } catch (error: any) {
+      setMessage(error.response?.data?.error || '트로피 이미지 삭제 실패');
     }
   };
 
@@ -343,6 +387,49 @@ export default function Admin() {
               </button>
             </div>
           </div>
+
+          {cups.length > 0 && (
+            <div className="trophy-management-section">
+              <h3>트로피 이미지 관리</h3>
+              <div className="cups-trophy-grid">
+                {cups.map(cup => (
+                  <div key={cup.id} className="cup-trophy-card">
+                    <div className="cup-trophy-image">
+                      {cup.trophy_image ? (
+                        <img src={cup.trophy_image} alt="Trophy" />
+                      ) : (
+                        <div className="no-trophy">이미지 없음</div>
+                      )}
+                    </div>
+                    <div className="cup-trophy-info">
+                      <div className="cup-name">{cup.name}</div>
+                      <div className="cup-status">{cup.status}</div>
+                      {cup.winner_name && <div className="cup-winner">우승: {cup.winner_name}</div>}
+                    </div>
+                    <div className="cup-trophy-actions">
+                      <label className="upload-btn">
+                        {uploadingCupId === cup.id ? '업로드 중...' : '트로피 선택'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleTrophyUpload(cup.id, file);
+                          }}
+                          disabled={uploadingCupId === cup.id}
+                        />
+                      </label>
+                      {cup.trophy_image && (
+                        <button onClick={() => deleteTrophy(cup.id)} className="danger">
+                          삭제
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <h2>리그 목록</h2>
           <table className="admin-table">

@@ -785,6 +785,23 @@ router.get('/lpo/status', authenticateToken, adminMiddleware, async (req: AuthRe
   }
 });
 
+// 모든 컵 대회 목록 조회
+router.get('/cups', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const cups = await pool.query(`
+      SELECT ct.id, ct.name, ct.season, ct.status, ct.trophy_image,
+             t.name as winner_name
+      FROM cup_tournaments ct
+      LEFT JOIN teams t ON ct.winner_team_id = t.id
+      ORDER BY ct.season DESC
+    `);
+    res.json(cups);
+  } catch (error: any) {
+    console.error('Get cups error:', error);
+    res.status(500).json({ error: '컵 대회 목록 조회 실패' });
+  }
+});
+
 // 컵 대회 생성
 router.post('/cup/create', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
   try {
