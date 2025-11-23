@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { io, Socket } from 'socket.io-client';
 import './Matches.css';
 
 // 날짜 포맷 헬퍼 함수
@@ -32,112 +31,15 @@ interface Match {
   match_type: string;
 }
 
-interface MatchEvent {
-  type: string;
-  time: number;
-  description: string;
-  data: any;
-}
-
-interface MatchStat {
-  id: number;
-  player_id: number;
-  player_name: string;
-  position: string;
-  team_name: string;
-  kills: number;
-  deaths: number;
-  assists: number;
-  cs: number;
-  gold_earned: number;
-  damage_dealt: number;
-  damage_taken: number;
-  vision_score: number;
-  wards_placed: number;
-  wards_destroyed: number;
-  turret_kills: number;
-  first_blood: boolean;
-}
-
 export default function Matches() {
   const navigate = useNavigate();
   const [matches, setMatches] = useState<Match[]>([]);
-  const [selectedMatch, setSelectedMatch] = useState<any>(null);
-  const [matchEvents, setMatchEvents] = useState<MatchEvent[]>([]);
-  const [matchStats, setMatchStats] = useState<MatchStat[]>([]);
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [gameTime, setGameTime] = useState(0);
   const [filter, setFilter] = useState<'all' | 'scheduled' | 'live' | 'finished'>('all');
   const [matchTypeFilter, setMatchTypeFilter] = useState<'all' | 'LEAGUE' | 'FRIENDLY'>('all');
-  const [showStats, setShowStats] = useState(false);
-  const [aggressionLevel, setAggressionLevel] = useState('NORMAL');
-  const [isMyMatch, setIsMyMatch] = useState(false);
-
-  const aggressionLabels: Record<string, string> = {
-    VERY_AGGRESSIVE: '매우 공격적',
-    AGGRESSIVE: '공격적',
-    NORMAL: '보통',
-    DEFENSIVE: '수비적',
-    VERY_DEFENSIVE: '매우 수비적'
-  };
 
   useEffect(() => {
     fetchMatches();
-    // 프로덕션에서는 현재 도메인 사용, 개발에서는 localhost
-    const socketUrl = window.location.hostname === 'localhost'
-      ? 'http://localhost:5000'
-      : window.location.origin;
-    const newSocket = io(socketUrl);
-    setSocket(newSocket);
-
-    newSocket.on('match_started', (data) => {
-      if (selectedMatch && data.match_id === selectedMatch.id) {
-        setSelectedMatch({ ...selectedMatch, status: 'LIVE' });
-      }
-    });
-
-    newSocket.on('match_update', (data) => {
-      if (selectedMatch && data.match_id === selectedMatch.id) {
-        setGameTime(data.game_time);
-        setSelectedMatch({
-          ...selectedMatch,
-          home_score: data.home_score,
-          away_score: data.away_score
-        });
-      }
-    });
-
-    newSocket.on('match_event', (event) => {
-      if (selectedMatch && event.match_id === selectedMatch.id) {
-        setMatchEvents(prev => [...prev, event]);
-      }
-    });
-
-    newSocket.on('match_finished', (data) => {
-      if (selectedMatch && data.match_id === selectedMatch.id) {
-        setSelectedMatch({
-          ...selectedMatch,
-          status: 'FINISHED',
-          home_score: data.home_score,
-          away_score: data.away_score
-        });
-        fetchMatches();
-      }
-    });
-
-    return () => {
-      newSocket.close();
-    };
-  }, [selectedMatch]);
-
-  useEffect(() => {
-    if (socket && selectedMatch) {
-      socket.emit('subscribe_match', selectedMatch.id);
-      return () => {
-        socket.emit('unsubscribe_match', selectedMatch.id);
-      };
-    }
-  }, [socket, selectedMatch]);
+  }, []);
 
   const fetchMatches = async () => {
     try {
@@ -148,21 +50,6 @@ export default function Matches() {
     }
   };
 
-
-  const changeAggression = async (level: string) => {
-    if (!selectedMatch || selectedMatch.status !== 'LIVE') return;
-
-    try {
-      await axios.post(`/api/tactics/match/${selectedMatch.id}/aggression`, {
-        aggression_level: level,
-        game_time: gameTime
-      });
-      setAggressionLevel(level);
-    } catch (error) {
-      console.error('Failed to change aggression:', error);
-    }
-  };
-
   const filteredMatches = matches.filter(m => {
     // 상태 필터
     if (filter !== 'all' && m.status !== filter.toUpperCase()) return false;
@@ -170,12 +57,6 @@ export default function Matches() {
     if (matchTypeFilter !== 'all' && m.match_type !== matchTypeFilter) return false;
     return true;
   });
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   return (
     <div className="matches-page">
@@ -236,7 +117,7 @@ export default function Matches() {
           {filteredMatches.map((match) => (
             <div
               key={match.id}
-              className={`match-item ${match.status?.toLowerCase() || ''} ${selectedMatch?.id === match.id ? 'selected' : ''}`}
+              className={`match-item ${match.status?.toLowerCase() || ''}`}
               onClick={() => navigate(`/live/${match.id}`)}
             >
               <div className="match-teams">
@@ -264,159 +145,7 @@ export default function Matches() {
             </div>
           ))}
         </div>
-
-        {selectedMatch && (
-          <div className="match-viewer">
-            <h2>경기 관전</h2>
-            <div className="match-header">
-              <div className="team-info">
-                <h3>{selectedMatch.home_team_name}</h3>
-                <div className="score">{selectedMatch.home_score}</div>
-              </div>
-              <div className="vs-divider">VS</div>
-              <div className="team-info">
-                <h3>{selectedMatch.away_team_name}</h3>
-                <div className="score">{selectedMatch.away_score}</div>
-              </div>
-            </div>
-
-            {selectedMatch.status === 'LIVE' && (
-              <div className="game-time">
-                경기 시간: {formatTime(gameTime)}
-              </div>
-            )}
-
-            {selectedMatch.status === 'LIVE' && isMyMatch && (
-              <div className="aggression-control">
-                <h4>공격 성향 조절</h4>
-                <div className="aggression-buttons">
-                  {Object.entries(aggressionLabels).map(([value, label]) => (
-                    <button
-                      key={value}
-                      className={`aggression-btn ${aggressionLevel === value ? 'active' : ''} ${value.toLowerCase().replace('_', '-')}`}
-                      onClick={() => changeAggression(value)}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="match-tabs">
-              <button 
-                className={!showStats ? 'tab-active' : ''}
-                onClick={() => setShowStats(false)}
-              >
-                이벤트
-              </button>
-              <button 
-                className={showStats ? 'tab-active' : ''}
-                onClick={() => setShowStats(true)}
-              >
-                통계
-              </button>
-            </div>
-
-            {!showStats ? (
-              <div className="match-events">
-                <h3>경기 이벤트</h3>
-                <div className="events-list">
-                  {matchEvents.map((event, idx) => (
-                    <div key={idx} className={`event-item ${event.type?.toLowerCase() || ''}`}>
-                      <span className="event-time">{formatTime(event.time)}</span>
-                      <span className="event-description">
-                        {event.data?.killer_name && (
-                          <span className="event-killer">{event.data.killer_name}</span>
-                        )}
-                        {event.description}
-                        {event.data?.victim_name && (
-                          <span className="event-victim"> → {event.data.victim_name}</span>
-                        )}
-                      </span>
-                    </div>
-                  ))}
-                  {matchEvents.length === 0 && (
-                    <p className="empty-events">이벤트가 없습니다.</p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="match-stats">
-                <h3>경기 통계</h3>
-                {matchStats.length === 0 ? (
-                  <div className="empty-stats">
-                    <p>경기 통계가 아직 없습니다.</p>
-                  </div>
-                ) : (
-                  <div className="stats-table-container">
-                    <table className="stats-table">
-                      <thead>
-                        <tr>
-                          <th>선수</th>
-                          <th>포지션</th>
-                          <th>K</th>
-                          <th>D</th>
-                          <th>A</th>
-                          <th>KDA</th>
-                          <th>CS</th>
-                          <th>골드</th>
-                          <th>딜량</th>
-                          <th>받은딜</th>
-                          <th>비전</th>
-                          <th>와드</th>
-                          <th>타워</th>
-                          <th>FB</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {matchStats.map((stat, index) => {
-                          const kills = stat.kills || 0;
-                          const deaths = stat.deaths || 0;
-                          const assists = stat.assists || 0;
-                          const kda = deaths === 0
-                            ? (kills + assists).toFixed(1)
-                            : ((kills + assists) / deaths).toFixed(2);
-                          const kdaValue = parseFloat(kda);
-                          const kdaClass = kdaValue >= 3 ? 'kda-excellent' : kdaValue >= 2 ? 'kda-good' : kdaValue >= 1 ? 'kda-average' : 'kda-poor';
-                          return (
-                            <tr
-                              key={stat.id}
-                              className={`${stat.first_blood ? 'first-blood' : ''} stat-row-${index}`}
-                              style={{ animationDelay: `${index * 0.05}s` }}
-                            >
-                              <td className="player-name">
-                                <span className="player-name-text">{stat.player_name || '-'}</span>
-                                <span className="team-name-badge">{stat.team_name || '-'}</span>
-                              </td>
-                              <td className="position">
-                                <span className={`position-badge ${stat.position || ''}`}>{stat.position || '-'}</span>
-                              </td>
-                              <td className="kills">{kills}</td>
-                              <td className="deaths">{deaths}</td>
-                              <td className="assists">{assists}</td>
-                              <td className={`kda ${kdaClass}`}>{kda}</td>
-                              <td className="cs">{(stat.cs || 0).toLocaleString()}</td>
-                              <td className="gold">{(stat.gold_earned || 0).toLocaleString()}</td>
-                              <td className="damage">{(stat.damage_dealt || 0).toLocaleString()}</td>
-                              <td className="damage-taken">{(stat.damage_taken || 0).toLocaleString()}</td>
-                              <td className="vision">{stat.vision_score || 0}</td>
-                              <td className="wards">{stat.wards_placed || 0}/{stat.wards_destroyed || 0}</td>
-                              <td className="turrets">{stat.turret_kills || 0}</td>
-                              <td className="fb">{stat.first_blood ? '✓' : '-'}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
 }
-
