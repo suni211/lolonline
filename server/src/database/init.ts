@@ -350,15 +350,15 @@ export async function initializeDatabase() {
       await pool.query(`
         CREATE TABLE IF NOT EXISTS scouter_discoveries (
           id INT PRIMARY KEY AUTO_INCREMENT,
-          scouter_id INT NOT NULL,
+          scouter_id INT,
           team_id INT NOT NULL,
           pro_player_id INT NOT NULL,
+          scouter_name VARCHAR(100),
+          scouter_star INT,
           discovered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           signed BOOLEAN DEFAULT false,
-          FOREIGN KEY (scouter_id) REFERENCES scouters(id) ON DELETE CASCADE,
           FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
           FOREIGN KEY (pro_player_id) REFERENCES pro_players(id) ON DELETE CASCADE,
-          INDEX idx_scouter (scouter_id),
           INDEX idx_team (team_id)
         )
       `);
@@ -366,6 +366,17 @@ export async function initializeDatabase() {
     } catch (error: any) {
       if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
         console.error('Error creating scouter_discoveries table:', error);
+      }
+    }
+
+    // scouter_discoveries에 스카우터 정보 컬럼 추가
+    try {
+      await pool.query(`ALTER TABLE scouter_discoveries ADD COLUMN scouter_name VARCHAR(100)`);
+      await pool.query(`ALTER TABLE scouter_discoveries ADD COLUMN scouter_star INT`);
+      console.log('Added scouter info columns to scouter_discoveries');
+    } catch (error: any) {
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        // 이미 존재하면 무시
       }
     }
 

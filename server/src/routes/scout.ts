@@ -215,10 +215,10 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
 
     const player = players[0];
 
-    // 발굴 기록 저장
+    // 발굴 기록 저장 (스카우터 정보 직접 저장)
     await pool.query(
-      `INSERT INTO scouter_discoveries (scouter_id, team_id, pro_player_id) VALUES (?, ?, ?)`,
-      [scouterId, req.teamId, player.id]
+      `INSERT INTO scouter_discoveries (scouter_id, team_id, pro_player_id, scouter_name, scouter_star) VALUES (?, ?, ?, ?, ?)`,
+      [scouterId, req.teamId, player.id, scouter.name, scouter.star_rating]
     );
 
     // 스카우터는 일회용 - 발굴 후 삭제
@@ -252,11 +252,9 @@ router.get('/discoveries', authenticateToken, async (req: AuthRequest, res) => {
     const discoveries = await pool.query(
       `SELECT sd.*, pp.name, pp.position, pp.nationality, pp.face_image,
               pp.mental, pp.teamfight, pp.focus, pp.laning,
-              (pp.mental + pp.teamfight + pp.focus + pp.laning) as overall,
-              s.name as scouter_name, s.star_rating as scouter_star
+              (pp.mental + pp.teamfight + pp.focus + pp.laning) as overall
        FROM scouter_discoveries sd
        INNER JOIN pro_players pp ON sd.pro_player_id = pp.id
-       INNER JOIN scouters s ON sd.scouter_id = s.id
        WHERE sd.team_id = ? AND sd.signed = false
        ORDER BY sd.discovered_at DESC`,
       [req.teamId]
