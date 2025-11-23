@@ -285,29 +285,27 @@ export default function LiveMatch() {
   // 이벤트에서 하이라이트 감지
   const detectHighlight = (event: MatchEvent) => {
     let highlight: Highlight | null = null;
-    let duration = 3000; // 기본 3초
+    let duration = 8000; // 기본 8초
 
     switch (event.type) {
       case 'KILL':
-        // 킬 하이라이트
         highlight = {
           type: 'kill',
           x: 50,
           y: 50,
           description: `${event.data?.killer} → ${event.data?.victim}`
         };
-        duration = 3000;
+        duration = 6000;
         break;
 
       case 'TEAMFIGHT':
-        // 한타 - 끝날 때까지 표시
         highlight = {
           type: 'teamfight',
           x: 50,
           y: 50,
           description: 'TEAM FIGHT!'
         };
-        duration = 10000; // 한타는 길게
+        duration = 15000;
         break;
 
       case 'DRAGON':
@@ -318,7 +316,7 @@ export default function LiveMatch() {
           description: `${event.data?.team === 'home' ? '블루' : '레드'} 드래곤`
         };
         setObjectives(prev => ({ ...prev, dragon: { alive: false } }));
-        duration = 4000;
+        duration = 8000;
         break;
 
       case 'BARON':
@@ -329,7 +327,7 @@ export default function LiveMatch() {
           description: `${event.data?.team === 'home' ? '블루' : '레드'} 바론`
         };
         setObjectives(prev => ({ ...prev, baron: { alive: false } }));
-        duration = 5000;
+        duration = 10000;
         break;
 
       case 'HERALD':
@@ -340,18 +338,17 @@ export default function LiveMatch() {
           description: `${event.data?.team === 'home' ? '블루' : '레드'} 전령`
         };
         setObjectives(prev => ({ ...prev, herald: { alive: false, taken: true } }));
-        duration = 4000;
+        duration = 8000;
         break;
 
       case 'NEXUS_DESTROYED':
-        // 게임 종료
         highlight = {
           type: 'ace',
           x: event.data?.team === 'away' ? 13.9 : 85.2,
           y: event.data?.team === 'away' ? 85.7 : 13.7,
           description: 'VICTORY!'
         };
-        duration = 10000;
+        duration = 15000;
         break;
     }
 
