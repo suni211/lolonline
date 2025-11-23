@@ -47,8 +47,9 @@ interface Match {
 }
 
 // 팀 약자 표시 (약자가 없으면 팀 이름 앞 3글자)
-const getTeamAbbr = (name: string, abbr: string | null) => {
+const getTeamAbbr = (name: string | null | undefined, abbr: string | null) => {
   if (abbr) return abbr;
+  if (!name) return '???';
   return name.replace(/[^A-Za-z0-9가-힣]/g, '').substring(0, 3).toUpperCase();
 };
 
