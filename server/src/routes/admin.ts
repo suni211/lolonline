@@ -747,4 +747,56 @@ router.get('/lpo/status', authenticateToken, adminMiddleware, async (req: AuthRe
   }
 });
 
+// 전체 선수 스탯 일괄 조정
+router.post('/players/adjust-stats', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const { adjustment } = req.body; // 양수면 증가, 음수면 감소
+
+    if (typeof adjustment !== 'number') {
+      return res.status(400).json({ error: '조정값을 입력해주세요' });
+    }
+
+    // pro_players 테이블 스탯 조정
+    await pool.query(
+      `UPDATE pro_players SET
+        mental = GREATEST(1, mental + ?),
+        teamfight = GREATEST(1, teamfight + ?),
+        focus = GREATEST(1, focus + ?),
+        laning = GREATEST(1, laning + ?),
+        base_ovr = GREATEST(4, base_ovr + ?)
+       WHERE is_active = true`,
+      [adjustment, adjustment, adjustment, adjustment, adjustment * 4]
+    );
+
+    // player_cards 테이블 스탯 조정
+    await pool.query(
+      `UPDATE player_cards SET
+        mental = GREATEST(1, mental + ?),
+        teamfight = GREATEST(1, teamfight + ?),
+        focus = GREATEST(1, focus + ?),
+        laning = GREATEST(1, laning + ?),
+        ovr = GREATEST(4, ovr + ?)`,
+      [adjustment, adjustment, adjustment, adjustment, adjustment * 4]
+    );
+
+    // players 테이블 스탯 조정 (구 시스템)
+    await pool.query(
+      `UPDATE players SET
+        mental = GREATEST(1, mental + ?),
+        teamfight = GREATEST(1, teamfight + ?),
+        focus = GREATEST(1, focus + ?),
+        laning = GREATEST(1, laning + ?)`,
+      [adjustment, adjustment, adjustment, adjustment]
+    );
+
+    res.json({
+      success: true,
+      message: `모든 선수 스탯이 ${adjustment > 0 ? '+' : ''}${adjustment} 조정되었습니다`
+    });
+  } catch (error: any) {
+    console.error('Adjust stats error:', error);
+    res.status(500).json({ error: '스탯 조정 실패: ' + error.message });
+  }
+});
+
 export default router;
