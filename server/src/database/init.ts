@@ -324,6 +324,51 @@ export async function initializeDatabase() {
       }
     }
 
+    // scouters 테이블 생성 (스카우터 시스템)
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS scouters (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          team_id INT NOT NULL,
+          name VARCHAR(100) NOT NULL,
+          star_rating INT NOT NULL CHECK (star_rating >= 1 AND star_rating <= 5),
+          specialty VARCHAR(50),
+          hired_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+          INDEX idx_team (team_id)
+        )
+      `);
+      console.log('Scouters table created/verified');
+    } catch (error: any) {
+      if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
+        console.error('Error creating scouters table:', error);
+      }
+    }
+
+    // scouter_discoveries 테이블 생성 (스카우터가 발굴한 선수)
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS scouter_discoveries (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          scouter_id INT NOT NULL,
+          team_id INT NOT NULL,
+          pro_player_id INT NOT NULL,
+          discovered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          signed BOOLEAN DEFAULT false,
+          FOREIGN KEY (scouter_id) REFERENCES scouters(id) ON DELETE CASCADE,
+          FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+          FOREIGN KEY (pro_player_id) REFERENCES pro_players(id) ON DELETE CASCADE,
+          INDEX idx_scouter (scouter_id),
+          INDEX idx_team (team_id)
+        )
+      `);
+      console.log('Scouter discoveries table created/verified');
+    } catch (error: any) {
+      if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
+        console.error('Error creating scouter_discoveries table:', error);
+      }
+    }
+
     console.log('Database initialized successfully');
 
     // 초기 리그 생성

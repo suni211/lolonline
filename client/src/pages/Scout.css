@@ -40,49 +40,192 @@
   cursor: pointer;
 }
 
-.scout-filters {
+.scout-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.scouters-section h2,
+.discoveries-section h2 {
+  margin-bottom: 1rem;
+  color: var(--white);
+}
+
+/* 스카우터 영입 박스 */
+.hire-scouter-box {
+  background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+  border: 1px solid #3b82f6;
+  border-radius: 8px;
+  padding: 1.5rem;
   margin-bottom: 1.5rem;
 }
 
-.scout-filters select {
+.hire-description {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.hire-controls {
+  display: flex;
+  gap: 1rem;
+}
+
+.hire-controls select {
+  flex: 1;
   padding: 0.75rem 1rem;
   background: #222;
   color: white;
   border: 1px solid #444;
   border-radius: 4px;
-  font-size: 1rem;
-  min-width: 150px;
+  font-size: 0.9rem;
 }
 
-.scout-content {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 2rem;
+.hire-btn {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
 }
 
-.available-players h2,
-.scout-history h2 {
-  margin-bottom: 1rem;
-  color: var(--white);
+.hire-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
 }
 
-.players-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+.hire-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 스카우터 목록 */
+.scouters-list {
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
 }
 
-.player-card {
+.scouter-card {
   background: #111;
   border: 1px solid #333;
   border-radius: 8px;
   padding: 1rem;
+}
+
+.scouter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.scouter-name {
+  font-weight: 600;
+  color: white;
+  font-size: 1.1rem;
+}
+
+.star-rating {
+  font-size: 1rem;
+}
+
+.star-rating.star-1 { color: #9ca3af; }
+.star-rating.star-2 { color: #10b981; }
+.star-rating.star-3 { color: #3b82f6; }
+.star-rating.star-4 { color: #8b5cf6; }
+.star-rating.star-5 { color: #f59e0b; }
+
+.scouter-info {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.specialty {
+  font-size: 0.85rem;
+}
+
+.pending-badge {
+  background: #3b82f6;
+  color: white;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.scouter-cost {
+  color: #f59e0b;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.scouter-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.discover-btn {
+  flex: 1;
+  padding: 0.5rem;
+  background: linear-gradient(135deg, var(--primary-blue), var(--dark-blue));
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
   transition: all 0.3s ease;
 }
 
-.player-card:hover {
-  border-color: var(--primary-blue);
-  transform: translateY(-2px);
+.discover-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.discover-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fire-btn {
+  padding: 0.5rem 1rem;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.fire-btn:hover {
+  background: #dc2626;
+}
+
+.no-scouters,
+.no-discoveries {
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  padding: 2rem;
+}
+
+/* 발굴된 선수 목록 */
+.discoveries-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 700px;
+  overflow-y: auto;
+}
+
+.discovery-card {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
 }
 
 .player-header {
@@ -158,7 +301,16 @@
   font-size: 1.1rem;
 }
 
-.scout-cost {
+.discovery-meta {
+  margin-bottom: 0.5rem;
+}
+
+.discovery-meta .scouter-info {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.sign-cost {
   text-align: center;
   color: #F59E0B;
   font-weight: 600;
@@ -166,10 +318,15 @@
   font-size: 0.9rem;
 }
 
-.scout-btn {
-  width: 100%;
-  padding: 0.75rem;
-  background: linear-gradient(135deg, var(--primary-blue), var(--dark-blue));
+.discovery-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sign-btn {
+  flex: 1;
+  padding: 0.5rem;
+  background: linear-gradient(135deg, #10b981, #059669);
   color: white;
   border: none;
   border-radius: 4px;
@@ -178,91 +335,28 @@
   transition: all 0.3s ease;
 }
 
-.scout-btn:hover:not(:disabled) {
+.sign-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
-.scout-btn:disabled {
+.sign-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.no-players,
-.no-history {
-  color: rgba(255, 255, 255, 0.5);
-  text-align: center;
-  padding: 2rem;
-}
-
-.history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  max-height: 600px;
-  overflow-y: auto;
-}
-
-.history-item {
-  background: #111;
-  border: 1px solid #333;
-  border-radius: 8px;
-  padding: 1rem;
-}
-
-.history-item.success {
-  border-left: 3px solid #10b981;
-}
-
-.history-item.failed {
-  border-left: 3px solid #ef4444;
-}
-
-.history-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.history-header .player-name {
-  font-weight: 600;
+.reject-btn {
+  padding: 0.5rem 1rem;
+  background: #6b7280;
   color: white;
-}
-
-.result-badge {
-  padding: 0.15rem 0.4rem;
+  border: none;
   border-radius: 4px;
-  font-size: 0.7rem;
-  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.result-badge.success {
-  background: #10b981;
-  color: white;
-}
-
-.result-badge.failed {
-  background: #ef4444;
-  color: white;
-}
-
-.history-cost {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.7);
-  margin-bottom: 0.5rem;
-}
-
-.history-dialogue {
-  font-size: 0.85rem;
-  font-style: italic;
-  color: rgba(255, 255, 255, 0.6);
-  margin-bottom: 0.5rem;
-}
-
-.history-date {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.4);
+.reject-btn:hover {
+  background: #4b5563;
 }
 
 @media (max-width: 1024px) {
