@@ -648,3 +648,179 @@
     flex-direction: row;
   }
 }
+
+/* 경기 종료 집계 모달 */
+.match-summary-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.match-summary-modal {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 16px;
+  padding: 30px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  border: 1px solid #333;
+}
+
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.summary-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #ffd700;
+}
+
+.summary-header .close-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 1.8rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.summary-header .close-btn:hover {
+  color: #fff;
+}
+
+.summary-score {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.summary-team {
+  text-align: center;
+}
+
+.summary-team .team-name {
+  display: block;
+  font-size: 1rem;
+  color: #aaa;
+  margin-bottom: 5px;
+}
+
+.summary-team .score {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.summary-score .vs {
+  font-size: 1.2rem;
+  color: #666;
+}
+
+.summary-result {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.summary-result .result {
+  font-size: 1.8rem;
+  font-weight: bold;
+  padding: 8px 20px;
+  border-radius: 8px;
+}
+
+.summary-result .result.win {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+}
+
+.summary-result .result.lose {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+}
+
+.summary-result .result.draw {
+  background: rgba(241, 196, 15, 0.2);
+  color: #f1c40f;
+}
+
+.summary-stats h3 {
+  margin: 0 0 15px 0;
+  font-size: 1.1rem;
+  color: #888;
+}
+
+.stats-table {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.stats-header,
+.stats-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 10px;
+  padding: 10px 15px;
+}
+
+.stats-header {
+  background: rgba(0, 0, 0, 0.3);
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.stats-row {
+  border-bottom: 1px solid #333;
+}
+
+.stats-row:last-child {
+  border-bottom: none;
+}
+
+.stats-row .player {
+  font-size: 0.9rem;
+}
+
+.stats-row .kda {
+  color: #3498db;
+}
+
+.stats-row .cs {
+  color: #f1c40f;
+}
+
+.stats-row .damage {
+  color: #e74c3c;
+}
+
+.summary-close-btn {
+  width: 100%;
+  margin-top: 20px;
+  padding: 12px;
+  background: #3498db;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.summary-close-btn:hover {
+  background: #2980b9;
+}

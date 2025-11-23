@@ -96,6 +96,10 @@ export default function LiveMatch() {
   const [homeSetWins, setHomeSetWins] = useState(0);
   const [awaySetWins, setAwaySetWins] = useState(0);
 
+  // 경기 종료 후 집계
+  const [showSummary, setShowSummary] = useState(false);
+  const [isMyMatch, setIsMyMatch] = useState(false);
+
   // 맵 관련 상태
   const [champions, setChampions] = useState<ChampionPosition[]>([]);
   const [objectives, setObjectives] = useState<ObjectiveState>({
@@ -165,9 +169,15 @@ export default function LiveMatch() {
     });
 
     // 경기 종료
-    socket.on('match_finished', () => {
+    socket.on('match_finished', (data) => {
       setIsLive(false);
+      setHomeSetWins(data.home_score || 0);
+      setAwaySetWins(data.away_score || 0);
       fetchMatchData(); // 최종 데이터 갱신
+      // 내 경기라면 집계 표시
+      if (isMyMatch) {
+        setShowSummary(true);
+      }
     });
 
     // 경기 시작
@@ -195,6 +205,38 @@ export default function LiveMatch() {
       setHomeSetWins(data.home_set_wins);
       setAwaySetWins(data.away_set_wins);
       setGameTime(0);
+      // 킬/골드 초기화
+      setHomeState(prev => prev ? {
+        ...prev,
+        kills: 0,
+        gold: 2500,
+        dragons: [],
+        barons: 0,
+        heralds: 0
+      } : null);
+      setAwayState(prev => prev ? {
+        ...prev,
+        kills: 0,
+        gold: 2500,
+        dragons: [],
+        barons: 0,
+        heralds: 0
+      } : null);
+      // 선수 스탯 초기화
+      setPlayerStats(prev => prev.map(p => ({
+        ...p,
+        kills: 0,
+        deaths: 0,
+        assists: 0,
+        cs: 0,
+        gold_earned: 0,
+        damage_dealt: 0,
+        damage_taken: 0,
+        vision_score: 0,
+        wards_placed: 0,
+        wards_destroyed: 0,
+        turret_kills: 0
+      })));
       setEvents(prev => [...prev, {
         type: 'SET_START',
         time: 0,
@@ -260,6 +302,14 @@ export default function LiveMatch() {
       setMatch(res.data.match);
       setEvents(res.data.events || []);
       setPlayerStats(res.data.stats || []);
+
+      // 내 경기인지 확인
+      if (team) {
+        const myTeamId = team.id;
+        const isMyGame = res.data.match.home_team_id === myTeamId ||
+                         res.data.match.away_team_id === myTeamId;
+        setIsMyMatch(isMyGame);
+      }
 
       // match_data 파싱
       if (res.data.match.match_data) {
@@ -678,6 +728,73 @@ export default function LiveMatch() {
           <button onClick={sendChat} className="chat-send-btn">전송</button>
         </div>
       </div>
+
+      {/* 경기 종료 집계 모달 */}
+      {showSummary && (
+        <div className="match-summary-overlay" onClick={() => setShowSummary(false)}>
+          <div className="match-summary-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="summary-header">
+              <h2>경기 종료</h2>
+              <button className="close-btn" onClick={() => setShowSummary(false)}>×</button>
+            </div>
+
+            <div className="summary-score">
+              <div className="summary-team home">
+                <span className="team-name">{match.home_team_name}</span>
+                <span className="score">{homeSetWins}</span>
+              </div>
+              <span className="vs">VS</span>
+              <div className="summary-team away">
+                <span className="score">{awaySetWins}</span>
+                <span className="team-name">{match.away_team_name}</span>
+              </div>
+            </div>
+
+            <div className="summary-result">
+              {team && (
+                <span className={`result ${
+                  (match.home_team_id === team.id && homeSetWins > awaySetWins) ||
+                  (match.away_team_id === team.id && awaySetWins > homeSetWins)
+                    ? 'win' : homeSetWins === awaySetWins ? 'draw' : 'lose'
+                }`}>
+                  {(match.home_team_id === team.id && homeSetWins > awaySetWins) ||
+                   (match.away_team_id === team.id && awaySetWins > homeSetWins)
+                    ? '승리!' : homeSetWins === awaySetWins ? '무승부' : '패배'}
+                </span>
+              )}
+            </div>
+
+            <div className="summary-stats">
+              <h3>선수 통계</h3>
+              <div className="stats-table">
+                <div className="stats-header">
+                  <span>선수</span>
+                  <span>KDA</span>
+                  <span>CS</span>
+                  <span>딜량</span>
+                </div>
+                {playerStats
+                  .filter(p => team && (
+                    (match.home_team_id === team.id && p.team_name === match.home_team_name) ||
+                    (match.away_team_id === team.id && p.team_name === match.away_team_name)
+                  ))
+                  .map(player => (
+                    <div key={player.id} className="stats-row">
+                      <span className="player">{player.position} {player.player_name}</span>
+                      <span className="kda">{player.kills}/{player.deaths}/{player.assists}</span>
+                      <span className="cs">{player.cs}</span>
+                      <span className="damage">{(player.damage_dealt / 1000).toFixed(1)}k</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            <button className="summary-close-btn" onClick={() => setShowSummary(false)}>
+              확인
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
