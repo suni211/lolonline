@@ -186,11 +186,149 @@ export async function initializeDatabase() {
       }
     }
     
+    // player_cards 테이블에 personality 컬럼 추가
+    try {
+      await pool.query(`ALTER TABLE player_cards ADD COLUMN personality ENUM('LEADER', 'REBELLIOUS', 'CALM', 'EMOTIONAL', 'COMPETITIVE') DEFAULT 'CALM'`);
+      console.log('Added personality column to player_cards table');
+    } catch (error: any) {
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        console.error('Error adding personality column:', error);
+      }
+    }
+
+    // player_chat_history 테이블 생성
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS player_chat_history (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          player_id INT NOT NULL,
+          team_id INT NOT NULL,
+          user_message TEXT NOT NULL,
+          ai_response TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (player_id) REFERENCES player_cards(id) ON DELETE CASCADE,
+          FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+          INDEX idx_player_team (player_id, team_id)
+        )
+      `);
+      console.log('Player chat history table created/verified');
+    } catch (error: any) {
+      if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
+        console.error('Error creating player_chat_history table:', error);
+      }
+    }
+
+    // team_meeting_history 테이블 생성
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS team_meeting_history (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          team_id INT NOT NULL,
+          topic VARCHAR(255) NOT NULL,
+          result TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+          INDEX idx_team (team_id)
+        )
+      `);
+      console.log('Team meeting history table created/verified');
+    } catch (error: any) {
+      if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
+        console.error('Error creating team_meeting_history table:', error);
+      }
+    }
+
+    // player_events 테이블 생성
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS player_events (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          player_id INT NOT NULL,
+          team_id INT NOT NULL,
+          event_type ENUM('CONFLICT', 'MOTIVATION', 'SLUMP', 'BREAKTHROUGH') NOT NULL,
+          title VARCHAR(100) NOT NULL,
+          description TEXT NOT NULL,
+          effect_stat VARCHAR(50),
+          effect_value INT DEFAULT 0,
+          resolved BOOLEAN DEFAULT false,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          resolved_at DATETIME,
+          FOREIGN KEY (player_id) REFERENCES player_cards(id) ON DELETE CASCADE,
+          FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+          INDEX idx_player_team (player_id, team_id),
+          INDEX idx_event_type (event_type)
+        )
+      `);
+      console.log('Player events table created/verified');
+    } catch (error: any) {
+      if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
+        console.error('Error creating player_events table:', error);
+      }
+    }
+
+    // contract_negotiations 테이블에 AI 대사 컬럼 추가
+    try {
+      await pool.query(`ALTER TABLE contract_negotiations ADD COLUMN ai_dialogue TEXT`);
+      console.log('Added ai_dialogue column to contract_negotiations table');
+    } catch (error: any) {
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        console.error('Error adding ai_dialogue column:', error);
+      }
+    }
+
+    // contract_negotiations 테이블에 추가 컬럼
+    try {
+      await pool.query(`ALTER TABLE contract_negotiations ADD COLUMN player_response_salary BIGINT`);
+      await pool.query(`ALTER TABLE contract_negotiations ADD COLUMN player_response_years INT`);
+      await pool.query(`ALTER TABLE contract_negotiations ADD COLUMN player_response_bonus BIGINT`);
+      await pool.query(`ALTER TABLE contract_negotiations ADD COLUMN transfer_fee BIGINT DEFAULT 0`);
+      await pool.query(`ALTER TABLE contract_negotiations ADD COLUMN owner_team_id INT`);
+      console.log('Added additional columns to contract_negotiations table');
+    } catch (error: any) {
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        // 일부 컬럼은 이미 있을 수 있음
+      }
+    }
+
+    // teams 테이블에 morale 컬럼 추가
+    try {
+      await pool.query(`ALTER TABLE teams ADD COLUMN morale INT DEFAULT 50 CHECK (morale >= 0 AND morale <= 100)`);
+      console.log('Added morale column to teams table');
+    } catch (error: any) {
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        console.error('Error adding morale column:', error);
+      }
+    }
+
+    // scout_history 테이블 생성
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS scout_history (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          team_id INT NOT NULL,
+          pro_player_id INT NOT NULL,
+          result ENUM('SUCCESS', 'FAILED') NOT NULL,
+          cost BIGINT NOT NULL,
+          dialogue TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+          FOREIGN KEY (pro_player_id) REFERENCES pro_players(id) ON DELETE CASCADE,
+          INDEX idx_team (team_id),
+          INDEX idx_result (result)
+        )
+      `);
+      console.log('Scout history table created/verified');
+    } catch (error: any) {
+      if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
+        console.error('Error creating scout_history table:', error);
+      }
+    }
+
     console.log('Database initialized successfully');
-    
+
     // 초기 리그 생성
     await createInitialLeagues();
-    
+
     // 초기 선수 생성
     await createInitialPlayers();
   } catch (error: any) {

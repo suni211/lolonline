@@ -27,6 +27,8 @@ import adminRoutes from './routes/admin.js';
 import tacticsRoutes from './routes/tactics.js';
 import packsRoutes from './routes/packs.js';
 import transferRoutes from './routes/transfer.js';
+import aiRoutes from './routes/ai.js';
+import scoutRoutes from './routes/scout.js';
 import { initializeDatabase } from './database/init.js';
 import { ProPlayerService } from './services/proPlayerService.js';
 import { initializeSeasonSystem } from './services/seasonService.js';
@@ -75,6 +77,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/tactics', tacticsRoutes);
 app.use('/api/packs', packsRoutes);
 app.use('/api/transfer', transferRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/scout', scoutRoutes);
 
 // Socket.IO 연결
 io.on('connection', (socket) => {

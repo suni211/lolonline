@@ -218,7 +218,7 @@ export default function Leagues() {
                         )}
                         <span className="team-name">
                           {standing.team_name}
-                          {standing.is_ai && <span className="ai-badge">AI</span>}
+                          {standing.is_ai === true || standing.is_ai === 1 ? <span className="ai-badge">AI</span> : null}
                         </span>
                       </td>
                       <td>{standing.wins}</td>

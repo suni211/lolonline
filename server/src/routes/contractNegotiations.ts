@@ -2,6 +2,7 @@ import express from 'express';
 import pool from '../database/db.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { EventService } from '../services/eventService.js';
+import { generateContractNegotiationDialogue, PersonalityType } from '../services/geminiService.js';
 
 const router = express.Router();
 
@@ -249,37 +250,51 @@ async function generateAIResponse(
       }
     }
     
+    // AI 대사 생성
+    const playerPersonality = (player.personality || 'CALM') as PersonalityType;
+    const dialogue = await generateContractNegotiationDialogue(
+      player.name,
+      playerPersonality,
+      proposedSalary,
+      baseSalary,
+      responseType,
+      counterSalary
+    );
+
     // AI 응답 저장 (FA 선수 연봉협상)
     if (responseType === 'ACCEPT') {
       await pool.query(
-        `UPDATE contract_negotiations 
-         SET status = 'ACCEPTED', 
+        `UPDATE contract_negotiations
+         SET status = 'ACCEPTED',
              player_response_salary = ?,
              player_response_years = ?,
              player_response_bonus = ?,
+             ai_dialogue = ?,
              responded_at = NOW()
          WHERE id = ?`,
-        [proposedSalary, proposedYears, proposedBonus, negotiationId]
+        [proposedSalary, proposedYears, proposedBonus, dialogue, negotiationId]
       );
     } else if (responseType === 'REJECT') {
       await pool.query(
-        `UPDATE contract_negotiations 
-         SET status = 'REJECTED', 
+        `UPDATE contract_negotiations
+         SET status = 'REJECTED',
+             ai_dialogue = ?,
              responded_at = NOW()
          WHERE id = ?`,
-        [negotiationId]
+        [dialogue, negotiationId]
       );
     } else {
       // COUNTER
       await pool.query(
-        `UPDATE contract_negotiations 
-         SET status = 'COUNTER_OFFER', 
+        `UPDATE contract_negotiations
+         SET status = 'COUNTER_OFFER',
              player_response_salary = ?,
              player_response_years = ?,
              player_response_bonus = ?,
+             ai_dialogue = ?,
              responded_at = NOW()
          WHERE id = ?`,
-        [counterSalary, counterYears, counterBonus, negotiationId]
+        [counterSalary, counterYears, counterBonus, dialogue, negotiationId]
       );
     }
   } catch (error: any) {
