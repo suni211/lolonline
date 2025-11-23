@@ -285,41 +285,73 @@ export default function LiveMatch() {
   // 이벤트에서 하이라이트 감지
   const detectHighlight = (event: MatchEvent) => {
     let highlight: Highlight | null = null;
-    let duration = 5000; // 기본 5초
+    let duration = 3000; // 기본 3초
 
     switch (event.type) {
+      case 'KILL':
+        // 킬 하이라이트
+        highlight = {
+          type: 'kill',
+          x: 50,
+          y: 50,
+          description: `${event.data?.killer} → ${event.data?.victim}`
+        };
+        duration = 3000;
+        break;
+
       case 'TEAMFIGHT':
-        // 한타만 맵에 표시
+        // 한타 - 끝날 때까지 표시
         highlight = {
           type: 'teamfight',
           x: 50,
           y: 50,
           description: 'TEAM FIGHT!'
         };
-        duration = 8000; // 한타는 8초
+        duration = 10000; // 한타는 길게
+        break;
+
+      case 'DRAGON':
+        highlight = {
+          type: 'objective',
+          x: 64.9,
+          y: 68,
+          description: `${event.data?.team === 'home' ? '블루' : '레드'} 드래곤`
+        };
+        setObjectives(prev => ({ ...prev, dragon: { alive: false } }));
+        duration = 4000;
+        break;
+
+      case 'BARON':
+        highlight = {
+          type: 'objective',
+          x: 36.6,
+          y: 30.2,
+          description: `${event.data?.team === 'home' ? '블루' : '레드'} 바론`
+        };
+        setObjectives(prev => ({ ...prev, baron: { alive: false } }));
+        duration = 5000;
+        break;
+
+      case 'HERALD':
+        highlight = {
+          type: 'objective',
+          x: 36.6,
+          y: 30.2,
+          description: `${event.data?.team === 'home' ? '블루' : '레드'} 전령`
+        };
+        setObjectives(prev => ({ ...prev, herald: { alive: false, taken: true } }));
+        duration = 4000;
         break;
 
       case 'NEXUS_DESTROYED':
         // 게임 종료
         highlight = {
           type: 'ace',
-          x: event.data?.team === 'away' ? 12 : 88,
-          y: event.data?.team === 'away' ? 88 : 12,
+          x: event.data?.team === 'away' ? 13.9 : 85.2,
+          y: event.data?.team === 'away' ? 85.7 : 13.7,
           description: 'VICTORY!'
         };
-        duration = 10000; // 승리는 10초
-        break;
-
-      case 'DRAGON':
-        setObjectives(prev => ({ ...prev, dragon: { alive: false } }));
-        break;
-
-      case 'BARON':
-        setObjectives(prev => ({ ...prev, baron: { alive: false } }));
-        break;
-
-      case 'HERALD':
-        setObjectives(prev => ({ ...prev, herald: { alive: false, taken: true } }));
+        duration = 10000;
         break;
     }
 
@@ -338,7 +370,28 @@ export default function LiveMatch() {
     return types[Math.floor(Math.random() * types.length)];
   };
 
-  // 챔피언 위치 업데이트 (시간에 따라 자연스럽게 이동)
+  // 포지션별 주요 활동 영역 정의
+  const getLaneArea = (position: string, team: 'blue' | 'red') => {
+    const areas = {
+      blue: {
+        TOP: { centerX: 14, centerY: 45, rangeX: 8, rangeY: 25 }, // 탑 라인
+        JGL: { centerX: 35, centerY: 55, rangeX: 20, rangeY: 25 }, // 정글
+        MID: { centerX: 40, centerY: 60, rangeX: 15, rangeY: 15 }, // 미드
+        ADC: { centerX: 55, centerY: 88, rangeX: 20, rangeY: 8 }, // 봇 라인
+        SUP: { centerX: 50, centerY: 85, rangeX: 20, rangeY: 10 }  // 서포터
+      },
+      red: {
+        TOP: { centerX: 45, centerY: 12, rangeX: 25, rangeY: 8 },
+        JGL: { centerX: 65, centerY: 45, rangeX: 20, rangeY: 25 },
+        MID: { centerX: 60, centerY: 40, rangeX: 15, rangeY: 15 },
+        ADC: { centerX: 88, centerY: 55, rangeX: 8, rangeY: 20 },
+        SUP: { centerX: 85, centerY: 50, rangeX: 10, rangeY: 20 }
+      }
+    };
+    return areas[team][position as keyof typeof areas.blue] || { centerX: 50, centerY: 50, rangeX: 30, rangeY: 30 };
+  };
+
+  // 챔피언 위치 업데이트 (포지션별 현실적 이동)
   useEffect(() => {
     if (!isLive || champions.length === 0) return;
 
@@ -346,9 +399,16 @@ export default function LiveMatch() {
       setChampions(prev => prev.map(champ => {
         if (!champ.isAlive) return champ;
 
-        // 랜덤하게 약간씩 이동 (라인 근처에서)
-        const dx = (Math.random() - 0.5) * 3;
-        const dy = (Math.random() - 0.5) * 3;
+        const area = getLaneArea(champ.position, champ.team);
+
+        // 자신의 라인 영역 내에서 이동
+        let targetX = area.centerX + (Math.random() - 0.5) * area.rangeX * 2;
+        let targetY = area.centerY + (Math.random() - 0.5) * area.rangeY * 2;
+
+        // 부드러운 이동 (현재 위치에서 목표 방향으로 조금씩)
+        const moveSpeed = 2;
+        const dx = (targetX - champ.x) * 0.1 + (Math.random() - 0.5) * moveSpeed;
+        const dy = (targetY - champ.y) * 0.1 + (Math.random() - 0.5) * moveSpeed;
 
         return {
           ...champ,
