@@ -151,7 +151,7 @@ router.put('/team', authenticateToken, async (req: AuthRequest, res) => {
          early_game_strategy = COALESCE(?, early_game_strategy)`,
       [
         req.teamId,
-        teamfight_style || 'TACTICAL',
+        teamfight_style || 'FIGHT_FIRST',
         split_formation || '0-5-0',
         aggression_level || 'NORMAL',
         priority_objective || 'DRAGON',
