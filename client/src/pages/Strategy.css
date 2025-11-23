@@ -1,0 +1,192 @@
+.strategy-page {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.strategy-page .page-title {
+  font-size: 28px;
+  margin-bottom: 20px;
+  color: #fff;
+}
+
+.saving-indicator {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #339af0;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 1000;
+  animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.strategy-sections {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .strategy-sections {
+    grid-template-columns: 1fr;
+  }
+}
+
+.strategy-section {
+  background: #1a1a2e;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.strategy-section h2 {
+  font-size: 20px;
+  color: #fff;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #333;
+}
+
+.tactic-group {
+  margin-bottom: 24px;
+}
+
+.tactic-group h3 {
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tactic-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tactic-options.aggression {
+  gap: 8px;
+}
+
+.tactic-btn {
+  background: #252540;
+  border: 2px solid #333;
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #ccc;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 120px;
+}
+
+.tactic-btn.small {
+  min-width: auto;
+  padding: 8px 12px;
+  flex-direction: row;
+  font-size: 12px;
+}
+
+.tactic-btn:hover {
+  border-color: #339af0;
+  background: #2a2a50;
+}
+
+.tactic-btn.active {
+  border-color: #339af0;
+  background: #1a3a5c;
+  color: #fff;
+}
+
+.btn-label {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.btn-desc {
+  font-size: 11px;
+  color: #888;
+  line-height: 1.3;
+}
+
+.tactic-btn.active .btn-desc {
+  color: #aaa;
+}
+
+/* 포지션별 전술 */
+.position-tactic {
+  background: #252540;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.position-header {
+  border-left: 4px solid;
+  padding-left: 12px;
+  margin-bottom: 12px;
+}
+
+.position-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.position-settings {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .position-settings {
+    grid-template-columns: 1fr;
+  }
+}
+
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.setting-group label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.setting-select {
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.setting-select:hover {
+  border-color: #339af0;
+}
+
+.setting-select:focus {
+  outline: none;
+  border-color: #339af0;
+}

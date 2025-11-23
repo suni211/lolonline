@@ -36,6 +36,17 @@ router.post('/individual', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: '계약된 선수만 훈련할 수 있습니다' });
     }
 
+    // 오늘 이미 훈련했는지 확인
+    const todayTraining = await pool.query(
+      `SELECT * FROM player_training
+       WHERE player_id = ? AND team_id = ? AND DATE(trained_at) = CURDATE()`,
+      [player_id, req.teamId]
+    );
+
+    if (todayTraining.length > 0) {
+      return res.status(400).json({ error: '이 선수는 오늘 이미 훈련했습니다. 내일 다시 시도하세요.' });
+    }
+
     // 훈련 시설 레벨 확인
     const facilities = await pool.query(
       'SELECT level FROM team_facilities WHERE team_id = ? AND facility_type = "TRAINING"',
@@ -121,6 +132,19 @@ router.post('/team', authenticateToken, async (req: AuthRequest, res) => {
 
     if (cards.length === 0) {
       return res.status(400).json({ error: '훈련할 스타터가 없습니다' });
+    }
+
+    // 오늘 이미 팀 훈련했는지 확인 (스타터 중 한 명이라도 훈련했으면 불가)
+    const cardIds = cards.map((c: any) => c.id);
+    const todayTraining = await pool.query(
+      `SELECT player_id FROM player_training
+       WHERE team_id = ? AND training_type = 'TEAM' AND DATE(trained_at) = CURDATE()
+       AND player_id IN (${cardIds.map(() => '?').join(',')})`,
+      [req.teamId, ...cardIds]
+    );
+
+    if (todayTraining.length > 0) {
+      return res.status(400).json({ error: '오늘 이미 팀 훈련을 했습니다. 내일 다시 시도하세요.' });
     }
 
     // 훈련 시설 레벨 확인
