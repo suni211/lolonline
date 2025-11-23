@@ -1086,4 +1086,74 @@ router.post('/players/adjust-stats', authenticateToken, adminMiddleware, async (
   }
 });
 
+// 테스트 경기 생성
+router.post('/test-match', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const { homeTeamId, awayTeamId } = req.body;
+
+    if (!homeTeamId || !awayTeamId) {
+      return res.status(400).json({ error: '홈팀과 어웨이팀을 선택해주세요' });
+    }
+
+    if (homeTeamId === awayTeamId) {
+      return res.status(400).json({ error: '같은 팀끼리는 경기할 수 없습니다' });
+    }
+
+    // 팀 존재 확인
+    const teams = await pool.query(
+      'SELECT id, name FROM teams WHERE id IN (?, ?)',
+      [homeTeamId, awayTeamId]
+    );
+
+    if (teams.length !== 2) {
+      return res.status(400).json({ error: '팀을 찾을 수 없습니다' });
+    }
+
+    // 테스트 경기 생성 (친선전으로)
+    const result = await pool.query(
+      `INSERT INTO matches (home_team_id, away_team_id, match_type, status, scheduled_at)
+       VALUES (?, ?, 'FRIENDLY', 'SCHEDULED', NOW())`,
+      [homeTeamId, awayTeamId]
+    );
+
+    const matchId = result.insertId;
+
+    // 양 팀의 선수 카드로 match_stats 초기화
+    const homeCards = await pool.query(
+      `SELECT pc.id, pp.name, pp.position
+       FROM player_cards pc
+       JOIN pro_players pp ON pc.pro_player_id = pp.id
+       WHERE pc.team_id = ? AND pc.is_starter = 1`,
+      [homeTeamId]
+    );
+
+    const awayCards = await pool.query(
+      `SELECT pc.id, pp.name, pp.position
+       FROM player_cards pc
+       JOIN pro_players pp ON pc.pro_player_id = pp.id
+       WHERE pc.team_id = ? AND pc.is_starter = 1`,
+      [awayTeamId]
+    );
+
+    // 선수 통계 초기화
+    for (const card of [...homeCards, ...awayCards]) {
+      const teamId = homeCards.includes(card) ? homeTeamId : awayTeamId;
+      await pool.query(
+        `INSERT INTO match_stats (match_id, player_id, team_id, kills, deaths, assists, cs, gold_earned, damage_dealt, damage_taken, vision_score, wards_placed, wards_destroyed, turret_damage, first_blood)
+         VALUES (?, ?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)`,
+        [matchId, card.id, teamId]
+      );
+    }
+
+    res.json({
+      success: true,
+      matchId,
+      message: '테스트 경기가 생성되었습니다'
+    });
+  } catch (error: any) {
+    console.error('Create test match error:', error);
+    res.status(500).json({ error: '테스트 경기 생성 실패: ' + error.message });
+  }
+});
+
 export default router;

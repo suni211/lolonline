@@ -70,6 +70,8 @@ export default function Admin() {
   const [cups, setCups] = useState<CupTournament[]>([]);
   const [uploadingCupId, setUploadingCupId] = useState<number | null>(null);
   const [uploadingLeagueId, setUploadingLeagueId] = useState<number | null>(null);
+  const [testHomeTeam, setTestHomeTeam] = useState<number | null>(null);
+  const [testAwayTeam, setTestAwayTeam] = useState<number | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -334,6 +336,31 @@ export default function Admin() {
     }
   };
 
+  const createTestMatch = async () => {
+    if (!testHomeTeam || !testAwayTeam) {
+      setMessage('홈팀과 어웨이팀을 선택해주세요');
+      return;
+    }
+    if (testHomeTeam === testAwayTeam) {
+      setMessage('같은 팀끼리는 경기할 수 없습니다');
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await axios.post('/api/admin/test-match', {
+        homeTeamId: testHomeTeam,
+        awayTeamId: testAwayTeam
+      });
+      setMessage(`테스트 경기가 생성되었습니다. 경기 ID: ${res.data.matchId}`);
+      // 경기 페이지로 이동
+      window.open(`/live/${res.data.matchId}`, '_blank');
+    } catch (error: any) {
+      setMessage(error.response?.data?.error || '테스트 경기 생성 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="admin-page">
       <h1>어드민 관리</h1>
@@ -430,6 +457,49 @@ export default function Admin() {
               />
               <button onClick={createCupTournament} disabled={loading} className="primary">
                 컵 대회 생성
+              </button>
+            </div>
+          </div>
+
+          <div className="test-match-section">
+            <h3>테스트 경기</h3>
+            <p className="hint">맵 시스템을 테스트하기 위한 친선 경기를 생성합니다.</p>
+            <div className="test-match-controls">
+              <div className="team-select">
+                <label>홈팀:</label>
+                <select
+                  value={testHomeTeam || ''}
+                  onChange={(e) => setTestHomeTeam(parseInt(e.target.value) || null)}
+                >
+                  <option value="">팀 선택</option>
+                  {teams.map(team => (
+                    <option key={team.id} value={team.id}>
+                      {team.name} {team.is_ai ? '(AI)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <span className="vs-text">VS</span>
+              <div className="team-select">
+                <label>어웨이팀:</label>
+                <select
+                  value={testAwayTeam || ''}
+                  onChange={(e) => setTestAwayTeam(parseInt(e.target.value) || null)}
+                >
+                  <option value="">팀 선택</option>
+                  {teams.map(team => (
+                    <option key={team.id} value={team.id}>
+                      {team.name} {team.is_ai ? '(AI)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={createTestMatch}
+                disabled={loading || !testHomeTeam || !testAwayTeam}
+                className="primary"
+              >
+                테스트 경기 시작
               </button>
             </div>
           </div>
