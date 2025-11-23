@@ -117,7 +117,7 @@ router.put('/team', authenticateToken, async (req: AuthRequest, res) => {
     } = req.body;
 
     // 유효성 검사
-    const validTeamfightStyles = ['SAFE', 'BURST', 'ORGANIC', 'TACTICAL'];
+    const validTeamfightStyles = ['FIGHT_FIRST', 'OBJECTIVE_FIRST'];
     const validFormations = ['1-3-1', '1-4-0', '0-5-0'];
     const validAggressions = ['VERY_AGGRESSIVE', 'AGGRESSIVE', 'NORMAL', 'DEFENSIVE', 'VERY_DEFENSIVE'];
     const validObjectives = ['DRAGON', 'BARON', 'TOWER', 'TEAMFIGHT'];

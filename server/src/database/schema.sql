@@ -578,8 +578,8 @@ CREATE TABLE IF NOT EXISTS transfer_market (
 CREATE TABLE IF NOT EXISTS team_tactics (
     id INT PRIMARY KEY AUTO_INCREMENT,
     team_id INT NOT NULL UNIQUE,
-    -- 한타 스타일
-    teamfight_style ENUM('SAFE', 'BURST', 'ORGANIC', 'TACTICAL') DEFAULT 'TACTICAL',
+    -- 한타 스타일 (싸움 후 오브젝트 vs 오브젝트 후 싸움)
+    teamfight_style ENUM('FIGHT_FIRST', 'OBJECTIVE_FIRST') DEFAULT 'FIGHT_FIRST',
     -- 스플릿 포메이션
     split_formation ENUM('1-3-1', '1-4-0', '0-5-0') DEFAULT '0-5-0',
     -- 공격성향 (경기 중 조절 가능)

@@ -33,10 +33,8 @@ export default function Tactics() {
   // 한글 라벨
   const labels = {
     teamfight_style: {
-      SAFE: '사리기',
-      BURST: '버스트',
-      ORGANIC: '유기적',
-      TACTICAL: '전술대로'
+      FIGHT_FIRST: '싸움 후 오브젝트',
+      OBJECTIVE_FIRST: '오브젝트 후 싸움'
     },
     split_formation: {
       '1-3-1': '1-3-1',
