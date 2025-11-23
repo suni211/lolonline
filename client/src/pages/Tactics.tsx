@@ -21,11 +21,23 @@ interface PositionTactic {
   priority_target: string;
 }
 
+interface TacticStats {
+  totalMatches: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  recentResults: string[];
+  aggressionStats: Record<string, { wins: number; total: number }>;
+  strategyStats: Record<string, { wins: number; total: number }>;
+  objectiveStats: Record<string, { wins: number; total: number }>;
+}
+
 export default function Tactics() {
   const [teamTactics, setTeamTactics] = useState<TeamTactics | null>(null);
   const [positionTactics, setPositionTactics] = useState<PositionTactic[]>([]);
   const [playstyleOptions, setPlaystyleOptions] = useState<Record<string, string[]>>({});
   const [playstyleNames, setPlaystyleNames] = useState<Record<string, string>>({});
+  const [tacticStats, setTacticStats] = useState<TacticStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
@@ -83,6 +95,7 @@ export default function Tactics() {
 
   useEffect(() => {
     fetchTactics();
+    fetchTacticStats();
   }, []);
 
   const fetchTactics = async () => {
@@ -99,6 +112,20 @@ export default function Tactics() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchTacticStats = async () => {
+    try {
+      const res = await axios.get('/api/tactics/stats');
+      setTacticStats(res.data);
+    } catch (error) {
+      console.error('Failed to fetch tactic stats:', error);
+    }
+  };
+
+  const getWinRate = (wins: number, total: number) => {
+    if (total === 0) return 0;
+    return Math.round((wins / total) * 100);
   };
 
   const updateTeamTactics = async (field: string, value: string) => {
@@ -159,6 +186,99 @@ export default function Tactics() {
       )}
 
       {saving && <div className="saving-indicator">저장 중...</div>}
+
+      {/* 승률 통계 섹션 */}
+      {tacticStats && (
+        <div className="stats-section">
+          <h2>전술 통계</h2>
+
+          <div className="stats-overview">
+            <div className="stat-box">
+              <span className="stat-label">총 경기</span>
+              <span className="stat-value">{tacticStats.totalMatches}</span>
+            </div>
+            <div className="stat-box">
+              <span className="stat-label">승리</span>
+              <span className="stat-value wins">{tacticStats.wins}</span>
+            </div>
+            <div className="stat-box">
+              <span className="stat-label">패배</span>
+              <span className="stat-value losses">{tacticStats.losses}</span>
+            </div>
+            <div className="stat-box">
+              <span className="stat-label">승률</span>
+              <span className="stat-value winrate">{tacticStats.winRate}%</span>
+            </div>
+          </div>
+
+          <div className="recent-results">
+            <h3>최근 경기</h3>
+            <div className="result-badges">
+              {tacticStats.recentResults.map((result, idx) => (
+                <span key={idx} className={`result-badge ${result === 'W' ? 'win' : 'loss'}`}>
+                  {result}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="stats-graphs">
+            <div className="graph-section">
+              <h3>공격 성향별 승률</h3>
+              <div className="bar-chart">
+                {Object.entries(tacticStats.aggressionStats).map(([key, stat]) => (
+                  <div key={key} className="bar-item">
+                    <span className="bar-label">{labels.aggression_level[key as keyof typeof labels.aggression_level]}</span>
+                    <div className="bar-container">
+                      <div
+                        className="bar-fill"
+                        style={{ width: `${getWinRate(stat.wins, stat.total)}%` }}
+                      />
+                      <span className="bar-value">{getWinRate(stat.wins, stat.total)}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="graph-section">
+              <h3>초반 전략별 승률</h3>
+              <div className="bar-chart">
+                {Object.entries(tacticStats.strategyStats).map(([key, stat]) => (
+                  <div key={key} className="bar-item">
+                    <span className="bar-label">{labels.early_game_strategy[key as keyof typeof labels.early_game_strategy]}</span>
+                    <div className="bar-container">
+                      <div
+                        className="bar-fill strategy"
+                        style={{ width: `${getWinRate(stat.wins, stat.total)}%` }}
+                      />
+                      <span className="bar-value">{getWinRate(stat.wins, stat.total)}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="graph-section">
+              <h3>우선 오브젝트별 승률</h3>
+              <div className="bar-chart">
+                {Object.entries(tacticStats.objectiveStats).map(([key, stat]) => (
+                  <div key={key} className="bar-item">
+                    <span className="bar-label">{labels.priority_objective[key as keyof typeof labels.priority_objective]}</span>
+                    <div className="bar-container">
+                      <div
+                        className="bar-fill objective"
+                        style={{ width: `${getWinRate(stat.wins, stat.total)}%` }}
+                      />
+                      <span className="bar-value">{getWinRate(stat.wins, stat.total)}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="tactics-container">
         {/* 팀 전술 섹션 */}
