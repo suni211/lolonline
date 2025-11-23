@@ -285,90 +285,51 @@ export default function LiveMatch() {
   // 이벤트에서 하이라이트 감지
   const detectHighlight = (event: MatchEvent) => {
     let highlight: Highlight | null = null;
+    let duration = 5000; // 기본 5초
 
     switch (event.type) {
-      case 'KILL':
-        // 킬 위치 추정 (킬러의 현재 위치)
-        const killer = champions.find(c => c.playerName === event.data?.killer);
-        if (killer) {
-          highlight = {
-            type: 'kill',
-            x: killer.x,
-            y: killer.y,
-            description: `${event.data?.killer} → ${event.data?.victim}`
-          };
-          // 죽은 챔피언 표시
-          setChampions(prev => prev.map(c =>
-            c.playerName === event.data?.victim ? { ...c, isAlive: false } : c
-          ));
-          // 일정 시간 후 부활
-          setTimeout(() => {
-            setChampions(prev => prev.map(c =>
-              c.playerName === event.data?.victim ? { ...c, isAlive: true } : c
-            ));
-          }, 5000);
-        }
-        break;
-
       case 'TEAMFIGHT':
+        // 한타만 맵에 표시
         highlight = {
           type: 'teamfight',
           x: 50,
           y: 50,
           description: 'TEAM FIGHT!'
         };
-        break;
-
-      case 'DRAGON':
-        highlight = {
-          type: 'objective',
-          x: 72,
-          y: 68,
-          description: `${event.data?.team === 'home' ? '블루' : '레드'} 드래곤`
-        };
-        setObjectives(prev => ({ ...prev, dragon: { alive: false } }));
-        setTimeout(() => {
-          setObjectives(prev => ({
-            ...prev,
-            dragon: { alive: true, type: getNextDragonType() }
-          }));
-        }, 3000);
-        break;
-
-      case 'BARON':
-        highlight = {
-          type: 'objective',
-          x: 28,
-          y: 32,
-          description: `${event.data?.team === 'home' ? '블루' : '레드'} 바론`
-        };
-        setObjectives(prev => ({ ...prev, baron: { alive: false } }));
-        setTimeout(() => {
-          setObjectives(prev => ({ ...prev, baron: { alive: true } }));
-        }, 3000);
-        break;
-
-      case 'HERALD':
-        setObjectives(prev => ({ ...prev, herald: { alive: false, taken: true } }));
+        duration = 8000; // 한타는 8초
         break;
 
       case 'NEXUS_DESTROYED':
+        // 게임 종료
         highlight = {
           type: 'ace',
           x: event.data?.team === 'away' ? 12 : 88,
           y: event.data?.team === 'away' ? 88 : 12,
           description: 'VICTORY!'
         };
+        duration = 10000; // 승리는 10초
+        break;
+
+      case 'DRAGON':
+        setObjectives(prev => ({ ...prev, dragon: { alive: false } }));
+        break;
+
+      case 'BARON':
+        setObjectives(prev => ({ ...prev, baron: { alive: false } }));
+        break;
+
+      case 'HERALD':
+        setObjectives(prev => ({ ...prev, herald: { alive: false, taken: true } }));
         break;
     }
 
     if (highlight) {
       setCurrentHighlight(highlight);
-      setShowMap(true); // 하이라이트 시 맵 표시
+      setShowMap(true);
       setTimeout(() => {
         setCurrentHighlight(null);
-        setShowMap(false); // 하이라이트 종료 후 맵 숨김
-      }, 3000);
+        setShowMap(false);
+      }, duration);
     }
   };
 
