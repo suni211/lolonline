@@ -311,6 +311,14 @@ export default function Cards() {
                     {card.ovr}
                   </span>
                 </div>
+                <div
+                  className="card-avatar"
+                  style={{
+                    background: `linear-gradient(135deg, ${getPositionColor(card.position)}, ${getPositionColor(card.position)}88)`
+                  }}
+                >
+                  <span className="avatar-initial">{card.name.charAt(0)}</span>
+                </div>
                 <div className="card-name">{card.name}</div>
                 <div className="card-team">{card.team}</div>
                 <div className="card-league">{card.league} | {card.nationality}</div>
@@ -402,6 +410,14 @@ export default function Cards() {
                   </div>
                   {starter ? (
                     <div className="starter-card">
+                      <div
+                        className="starter-avatar"
+                        style={{
+                          background: `linear-gradient(135deg, ${getPositionColor(starter.position)}, ${getPositionColor(starter.position)}88)`
+                        }}
+                      >
+                        <span className="avatar-initial">{starter.name.charAt(0)}</span>
+                      </div>
                       <div className="starter-name">{starter.name}</div>
                       <div className="starter-ovr" style={{ color: getOvrColor(starter.ovr) }}>
                         OVR {starter.ovr}
@@ -483,6 +499,14 @@ export default function Cards() {
                     >
                       {card.ovr}
                     </span>
+                  </div>
+                  <div
+                    className="card-avatar large"
+                    style={{
+                      background: `linear-gradient(135deg, ${getPositionColor(card.position)}, ${getPositionColor(card.position)}88)`
+                    }}
+                  >
+                    <span className="avatar-initial">{card.name.charAt(0)}</span>
                   </div>
                   <div className="card-name">{card.name}</div>
                   <div className="card-team">{card.team}</div>
