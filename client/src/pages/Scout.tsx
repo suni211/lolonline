@@ -40,6 +40,15 @@ export default function Scout() {
   } | null>(null);
   const [offerAmounts, setOfferAmounts] = useState<Record<number, number>>({});
 
+  // 계약 모달 상태
+  const [contractModal, setContractModal] = useState<{
+    show: boolean;
+    discovery: Discovery | null;
+    negotiating: boolean;
+    counterOffer?: number;
+    dialogue?: string;
+  }>({ show: false, discovery: null, negotiating: false });
+
   useEffect(() => {
     fetchScouters();
     fetchDiscoveries();
@@ -139,17 +148,28 @@ export default function Scout() {
     setOfferAmounts(prev => ({ ...prev, [discoveryId]: numValue }));
   };
 
-  const signPlayer = async (discoveryId: number) => {
-    if (loading) return;
+  // 계약 모달 열기
+  const openContractModal = (discovery: Discovery) => {
+    setContractModal({
+      show: true,
+      discovery,
+      negotiating: false,
+      counterOffer: undefined,
+      dialogue: undefined
+    });
+  };
 
-    setLoading(true);
-    setResult(null);
+  // 계약 모달에서 제안하기
+  const submitOffer = async () => {
+    if (!contractModal.discovery || contractModal.negotiating) return;
 
-    const discovery = discoveries.find(d => d.id === discoveryId);
-    const offerAmount = discovery ? getOfferAmount(discovery) : 0;
+    const discovery = contractModal.discovery;
+    const offerAmount = getOfferAmount(discovery);
+
+    setContractModal(prev => ({ ...prev, negotiating: true }));
 
     try {
-      const response = await axios.post(`/api/scout/discoveries/${discoveryId}/sign`, {
+      const response = await axios.post(`/api/scout/discoveries/${discovery.id}/sign`, {
         offered_price: offerAmount
       });
 
@@ -159,24 +179,27 @@ export default function Scout() {
           message: response.data.message,
           dialogue: response.data.dialogue
         });
+        setContractModal({ show: false, discovery: null, negotiating: false });
         fetchDiscoveries();
       } else if (response.data.result === 'COUNTER') {
-        // 카운터 오퍼 - 제안 금액 업데이트
+        // 카운터 오퍼 - 모달에서 계속 협상
         setOfferAmounts(prev => ({
           ...prev,
-          [discoveryId]: response.data.counter_price
+          [discovery.id]: response.data.counter_price
         }));
-        setResult({
-          success: false,
-          message: `${response.data.player.name}: "${response.data.dialogue || response.data.message}"`,
-          dialogue: `제안 금액: ${response.data.counter_price.toLocaleString()}원`
-        });
+        setContractModal(prev => ({
+          ...prev,
+          negotiating: false,
+          counterOffer: response.data.counter_price,
+          dialogue: response.data.dialogue || response.data.message
+        }));
       } else if (response.data.result === 'REJECT') {
         setResult({
           success: false,
           message: response.data.message,
           dialogue: response.data.dialogue
         });
+        setContractModal({ show: false, discovery: null, negotiating: false });
         fetchDiscoveries();
       }
     } catch (error: any) {
@@ -184,8 +207,14 @@ export default function Scout() {
         success: false,
         message: error.response?.data?.error || '선수 계약에 실패했습니다'
       });
-    } finally {
-      setLoading(false);
+      setContractModal({ show: false, discovery: null, negotiating: false });
+    }
+  };
+
+  const signPlayer = async (discoveryId: number) => {
+    const discovery = discoveries.find(d => d.id === discoveryId);
+    if (discovery) {
+      openContractModal(discovery);
     }
   };
 
@@ -370,39 +399,6 @@ export default function Scout() {
                     </span>
                   </div>
 
-                  <div className="offer-section">
-                    <div className="offer-label">
-                      <span>제안 금액</span>
-                      <span className="min-amount">
-                        (최소 {formatCost(getMinOfferAmount(discovery.overall))})
-                      </span>
-                    </div>
-                    <div className="offer-input-container">
-                      <input
-                        type="text"
-                        className="offer-input"
-                        value={getOfferAmount(discovery).toLocaleString()}
-                        onChange={(e) => handleOfferChange(discovery.id, e.target.value)}
-                        placeholder="제안 금액 입력"
-                      />
-                      <span className="currency">원</span>
-                    </div>
-                    <div className="offer-range">
-                      <input
-                        type="range"
-                        min={getMinOfferAmount(discovery.overall)}
-                        max={getDefaultOfferAmount(discovery.overall) * 3}
-                        step={10000}
-                        value={getOfferAmount(discovery)}
-                        onChange={(e) => handleOfferChange(discovery.id, e.target.value)}
-                        className="offer-slider"
-                      />
-                    </div>
-                    <div className="offer-hint">
-                      높은 금액일수록 계약 성공 확률이 높아집니다
-                    </div>
-                  </div>
-
                   <div className="discovery-actions">
                     <button
                       className="sign-btn"
@@ -424,6 +420,119 @@ export default function Scout() {
           )}
         </div>
       </div>
+
+      {/* 계약 협상 모달 */}
+      {contractModal.show && contractModal.discovery && (
+        <div className="contract-modal-overlay" onClick={() => setContractModal({ show: false, discovery: null, negotiating: false })}>
+          <div className="contract-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>계약 협상</h2>
+              <button className="close-btn" onClick={() => setContractModal({ show: false, discovery: null, negotiating: false })}>×</button>
+            </div>
+
+            <div className="modal-player-info">
+              {contractModal.discovery.face_image ? (
+                <img src={contractModal.discovery.face_image} alt={contractModal.discovery.name} className="modal-player-face" />
+              ) : (
+                <div className="modal-player-face-placeholder">
+                  {contractModal.discovery.name.charAt(0)}
+                </div>
+              )}
+              <div className="modal-player-details">
+                <h3>{contractModal.discovery.name}</h3>
+                <span
+                  className="position-badge"
+                  style={{ backgroundColor: getPositionColor(contractModal.discovery.position) }}
+                >
+                  {contractModal.discovery.position}
+                </span>
+                <span className="modal-overall">OVR {contractModal.discovery.overall}</span>
+              </div>
+            </div>
+
+            <div className="modal-stats-grid">
+              <div className="modal-stat">
+                <span>멘탈</span>
+                <span>{contractModal.discovery.mental}</span>
+              </div>
+              <div className="modal-stat">
+                <span>팀파이트</span>
+                <span>{contractModal.discovery.teamfight}</span>
+              </div>
+              <div className="modal-stat">
+                <span>집중력</span>
+                <span>{contractModal.discovery.focus}</span>
+              </div>
+              <div className="modal-stat">
+                <span>라인전</span>
+                <span>{contractModal.discovery.laning}</span>
+              </div>
+            </div>
+
+            {contractModal.dialogue && (
+              <div className="modal-dialogue">
+                <p>"{contractModal.dialogue}"</p>
+              </div>
+            )}
+
+            {contractModal.counterOffer && (
+              <div className="modal-counter-offer">
+                <span>선수 요구 금액:</span>
+                <span className="counter-amount">{contractModal.counterOffer.toLocaleString()}원</span>
+              </div>
+            )}
+
+            <div className="modal-offer-section">
+              <div className="offer-label">
+                <span>제안 금액</span>
+                <span className="min-amount">
+                  (최소 {formatCost(getMinOfferAmount(contractModal.discovery.overall))})
+                </span>
+              </div>
+              <div className="offer-input-container">
+                <input
+                  type="text"
+                  className="offer-input"
+                  value={getOfferAmount(contractModal.discovery).toLocaleString()}
+                  onChange={(e) => handleOfferChange(contractModal.discovery!.id, e.target.value)}
+                  placeholder="제안 금액 입력"
+                />
+                <span className="currency">원</span>
+              </div>
+              <div className="offer-range">
+                <input
+                  type="range"
+                  min={getMinOfferAmount(contractModal.discovery.overall)}
+                  max={getDefaultOfferAmount(contractModal.discovery.overall) * 3}
+                  step={10000}
+                  value={getOfferAmount(contractModal.discovery)}
+                  onChange={(e) => handleOfferChange(contractModal.discovery!.id, e.target.value)}
+                  className="offer-slider"
+                />
+              </div>
+              <div className="offer-hint">
+                높은 금액일수록 계약 성공 확률이 높아집니다
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                className="modal-sign-btn"
+                onClick={submitOffer}
+                disabled={contractModal.negotiating}
+              >
+                {contractModal.negotiating ? '협상 중...' : '제안하기'}
+              </button>
+              <button
+                className="modal-cancel-btn"
+                onClick={() => setContractModal({ show: false, discovery: null, negotiating: false })}
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
