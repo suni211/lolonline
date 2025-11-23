@@ -417,6 +417,13 @@ export async function initializeDatabase() {
         // 이미 존재하면 무시
       }
       console.log('Cup tournaments table created/verified');
+
+      // leagues 테이블에 trophy_image 컬럼 추가
+      try {
+        await pool.query(`ALTER TABLE leagues ADD COLUMN trophy_image VARCHAR(500)`);
+      } catch (e) {
+        // 이미 존재하면 무시
+      }
     } catch (error: any) {
       if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
         console.error('Error creating cup_tournaments table:', error);

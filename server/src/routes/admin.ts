@@ -74,6 +74,35 @@ const trophyUpload = multer({
   }
 });
 
+// 리그 트로피 이미지 업로드 설정
+const leagueTrophyStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(__dirname, '..', '..', 'uploads', 'trophies');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const leagueId = (req as any).params.leagueId;
+    const ext = path.extname(file.originalname);
+    cb(null, `league_${leagueId}${ext}`);
+  }
+});
+
+const leagueTrophyUpload = multer({
+  storage: leagueTrophyStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('이미지 파일만 업로드 가능합니다'));
+    }
+  }
+});
+
 // 어드민 인증 미들웨어
 const adminMiddleware = async (req: AuthRequest, res: any, next: any) => {
   try {
@@ -917,6 +946,64 @@ router.delete('/cup/:cupId/trophy', authenticateToken, adminMiddleware, async (r
   } catch (error: any) {
     console.error('Delete trophy image error:', error);
     res.status(500).json({ error: '트로피 이미지 삭제 실패' });
+  }
+});
+
+// 리그 트로피 이미지 업로드
+router.post('/league/:leagueId/trophy', authenticateToken, adminMiddleware, leagueTrophyUpload.single('image'), async (req: AuthRequest, res) => {
+  try {
+    const leagueId = parseInt(req.params.leagueId);
+
+    if (!req.file) {
+      return res.status(400).json({ error: '이미지 파일이 필요합니다' });
+    }
+
+    // 기존 이미지 삭제
+    const existing = await pool.query('SELECT trophy_image FROM leagues WHERE id = ?', [leagueId]);
+    if (existing.length > 0 && existing[0].trophy_image) {
+      const oldPath = path.join(__dirname, '..', '..', existing[0].trophy_image.replace('/uploads/', 'uploads/'));
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
+    }
+
+    // 이미지 경로 저장
+    const imagePath = `/uploads/trophies/${req.file.filename}`;
+    await pool.query('UPDATE leagues SET trophy_image = ? WHERE id = ?', [imagePath, leagueId]);
+
+    res.json({
+      success: true,
+      message: '리그 트로피 이미지가 업로드되었습니다',
+      trophy_image: imagePath
+    });
+  } catch (error: any) {
+    console.error('Upload league trophy image error:', error);
+    res.status(500).json({ error: '리그 트로피 이미지 업로드 실패' });
+  }
+});
+
+// 리그 트로피 이미지 삭제
+router.delete('/league/:leagueId/trophy', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const leagueId = parseInt(req.params.leagueId);
+
+    const existing = await pool.query('SELECT trophy_image FROM leagues WHERE id = ?', [leagueId]);
+    if (existing.length > 0 && existing[0].trophy_image) {
+      const filePath = path.join(__dirname, '..', '..', existing[0].trophy_image.replace('/uploads/', 'uploads/'));
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    await pool.query('UPDATE leagues SET trophy_image = NULL WHERE id = ?', [leagueId]);
+
+    res.json({
+      success: true,
+      message: '리그 트로피 이미지가 삭제되었습니다'
+    });
+  } catch (error: any) {
+    console.error('Delete league trophy image error:', error);
+    res.status(500).json({ error: '리그 트로피 이미지 삭제 실패' });
   }
 });
 

@@ -10,6 +10,7 @@ interface League {
   status: string;
   team_count?: number;
   current_month?: number;
+  trophy_image?: string | null;
 }
 
 interface LPOStatus {
@@ -68,6 +69,7 @@ export default function Admin() {
   const [cupSeason, setCupSeason] = useState<number>(1);
   const [cups, setCups] = useState<CupTournament[]>([]);
   const [uploadingCupId, setUploadingCupId] = useState<number | null>(null);
+  const [uploadingLeagueId, setUploadingLeagueId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -288,6 +290,36 @@ export default function Admin() {
     }
   };
 
+  const handleLeagueTrophyUpload = async (leagueId: number, file: File) => {
+    try {
+      setUploadingLeagueId(leagueId);
+      const formData = new FormData();
+      formData.append('image', file);
+
+      await axios.post(`/api/admin/league/${leagueId}/trophy`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      setMessage('리그 트로피 이미지 업로드 완료');
+      fetchData();
+    } catch (error: any) {
+      setMessage(error.response?.data?.error || '리그 트로피 이미지 업로드 실패');
+    } finally {
+      setUploadingLeagueId(null);
+    }
+  };
+
+  const deleteLeagueTrophy = async (leagueId: number) => {
+    if (!confirm('리그 트로피 이미지를 삭제하시겠습니까?')) return;
+    try {
+      await axios.delete(`/api/admin/league/${leagueId}/trophy`);
+      setMessage('리그 트로피 이미지 삭제 완료');
+      fetchData();
+    } catch (error: any) {
+      setMessage(error.response?.data?.error || '리그 트로피 이미지 삭제 실패');
+    }
+  };
+
   return (
     <div className="admin-page">
       <h1>어드민 관리</h1>
@@ -421,6 +453,48 @@ export default function Admin() {
                       </label>
                       {cup.trophy_image && (
                         <button onClick={() => deleteTrophy(cup.id)} className="danger">
+                          삭제
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {leagues.filter(l => l.name.includes('LPO')).length > 0 && (
+            <div className="trophy-management-section league-trophy">
+              <h3>리그 트로피 이미지 관리</h3>
+              <div className="cups-trophy-grid">
+                {leagues.filter(l => l.name.includes('LPO')).map(league => (
+                  <div key={league.id} className="cup-trophy-card">
+                    <div className="cup-trophy-image">
+                      {league.trophy_image ? (
+                        <img src={league.trophy_image} alt="Trophy" />
+                      ) : (
+                        <div className="no-trophy">이미지 없음</div>
+                      )}
+                    </div>
+                    <div className="cup-trophy-info">
+                      <div className="cup-name">{league.name}</div>
+                      <div className="cup-status">시즌 {league.season}</div>
+                    </div>
+                    <div className="cup-trophy-actions">
+                      <label className="upload-btn">
+                        {uploadingLeagueId === league.id ? '업로드 중...' : '트로피 선택'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleLeagueTrophyUpload(league.id, file);
+                          }}
+                          disabled={uploadingLeagueId === league.id}
+                        />
+                      </label>
+                      {league.trophy_image && (
+                        <button onClick={() => deleteLeagueTrophy(league.id)} className="danger">
                           삭제
                         </button>
                       )}

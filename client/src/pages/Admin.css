@@ -483,6 +483,15 @@
   font-size: 1rem;
 }
 
+.trophy-management-section.league-trophy {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: #10b981;
+}
+
+.trophy-management-section.league-trophy h3 {
+  color: #10b981;
+}
+
 .cups-trophy-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
