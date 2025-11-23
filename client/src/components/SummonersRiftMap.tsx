@@ -55,18 +55,18 @@ const MAP_POSITIONS = {
 // 포지션별 기본 위치 (게임 시작 시)
 const SPAWN_POSITIONS = {
   blue: {
-    TOP: { x: 14, y: 35 },
-    JGL: { x: 30, y: 60 },
-    MID: { x: 30, y: 70 },
-    ADC: { x: 40, y: 85 },
-    SUP: { x: 35, y: 82 }
+    TOP: { x: 8.1, y: 92.7 },
+    JGL: { x: 8.1, y: 92.7 },
+    MID: { x: 8.1, y: 92.7 },
+    ADC: { x: 8.1, y: 92.7 },
+    SUP: { x: 8.1, y: 92.7 }
   },
   red: {
-    TOP: { x: 86, y: 65 },
-    JGL: { x: 70, y: 40 },
-    MID: { x: 70, y: 30 },
-    ADC: { x: 60, y: 15 },
-    SUP: { x: 65, y: 18 }
+    TOP: { x: 92, y: 7.7 },
+    JGL: { x: 92, y: 7.7 },
+    MID: { x: 92, y: 7.7 },
+    ADC: { x: 92, y: 7.7 },
+    SUP: { x: 92, y: 7.7 }
   }
 };
 
