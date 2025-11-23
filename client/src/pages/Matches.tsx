@@ -148,32 +148,6 @@ export default function Matches() {
     }
   };
 
-  const watchMatch = async (matchId: number) => {
-    try {
-      const response = await axios.get(`/api/matches/${matchId}`);
-      setSelectedMatch(response.data.match);
-      setMatchEvents(response.data.events || []);
-      setMatchStats(response.data.stats || []);
-      setGameTime(0);
-      setShowStats(response.data.match.status === 'FINISHED');
-
-      // 내 팀 경기인지 확인 및 전술 로드
-      try {
-        const tacticsRes = await axios.get('/api/tactics');
-        if (tacticsRes.data.teamTactics) {
-          setAggressionLevel(tacticsRes.data.teamTactics.aggression_level || 'NORMAL');
-          // 경기에 내 팀이 참여하는지 확인
-          const myTeamId = tacticsRes.data.teamTactics.team_id;
-          const match = response.data.match;
-          setIsMyMatch(match.home_team_id === myTeamId || match.away_team_id === myTeamId);
-        }
-      } catch {
-        setIsMyMatch(false);
-      }
-    } catch (error) {
-      console.error('Failed to fetch match details:', error);
-    }
-  };
 
   const changeAggression = async (level: string) => {
     if (!selectedMatch || selectedMatch.status !== 'LIVE') return;
