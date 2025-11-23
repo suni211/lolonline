@@ -375,7 +375,18 @@ async function simulateMatchProgress(match: any, io: Server) {
       matchData.elder_available = true;
     }
 
-    // === 이벤트 발생 (매우 빈번하게) ===
+    // === 양팀 골드 증가 ===
+    // 1. 패시브 수입: 분당 약 100골드 (10초당 약 17골드)
+    const passiveGold = Math.floor(100 / 6);
+    matchData.home.gold += passiveGold;
+    matchData.away.gold += passiveGold;
+
+    // 2. CS 골드: 5명 * 분당 8CS * CS당 20골드 = 분당 800골드 (10초당 약 133골드)
+    const csGoldPerTeam = Math.floor(800 / 6);
+    matchData.home.gold += csGoldPerTeam;
+    matchData.away.gold += csGoldPerTeam;
+
+    // === 이벤트 발생 ===
     const events = await generateEvents(match, matchData, homePlayers, awayPlayers, homeWinChance, gameTime, io);
 
     // === 선수 통계 업데이트 ===
@@ -588,13 +599,18 @@ async function generateEvents(
       break;
 
     case 'TEAMFIGHT':
-      const killCount = 2 + Math.floor(Math.random() * 4); // 2-5킬
-      event = createEvent(gameTime, 'TEAMFIGHT', `한타에서 ${winningTeam === 'home' ? '블루팀' : '레드팀'}이 ${killCount}킬을 올렸습니다!`, {
+      // 이기는 팀이 더 많은 킬을 얻지만, 지는 팀도 킬을 얻음
+      const winnerKills = 2 + Math.floor(Math.random() * 3); // 2-4킬
+      const loserKills = Math.floor(Math.random() * 3); // 0-2킬
+      event = createEvent(gameTime, 'TEAMFIGHT', `한타! ${winningTeam === 'home' ? '블루팀' : '레드팀'} ${winnerKills}킬 vs ${winningTeam === 'home' ? '레드팀' : '블루팀'} ${loserKills}킬`, {
         team: winningTeam,
-        kills: killCount
+        winner_kills: winnerKills,
+        loser_kills: loserKills
       });
-      winningState.kills += killCount;
-      winningState.gold += killCount * 300;
+      winningState.kills += winnerKills;
+      winningState.gold += winnerKills * 300;
+      losingState.kills += loserKills;
+      losingState.gold += loserKills * 300;
       break;
 
     case 'GANK':
