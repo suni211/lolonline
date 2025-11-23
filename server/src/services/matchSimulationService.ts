@@ -131,40 +131,76 @@ async function processScheduledMatches(io: Server) {
 
 async function startMatch(match: any, io: Server) {
   try {
-    // 팀 선수 정보 가져오기 (스타터 체크) - 포지션별 1명만 선택
-    const homePlayers = await pool.query(
-      `SELECT pc.id, pp.name, pp.team, pp.position, pp.league, pp.nationality,
-              pc.mental, pc.teamfight, pc.focus, pc.laning, pc.ovr
-       FROM player_cards pc
-       JOIN pro_players pp ON pc.pro_player_id = pp.id
-       WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true
-         AND pc.id = (
-           SELECT pc2.id FROM player_cards pc2
-           JOIN pro_players pp2 ON pc2.pro_player_id = pp2.id
-           WHERE pc2.team_id = pc.team_id AND pp2.position = pp.position
-             AND pc2.is_starter = true AND pc2.is_contracted = true
-           ORDER BY pc2.ovr DESC LIMIT 1
-         )
-       ORDER BY FIELD(pp.position, 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
-      [match.home_team_id]
-    );
+    // 팀이 AI인지 확인 (user_id가 NULL이면 AI 팀)
+    const homeTeamInfo = await pool.query('SELECT user_id FROM teams WHERE id = ?', [match.home_team_id]);
+    const awayTeamInfo = await pool.query('SELECT user_id FROM teams WHERE id = ?', [match.away_team_id]);
 
-    const awayPlayers = await pool.query(
-      `SELECT pc.id, pp.name, pp.team, pp.position, pp.league, pp.nationality,
-              pc.mental, pc.teamfight, pc.focus, pc.laning, pc.ovr
-       FROM player_cards pc
-       JOIN pro_players pp ON pc.pro_player_id = pp.id
-       WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true
-         AND pc.id = (
-           SELECT pc2.id FROM player_cards pc2
-           JOIN pro_players pp2 ON pc2.pro_player_id = pp2.id
-           WHERE pc2.team_id = pc.team_id AND pp2.position = pp.position
-             AND pc2.is_starter = true AND pc2.is_contracted = true
-           ORDER BY pc2.ovr DESC LIMIT 1
-         )
-       ORDER BY FIELD(pp.position, 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
-      [match.away_team_id]
-    );
+    const isHomeAI = !homeTeamInfo[0]?.user_id;
+    const isAwayAI = !awayTeamInfo[0]?.user_id;
+
+    // 홈팀 선수 가져오기
+    let homePlayers;
+    if (isHomeAI) {
+      // AI 팀: 포지션별 OVR 가장 높은 선수 1명씩 (총 5명)
+      homePlayers = await pool.query(
+        `SELECT pc.id, pp.name, pp.team, pp.position, pp.league, pp.nationality,
+                pc.mental, pc.teamfight, pc.focus, pc.laning, pc.ovr
+         FROM player_cards pc
+         JOIN pro_players pp ON pc.pro_player_id = pp.id
+         WHERE pc.team_id = ? AND pc.is_contracted = true
+           AND pc.id = (
+             SELECT pc2.id FROM player_cards pc2
+             JOIN pro_players pp2 ON pc2.pro_player_id = pp2.id
+             WHERE pc2.team_id = ? AND pp2.position = pp.position AND pc2.is_contracted = true
+             ORDER BY pc2.ovr DESC LIMIT 1
+           )
+         ORDER BY FIELD(pp.position, 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
+        [match.home_team_id, match.home_team_id]
+      );
+    } else {
+      // 유저 팀: is_starter = true인 선수만
+      homePlayers = await pool.query(
+        `SELECT pc.id, pp.name, pp.team, pp.position, pp.league, pp.nationality,
+                pc.mental, pc.teamfight, pc.focus, pc.laning, pc.ovr
+         FROM player_cards pc
+         JOIN pro_players pp ON pc.pro_player_id = pp.id
+         WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true
+         ORDER BY FIELD(pp.position, 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
+        [match.home_team_id]
+      );
+    }
+
+    // 어웨이팀 선수 가져오기
+    let awayPlayers;
+    if (isAwayAI) {
+      // AI 팀: 포지션별 OVR 가장 높은 선수 1명씩 (총 5명)
+      awayPlayers = await pool.query(
+        `SELECT pc.id, pp.name, pp.team, pp.position, pp.league, pp.nationality,
+                pc.mental, pc.teamfight, pc.focus, pc.laning, pc.ovr
+         FROM player_cards pc
+         JOIN pro_players pp ON pc.pro_player_id = pp.id
+         WHERE pc.team_id = ? AND pc.is_contracted = true
+           AND pc.id = (
+             SELECT pc2.id FROM player_cards pc2
+             JOIN pro_players pp2 ON pc2.pro_player_id = pp2.id
+             WHERE pc2.team_id = ? AND pp2.position = pp.position AND pc2.is_contracted = true
+             ORDER BY pc2.ovr DESC LIMIT 1
+           )
+         ORDER BY FIELD(pp.position, 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
+        [match.away_team_id, match.away_team_id]
+      );
+    } else {
+      // 유저 팀: is_starter = true인 선수만
+      awayPlayers = await pool.query(
+        `SELECT pc.id, pp.name, pp.team, pp.position, pp.league, pp.nationality,
+                pc.mental, pc.teamfight, pc.focus, pc.laning, pc.ovr
+         FROM player_cards pc
+         JOIN pro_players pp ON pc.pro_player_id = pp.id
+         WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true
+         ORDER BY FIELD(pp.position, 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
+        [match.away_team_id]
+      );
+    }
 
     // 스타터 5명 체크 - 기권패 처리
     const homeStarterCount = homePlayers.length;
@@ -222,8 +258,8 @@ async function startMatch(match: any, io: Server) {
       nexus: { twin1: true, twin2: true, nexus: true }
     };
 
-    // 경기 시간 15~90분 랜덤 (초 단위)
-    const maxGameTime = (15 + Math.floor(Math.random() * 76)) * 60;
+    // 경기 시간 20~45분 랜덤 (초 단위)
+    const maxGameTime = (20 + Math.floor(Math.random() * 26)) * 60;
 
     // 세트 설정: 플레이오프는 5판3선, 그 외는 3판2선
     const isPlayoff = match.match_type === 'PLAYOFF';
@@ -499,9 +535,9 @@ async function generateEvents(
   const gameMinutes = Math.floor(gameTime / 60);
 
   // 현실적인 이벤트 발생 확률
-  // 30분 = 180번 호출, 목표: 킬 20-25개, 타워 8-10개
-  // 킬: 180 * 확률 * 킬비중 = 25 -> 확률 약 15-20%
-  if (Math.random() > 0.15) return events;
+  // 30분 = 180번 호출, 목표: 킬 5-20개, 포탑 빠르게 파괴
+  // 이벤트 확률 20%로 증가
+  if (Math.random() > 0.20) return events;
 
   // 승리 팀 결정
   const winningTeam = Math.random() < homeWinChance ? 'home' : 'away';
@@ -512,19 +548,19 @@ async function generateEvents(
 
   if (winningPlayers.length === 0 || losingPlayers.length === 0) return events;
 
-  // 이벤트 타입 선택 (현실적 가중치)
+  // 이벤트 타입 선택 (킬 줄이고 포탑/오브젝트 중심)
   const eventPool: string[] = [];
 
-  // 시간대별 이벤트 (킬은 시간에 따라 증가)
+  // 시간대별 이벤트 (킬 적게, 포탑 많이)
   if (gameMinutes < 10) {
-    // 초반: 킬 적음
-    eventPool.push('KILL', 'NOTHING', 'NOTHING');
+    // 초반: 킬 적음, 포탑 시작
+    eventPool.push('KILL', 'TURRET', 'NOTHING', 'NOTHING');
   } else if (gameMinutes < 20) {
-    // 중반: 킬 증가, 팀파이트 시작
-    eventPool.push('KILL', 'KILL', 'TEAMFIGHT', 'NOTHING');
+    // 중반: 포탑 집중, 킬 적당
+    eventPool.push('KILL', 'TURRET', 'TURRET', 'INHIBITOR', 'NOTHING');
   } else {
-    // 후반: 킬 빈번, 팀파이트 다수
-    eventPool.push('KILL', 'KILL', 'KILL', 'TEAMFIGHT', 'TEAMFIGHT');
+    // 후반: 억제기/넥서스 집중
+    eventPool.push('KILL', 'TURRET', 'INHIBITOR', 'INHIBITOR', 'TEAMFIGHT');
   }
 
   // 오브젝트 이벤트
@@ -650,8 +686,8 @@ async function generateEvents(
 
     case 'TEAMFIGHT':
       // 이기는 팀이 더 많은 킬을 얻지만, 지는 팀도 킬을 얻음
-      const winnerKills = 2 + Math.floor(Math.random() * 3); // 2-4킬
-      const loserKills = Math.floor(Math.random() * 3); // 0-2킬
+      const winnerKills = 1 + Math.floor(Math.random() * 3); // 1-3킬
+      const loserKills = Math.floor(Math.random() * 2); // 0-1킬
       event = createEvent(gameTime, 'TEAMFIGHT', `한타! ${winningTeam === 'home' ? '블루팀' : '레드팀'} ${winnerKills}킬 vs ${winningTeam === 'home' ? '레드팀' : '블루팀'} ${loserKills}킬`, {
         team: winningTeam,
         winner_kills: winnerKills,
@@ -696,7 +732,7 @@ async function generateEvents(
   const allInhibsDown = !losingState.turrets.top.inhib && !losingState.turrets.mid.inhib && !losingState.turrets.bot.inhib;
 
   if (allInhibsDown && (enemyNexusTurrets.twin1 || enemyNexusTurrets.twin2)) {
-    if (Math.random() < 0.3) {
+    if (Math.random() < 0.5) {  // 50% 확률로 증가
       if (enemyNexusTurrets.twin1) {
         enemyNexusTurrets.twin1 = false;
         event = createEvent(gameTime, 'NEXUS_TURRET', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 쌍둥이 타워를 파괴했습니다!`, {
@@ -713,7 +749,7 @@ async function generateEvents(
 
   // 넥서스 공격 (쌍둥이 타워가 모두 파괴된 경우)
   if (!enemyNexusTurrets.twin1 && !enemyNexusTurrets.twin2 && enemyNexusTurrets.nexus) {
-    if (Math.random() < 0.4) {
+    if (Math.random() < 0.6) {  // 60% 확률로 증가
       enemyNexusTurrets.nexus = false;
       event = createEvent(gameTime, 'NEXUS_DESTROYED', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 넥서스를 파괴했습니다! 게임 종료!`, {
         team: winningTeam
