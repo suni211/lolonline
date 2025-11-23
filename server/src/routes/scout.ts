@@ -41,15 +41,15 @@ const getScouterStarProbability = (cost: number): number[] => {
   }
 };
 
-// 스카우터 등급에 따른 선수 오버롤 범위
+// 스카우터 등급에 따른 선수 오버롤 범위 (현재 선수 오버롤 40~100 기준)
 const getOverallRangeByStarRating = (starRating: number): { min: number; max: number } => {
   switch (starRating) {
-    case 5: return { min: 200, max: 320 };  // 5성: 최상급 선수
-    case 4: return { min: 160, max: 260 };  // 4성: 상급 선수
-    case 3: return { min: 120, max: 200 };  // 3성: 중급 선수
-    case 2: return { min: 80, max: 160 };   // 2성: 하급 선수
-    case 1: return { min: 40, max: 120 };   // 1성: 최하급 선수
-    default: return { min: 40, max: 120 };
+    case 5: return { min: 80, max: 120 };   // 5성: 최상급 선수
+    case 4: return { min: 60, max: 100 };   // 4성: 상급 선수
+    case 3: return { min: 45, max: 80 };    // 3성: 중급 선수
+    case 2: return { min: 30, max: 60 };    // 2성: 하급 선수
+    case 1: return { min: 20, max: 45 };    // 1성: 최하급 선수
+    default: return { min: 20, max: 45 };
   }
 };
 
