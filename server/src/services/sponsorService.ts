@@ -8,10 +8,7 @@ const SPECIAL_SPONSORS = [
   { name: 'LG전자', prefix: 'LG', gold: 75000000, diamond: 75 },
   { name: '네이버', prefix: 'NAVER', gold: 70000000, diamond: 70 },
   { name: '카카오', prefix: 'KAKAO', gold: 65000000, diamond: 65 },
-  { name: '라이엇 게임즈', prefix: 'RIOT', gold: 120000000, diamond: 150 },
-  { name: 'Gen.G', prefix: 'GENG', gold: 50000000, diamond: 50 },
-  { name: 'T1', prefix: 'T1', gold: 55000000, diamond: 55 },
-  { name: 'DAMWON Gaming', prefix: 'DK', gold: 60000000, diamond: 60 }
+  { name: '라이엇 게임즈', prefix: 'RIOT', gold: 120000000, diamond: 150 }
 ];
 
 export class SponsorService {
