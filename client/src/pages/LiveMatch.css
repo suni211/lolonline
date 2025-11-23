@@ -145,6 +145,56 @@
   margin-bottom: 15px;
 }
 
+.main-content.with-map {
+  grid-template-columns: 200px 1fr 200px;
+}
+
+/* 맵 컨테이너 */
+.map-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.recent-event-overlay {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  padding: 8px 16px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  animation: fadeInUp 0.3s ease;
+  max-width: 90%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-event-overlay .event-icon {
+  font-size: 1rem;
+}
+
+.recent-event-overlay .event-desc {
+  color: #e0e0e0;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 /* 팀 통계 */
 .team-stats {
   background: #1e1e2e;
@@ -361,6 +411,18 @@
 @media (max-width: 1024px) {
   .main-content {
     grid-template-columns: 1fr;
+  }
+
+  .main-content.with-map {
+    grid-template-columns: 1fr;
+  }
+
+  .map-container {
+    order: -1;
+  }
+
+  .team-stats {
+    display: none;
   }
 
   .scoreboard {

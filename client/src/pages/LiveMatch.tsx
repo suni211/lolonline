@@ -3,6 +3,12 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
 import './LiveMatch.css';
+import SummonersRiftMap, {
+  ChampionPosition,
+  ObjectiveState,
+  Highlight,
+  SPAWN_POSITIONS
+} from '../components/SummonersRiftMap';
 
 interface TurretState {
   top: { t1: boolean; t2: boolean; t3: boolean; inhib: boolean };
@@ -71,6 +77,17 @@ export default function LiveMatch() {
   const [homeSetWins, setHomeSetWins] = useState(0);
   const [awaySetWins, setAwaySetWins] = useState(0);
 
+  // 맵 관련 상태
+  const [champions, setChampions] = useState<ChampionPosition[]>([]);
+  const [objectives, setObjectives] = useState<ObjectiveState>({
+    dragon: { alive: true, type: 'INFERNAL' },
+    baron: { alive: true },
+    herald: { alive: true, taken: false },
+    voidgrub: { alive: true, count: 6 },
+    atakhan: { alive: false }
+  });
+  const [currentHighlight, setCurrentHighlight] = useState<Highlight | null>(null);
+
   useEffect(() => {
     fetchMatchData();
 
@@ -100,6 +117,7 @@ export default function LiveMatch() {
     // 이벤트 수신
     socket.on('match_event', (event) => {
       setEvents(prev => [...prev.slice(-50), event]); // 최근 50개만 유지
+      detectHighlight(event);
     });
 
     // 경기 종료
@@ -193,6 +211,15 @@ export default function LiveMatch() {
       }
 
       setIsLive(res.data.match.status === 'LIVE');
+
+      // 챔피언 위치 초기화
+      if (res.data.stats && res.data.stats.length > 0) {
+        initializeChampionPositions(
+          res.data.stats,
+          res.data.match.home_team_name,
+          res.data.match.away_team_name
+        );
+      }
     } catch (error) {
       console.error('Failed to fetch match:', error);
     } finally {
@@ -221,6 +248,141 @@ export default function LiveMatch() {
     }
     return gold.toString();
   };
+
+  // 챔피언 위치 초기화
+  const initializeChampionPositions = (stats: PlayerStats[], homeName: string, awayName: string) => {
+    const positions: ChampionPosition[] = stats.map(player => {
+      const isHome = player.team_name === homeName;
+      const team = isHome ? 'blue' : 'red';
+      const pos = player.position as keyof typeof SPAWN_POSITIONS.blue;
+      const spawnPos = SPAWN_POSITIONS[team][pos] || { x: 50, y: 50 };
+
+      return {
+        playerId: player.id,
+        playerName: player.player_name,
+        position: player.position,
+        team,
+        x: spawnPos.x,
+        y: spawnPos.y,
+        isAlive: true
+      };
+    });
+    setChampions(positions);
+  };
+
+  // 이벤트에서 하이라이트 감지
+  const detectHighlight = (event: MatchEvent) => {
+    let highlight: Highlight | null = null;
+
+    switch (event.type) {
+      case 'KILL':
+        // 킬 위치 추정 (킬러의 현재 위치)
+        const killer = champions.find(c => c.playerName === event.data?.killer);
+        if (killer) {
+          highlight = {
+            type: 'kill',
+            x: killer.x,
+            y: killer.y,
+            description: `${event.data?.killer} → ${event.data?.victim}`
+          };
+          // 죽은 챔피언 표시
+          setChampions(prev => prev.map(c =>
+            c.playerName === event.data?.victim ? { ...c, isAlive: false } : c
+          ));
+          // 일정 시간 후 부활
+          setTimeout(() => {
+            setChampions(prev => prev.map(c =>
+              c.playerName === event.data?.victim ? { ...c, isAlive: true } : c
+            ));
+          }, 5000);
+        }
+        break;
+
+      case 'TEAMFIGHT':
+        highlight = {
+          type: 'teamfight',
+          x: 50,
+          y: 50,
+          description: 'TEAM FIGHT!'
+        };
+        break;
+
+      case 'DRAGON':
+        highlight = {
+          type: 'objective',
+          x: 72,
+          y: 68,
+          description: `${event.data?.team === 'home' ? '블루' : '레드'} 드래곤`
+        };
+        setObjectives(prev => ({ ...prev, dragon: { alive: false } }));
+        setTimeout(() => {
+          setObjectives(prev => ({
+            ...prev,
+            dragon: { alive: true, type: getNextDragonType() }
+          }));
+        }, 3000);
+        break;
+
+      case 'BARON':
+        highlight = {
+          type: 'objective',
+          x: 28,
+          y: 32,
+          description: `${event.data?.team === 'home' ? '블루' : '레드'} 바론`
+        };
+        setObjectives(prev => ({ ...prev, baron: { alive: false } }));
+        setTimeout(() => {
+          setObjectives(prev => ({ ...prev, baron: { alive: true } }));
+        }, 3000);
+        break;
+
+      case 'HERALD':
+        setObjectives(prev => ({ ...prev, herald: { alive: false, taken: true } }));
+        break;
+
+      case 'NEXUS_DESTROYED':
+        highlight = {
+          type: 'ace',
+          x: event.data?.team === 'away' ? 12 : 88,
+          y: event.data?.team === 'away' ? 88 : 12,
+          description: 'VICTORY!'
+        };
+        break;
+    }
+
+    if (highlight) {
+      setCurrentHighlight(highlight);
+      setTimeout(() => setCurrentHighlight(null), 2000);
+    }
+  };
+
+  const getNextDragonType = () => {
+    const types = ['INFERNAL', 'OCEAN', 'CLOUD', 'MOUNTAIN', 'HEXTECH', 'CHEMTECH'];
+    return types[Math.floor(Math.random() * types.length)];
+  };
+
+  // 챔피언 위치 업데이트 (시간에 따라 자연스럽게 이동)
+  useEffect(() => {
+    if (!isLive || champions.length === 0) return;
+
+    const interval = setInterval(() => {
+      setChampions(prev => prev.map(champ => {
+        if (!champ.isAlive) return champ;
+
+        // 랜덤하게 약간씩 이동 (라인 근처에서)
+        const dx = (Math.random() - 0.5) * 3;
+        const dy = (Math.random() - 0.5) * 3;
+
+        return {
+          ...champ,
+          x: Math.max(5, Math.min(95, champ.x + dx)),
+          y: Math.max(5, Math.min(95, champ.y + dy))
+        };
+      }));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isLive, champions.length]);
 
   const getEventIcon = (type: string) => {
     switch (type) {
@@ -335,7 +497,7 @@ export default function LiveMatch() {
         </div>
       )}
 
-      <div className="main-content">
+      <div className="main-content with-map">
         {/* 왼쪽: 홈팀 선수 통계 */}
         <div className="team-stats home">
           <h3>{match.home_team_name}</h3>
@@ -349,30 +511,37 @@ export default function LiveMatch() {
                 {player.kills}/{player.deaths}/{player.assists}
               </div>
               <div className="cs">{player.cs} CS</div>
-              <div className="damage">{(player.damage_dealt / 1000).toFixed(1)}k</div>
             </div>
           ))}
-          {homeState && renderTurrets(homeState.turrets, 'home')}
         </div>
 
-        {/* 중앙: 이벤트 로그 */}
-        <div className="event-log" ref={eventLogRef}>
-          <h3>경기 진행</h3>
-          <div className="events-list">
-            {events.length === 0 ? (
-              <div className="no-events">
-                {isLive ? '경기 시작 대기 중...' : '이벤트가 없습니다'}
-              </div>
-            ) : (
-              events.map((event, idx) => (
-                <div key={idx} className={`event ${event.data?.team || 'neutral'}`}>
-                  <span className="event-icon">{getEventIcon(event.type)}</span>
-                  <span className="event-time">[{formatTime(event.time)}]</span>
-                  <span className="event-desc">{event.description}</span>
-                </div>
-              ))
-            )}
-          </div>
+        {/* 중앙: 맵 */}
+        <div className="map-container">
+          <SummonersRiftMap
+            champions={champions}
+            objectives={objectives}
+            blueTurrets={homeState?.turrets || {
+              top: { t1: true, t2: true, t3: true, inhib: true },
+              mid: { t1: true, t2: true, t3: true, inhib: true },
+              bot: { t1: true, t2: true, t3: true, inhib: true },
+              nexus: { twin1: true, twin2: true, nexus: true }
+            }}
+            redTurrets={awayState?.turrets || {
+              top: { t1: true, t2: true, t3: true, inhib: true },
+              mid: { t1: true, t2: true, t3: true, inhib: true },
+              bot: { t1: true, t2: true, t3: true, inhib: true },
+              nexus: { twin1: true, twin2: true, nexus: true }
+            }}
+            currentHighlight={currentHighlight}
+            gameTime={gameTime}
+          />
+          {/* 최근 이벤트 오버레이 */}
+          {events.length > 0 && (
+            <div className="recent-event-overlay">
+              <span className="event-icon">{getEventIcon(events[events.length - 1].type)}</span>
+              <span className="event-desc">{events[events.length - 1].description}</span>
+            </div>
+          )}
         </div>
 
         {/* 오른쪽: 어웨이팀 선수 통계 */}
@@ -388,10 +557,8 @@ export default function LiveMatch() {
                 {player.kills}/{player.deaths}/{player.assists}
               </div>
               <div className="cs">{player.cs} CS</div>
-              <div className="damage">{(player.damage_dealt / 1000).toFixed(1)}k</div>
             </div>
           ))}
-          {awayState && renderTurrets(awayState.turrets, 'away')}
         </div>
       </div>
 
