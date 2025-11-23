@@ -53,6 +53,34 @@ const getOverallRangeByStarRating = (starRating: number): { min: number; max: nu
   }
 };
 
+// 오늘 남은 발굴 횟수 조회
+router.get('/daily-limit', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const todayDiscoveries = await pool.query(
+      `SELECT COUNT(*) as count FROM scouter_discoveries
+       WHERE team_id = ? AND discovered_at >= ? AND discovered_at < ?`,
+      [req.teamId, today, tomorrow]
+    );
+
+    const used = todayDiscoveries[0].count;
+    const remaining = Math.max(0, 5 - used);
+
+    res.json({
+      daily_limit: 5,
+      used: used,
+      remaining: remaining
+    });
+  } catch (error: any) {
+    console.error('Get daily limit error:', error);
+    res.status(500).json({ error: '일일 제한 조회에 실패했습니다' });
+  }
+});
+
 // 팀의 스카우터 목록 조회
 router.get('/scouters', authenticateToken, async (req: AuthRequest, res) => {
   try {
@@ -167,6 +195,22 @@ router.delete('/scouters/:scouterId', authenticateToken, async (req: AuthRequest
 router.post('/scouters/:scouterId/discover', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const scouterId = parseInt(req.params.scouterId);
+
+    // 오늘 발굴 횟수 체크 (하루 5회 제한)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const todayDiscoveries = await pool.query(
+      `SELECT COUNT(*) as count FROM scouter_discoveries
+       WHERE team_id = ? AND discovered_at >= ? AND discovered_at < ?`,
+      [req.teamId, today, tomorrow]
+    );
+
+    if (todayDiscoveries[0].count >= 5) {
+      return res.status(400).json({ error: '오늘 발굴 횟수를 모두 사용했습니다 (일일 5회 제한)' });
+    }
 
     // 스카우터 정보 조회
     const scouters = await pool.query(

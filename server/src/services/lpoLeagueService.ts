@@ -286,8 +286,8 @@ export class LPOLeagueService {
       matches.push(...cycle4);
 
       // 경기 일정 생성
-      // 한국 시간 기준으로 일~금 17:00~23:59 사이에 경기
-      // 토요일은 스토브리그 (경기 없음)
+      // 한국 시간 기준으로 월~토 17:00~23:30 사이에 경기
+      // 일요일은 스토브리그 (경기 없음)
 
       const MATCH_INTERVAL_MS = 30 * 60 * 1000; // 30분 간격
 
@@ -319,9 +319,10 @@ export class LPOLeagueService {
           const kstTime = new Date(result.getTime() + kstOffset);
           const dayOfWeek = kstTime.getUTCDay(); // 0=일, 6=토
           const hours = kstTime.getUTCHours();
+          const minutes = kstTime.getUTCMinutes();
 
-          // 토요일이면 다음 일요일 17:00 KST로
-          if (dayOfWeek === 6) {
+          // 일요일이면 다음 월요일 17:00 KST로 (스토브리그)
+          if (dayOfWeek === 0) {
             // 다음 날로 이동
             const nextDay = new Date(result.getTime() + 24 * 60 * 60 * 1000);
             nextDay.setUTCHours(8, 0, 0, 0);
@@ -337,8 +338,8 @@ export class LPOLeagueService {
             continue;
           }
 
-          // 24:00 KST (15:00 UTC) 이후면 다음 날 17:00 KST로
-          if (hours >= 15) {
+          // 23:30 KST (14:30 UTC) 이후면 다음 날 17:00 KST로
+          if (hours > 14 || (hours === 14 && minutes > 30)) {
             const nextDay = new Date(result.getTime() + 24 * 60 * 60 * 1000);
             nextDay.setUTCHours(8, 0, 0, 0);
             result = nextDay;

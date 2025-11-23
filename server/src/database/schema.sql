@@ -628,3 +628,85 @@ CREATE TABLE IF NOT EXISTS match_tactic_changes (
     INDEX idx_match_team (match_id, team_id)
 );
 
+-- 컵 토너먼트 테이블
+CREATE TABLE IF NOT EXISTS cup_tournaments (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    season INT NOT NULL,
+    status ENUM('UPCOMING', 'ROUND_32', 'ROUND_16', 'QUARTER', 'SEMI', 'FINAL', 'COMPLETED') DEFAULT 'UPCOMING',
+    prize_pool BIGINT DEFAULT 100000000,
+    winner_team_id INT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (winner_team_id) REFERENCES teams(id) ON DELETE SET NULL,
+    INDEX idx_cup_season (season)
+);
+
+-- 컵 경기 테이블
+CREATE TABLE IF NOT EXISTS cup_matches (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    cup_id INT NOT NULL,
+    round ENUM('ROUND_32', 'ROUND_16', 'QUARTER', 'SEMI', 'FINAL') NOT NULL,
+    match_number INT NOT NULL,
+    home_team_id INT NOT NULL,
+    away_team_id INT NOT NULL,
+    home_score INT DEFAULT 0,
+    away_score INT DEFAULT 0,
+    winner_team_id INT,
+    scheduled_at DATETIME NOT NULL,
+    status ENUM('SCHEDULED', 'IN_PROGRESS', 'COMPLETED') DEFAULT 'SCHEDULED',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (cup_id) REFERENCES cup_tournaments(id) ON DELETE CASCADE,
+    FOREIGN KEY (home_team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (away_team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (winner_team_id) REFERENCES teams(id) ON DELETE SET NULL,
+    INDEX idx_cup_round (cup_id, round),
+    INDEX idx_cup_schedule (scheduled_at)
+);
+
+-- 플레이오프 테이블
+CREATE TABLE IF NOT EXISTS playoffs (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    league_id INT NOT NULL,
+    season INT NOT NULL,
+    status ENUM('UPCOMING', 'QUARTER', 'SEMI', 'FINAL', 'COMPLETED') DEFAULT 'UPCOMING',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (league_id) REFERENCES leagues(id) ON DELETE CASCADE,
+    INDEX idx_playoff_league (league_id, season)
+);
+
+-- 플레이오프 경기 테이블
+CREATE TABLE IF NOT EXISTS playoff_matches (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    playoff_id INT NOT NULL,
+    round ENUM('QUARTER', 'SEMI', 'FINAL') NOT NULL,
+    match_number INT NOT NULL,
+    home_team_id INT NOT NULL,
+    away_team_id INT NOT NULL,
+    home_score INT DEFAULT 0,
+    away_score INT DEFAULT 0,
+    winner_team_id INT,
+    scheduled_at DATETIME NOT NULL,
+    status ENUM('SCHEDULED', 'IN_PROGRESS', 'COMPLETED') DEFAULT 'SCHEDULED',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (playoff_id) REFERENCES playoffs(id) ON DELETE CASCADE,
+    FOREIGN KEY (home_team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (away_team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (winner_team_id) REFERENCES teams(id) ON DELETE SET NULL,
+    INDEX idx_playoff_round (playoff_id, round)
+);
+
+-- 스페셜 스폰서 테이블 (0.001% 확률, 1시간마다 갱신)
+CREATE TABLE IF NOT EXISTS special_sponsors (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    team_id INT NOT NULL,
+    sponsor_name VARCHAR(100) NOT NULL,
+    bonus_gold BIGINT NOT NULL,
+    bonus_diamond INT DEFAULT 0,
+    expires_at DATETIME NOT NULL,
+    claimed BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    INDEX idx_sponsor_team (team_id),
+    INDEX idx_sponsor_expires (expires_at)
+);
+

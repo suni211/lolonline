@@ -7,6 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import LPOLeagueService from '../services/lpoLeagueService.js';
+import SponsorService from '../services/sponsorService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -467,6 +468,44 @@ router.post('/facilities/upgrade', authenticateToken, async (req: AuthRequest, r
   } catch (error: any) {
     console.error('Upgrade facility error:', error);
     res.status(500).json({ error: 'Failed to upgrade facility' });
+  }
+});
+
+// 스페셜 스폰서 조회
+router.get('/special-sponsor', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const sponsor = await SponsorService.getActiveSpecialSponsor(req.teamId!);
+    res.json({ sponsor });
+  } catch (error: any) {
+    console.error('Get special sponsor error:', error);
+    res.status(500).json({ error: '스페셜 스폰서 조회에 실패했습니다' });
+  }
+});
+
+// 스페셜 스폰서 수령
+router.post('/special-sponsor/:sponsorId/claim', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const sponsorId = parseInt(req.params.sponsorId);
+    const result = await SponsorService.claimSpecialSponsor(req.teamId!, sponsorId);
+    res.json({
+      success: true,
+      message: `${result.sponsor_name} 스폰서 계약 완료!`,
+      ...result
+    });
+  } catch (error: any) {
+    console.error('Claim special sponsor error:', error);
+    res.status(500).json({ error: error.message || '스페셜 스폰서 수령에 실패했습니다' });
+  }
+});
+
+// 스페셜 스폰서 확률 체크 (1시간마다 호출용)
+router.post('/check-special-sponsor', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const spawned = await SponsorService.checkSpecialSponsor(req.teamId!);
+    res.json({ spawned });
+  } catch (error: any) {
+    console.error('Check special sponsor error:', error);
+    res.status(500).json({ error: '스페셜 스폰서 체크에 실패했습니다' });
   }
 });
 
