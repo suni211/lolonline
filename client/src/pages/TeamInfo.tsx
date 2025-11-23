@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import './TeamInfo.css';
 
@@ -57,34 +57,99 @@ interface TeamDetail {
   leagueStats: LeagueStats | null;
 }
 
+type SortType = 'fan_count' | 'gold' | 'avg_overall' | 'name';
+type SortOrder = 'asc' | 'desc';
+
 export default function TeamInfo() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Team[]>([]);
+  const [allTeams, setAllTeams] = useState<Team[]>([]);
+  const [filteredTeams, setFilteredTeams] = useState<Team[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<TeamDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      setError('검색어를 입력해주세요');
-      return;
-    }
+  // 필터/정렬 상태
+  const [sortBy, setSortBy] = useState<SortType>('fan_count');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [leagueFilter, setLeagueFilter] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAI, setShowAI] = useState(true);
 
+  useEffect(() => {
+    fetchAllTeams();
+  }, []);
+
+  useEffect(() => {
+    applyFiltersAndSort();
+  }, [allTeams, sortBy, sortOrder, leagueFilter, searchQuery, showAI]);
+
+  const fetchAllTeams = async () => {
     setLoading(true);
-    setError('');
-    setSelectedTeam(null);
-
     try {
-      const response = await axios.get(`/api/teams/search?q=${encodeURIComponent(searchQuery)}`);
-      setSearchResults(response.data);
-      if (response.data.length === 0) {
-        setError('검색 결과가 없습니다');
-      }
+      const response = await axios.get('/api/teams/all');
+      setAllTeams(response.data);
     } catch (err: any) {
-      setError(err.response?.data?.error || '검색 중 오류가 발생했습니다');
+      setError(err.response?.data?.error || '팀 목록을 불러오는데 실패했습니다');
     } finally {
       setLoading(false);
     }
+  };
+
+  const applyFiltersAndSort = () => {
+    let teams = [...allTeams];
+
+    // AI 팀 필터
+    if (!showAI) {
+      teams = teams.filter(team => !team.is_ai);
+    }
+
+    // 리그 필터
+    if (leagueFilter) {
+      teams = teams.filter(team => team.league === leagueFilter);
+    }
+
+    // 검색 필터
+    if (searchQuery) {
+      teams = teams.filter(team =>
+        team.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // 정렬
+    teams.sort((a, b) => {
+      let compareA: number | string = 0;
+      let compareB: number | string = 0;
+
+      switch (sortBy) {
+        case 'fan_count':
+          compareA = a.fan_count || 0;
+          compareB = b.fan_count || 0;
+          break;
+        case 'gold':
+          compareA = a.gold || 0;
+          compareB = b.gold || 0;
+          break;
+        case 'avg_overall':
+          compareA = a.avg_overall || 0;
+          compareB = b.avg_overall || 0;
+          break;
+        case 'name':
+          compareA = a.name;
+          compareB = b.name;
+          break;
+      }
+
+      if (typeof compareA === 'string') {
+        return sortOrder === 'asc'
+          ? compareA.localeCompare(compareB as string)
+          : (compareB as string).localeCompare(compareA);
+      }
+
+      return sortOrder === 'asc'
+        ? (compareA as number) - (compareB as number)
+        : (compareB as number) - (compareA as number);
+    });
+
+    setFilteredTeams(teams);
   };
 
   const handleSelectTeam = async (teamId: number) => {
@@ -105,7 +170,7 @@ export default function TeamInfo() {
     if (gold >= 100000000) {
       return `${(gold / 100000000).toFixed(1)}억`;
     } else if (gold >= 10000) {
-      return `${(gold / 10000).toFixed(1)}만`;
+      return `${(gold / 10000).toFixed(0)}만`;
     }
     return gold.toLocaleString();
   };
@@ -115,74 +180,120 @@ export default function TeamInfo() {
     return order[position] || 6;
   };
 
+  const toggleSortOrder = () => {
+    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+  };
+
   return (
     <div className="team-info-page">
       <h1>팀 정보</h1>
 
-      <div className="search-section">
-        <div className="search-box">
-          <input
-            type="text"
-            placeholder="팀 이름으로 검색..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-          />
-          <button onClick={handleSearch} disabled={loading}>
-            {loading ? '검색중...' : '검색'}
-          </button>
-        </div>
-        {error && <div className="error-message">{error}</div>}
-      </div>
-
-      {searchResults.length > 0 && !selectedTeam && (
-        <div className="search-results">
-          <h2>검색 결과</h2>
-          <div className="team-list">
-            {searchResults.map((team) => (
-              <div
-                key={team.id}
-                className="team-card"
-                onClick={() => handleSelectTeam(team.id)}
-              >
-                <div className="team-header">
-                  {team.logo_url ? (
-                    <img src={team.logo_url} alt={team.name} className="team-logo" />
-                  ) : (
-                    <div className="team-logo-placeholder" style={{ backgroundColor: team.team_color }}>
-                      {team.name.charAt(0)}
-                    </div>
-                  )}
-                  <div className="team-name-section">
-                    <h3>{team.name}</h3>
-                    <span className={`league-badge ${team.league?.toLowerCase()}`}>{team.league}</span>
-                    {team.is_ai && <span className="ai-badge">AI</span>}
-                  </div>
-                </div>
-                <div className="team-quick-stats">
-                  <div className="stat">
-                    <span className="label">팬</span>
-                    <span className="value">{team.fan_count?.toLocaleString() || 0}</span>
-                  </div>
-                  <div className="stat">
-                    <span className="label">선수</span>
-                    <span className="value">{team.starter_count}/{team.player_count}</span>
-                  </div>
-                  <div className="stat">
-                    <span className="label">평균 OVR</span>
-                    <span className="value">{Math.round(team.avg_overall || 0)}</span>
-                  </div>
-                </div>
+      {!selectedTeam && (
+        <>
+          <div className="filter-section">
+            <div className="filter-row">
+              <div className="filter-group">
+                <label>정렬</label>
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortType)}>
+                  <option value="fan_count">팬 수</option>
+                  <option value="gold">자금</option>
+                  <option value="avg_overall">평균 OVR</option>
+                  <option value="name">이름</option>
+                </select>
+                <button className="sort-order-btn" onClick={toggleSortOrder}>
+                  {sortOrder === 'desc' ? '↓' : '↑'}
+                </button>
               </div>
-            ))}
+
+              <div className="filter-group">
+                <label>리그</label>
+                <select value={leagueFilter} onChange={(e) => setLeagueFilter(e.target.value)}>
+                  <option value="">전체</option>
+                  <option value="SUPER">SUPER</option>
+                  <option value="FIRST">FIRST</option>
+                  <option value="SECOND">SECOND</option>
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={showAI}
+                    onChange={(e) => setShowAI(e.target.checked)}
+                  />
+                  AI 팀 표시
+                </label>
+              </div>
+
+              <div className="filter-group search-group">
+                <input
+                  type="text"
+                  placeholder="팀 이름 검색..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
           </div>
-        </div>
+
+          {error && <div className="error-message">{error}</div>}
+
+          {loading ? (
+            <div className="loading">로딩 중...</div>
+          ) : (
+            <div className="team-list">
+              <div className="team-count">총 {filteredTeams.length}개 팀</div>
+              {filteredTeams.map((team, index) => (
+                <div
+                  key={team.id}
+                  className="team-card"
+                  onClick={() => handleSelectTeam(team.id)}
+                >
+                  <div className="team-rank">{index + 1}</div>
+                  <div className="team-header">
+                    {team.logo_url ? (
+                      <img src={team.logo_url} alt={team.name} className="team-logo" />
+                    ) : (
+                      <div className="team-logo-placeholder" style={{ backgroundColor: team.team_color }}>
+                        {team.name.charAt(0)}
+                      </div>
+                    )}
+                    <div className="team-name-section">
+                      <h3>{team.name}</h3>
+                      <span className={`league-badge ${team.league?.toLowerCase()}`}>{team.league}</span>
+                      {team.is_ai && <span className="ai-badge">AI</span>}
+                    </div>
+                  </div>
+                  <div className="team-quick-stats">
+                    <div className="stat">
+                      <span className="label">팬</span>
+                      <span className="value">{(team.fan_count || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="stat">
+                      <span className="label">자금</span>
+                      <span className="value">{formatGold(team.gold || 0)}</span>
+                    </div>
+                    <div className="stat">
+                      <span className="label">선수</span>
+                      <span className="value">{team.starter_count}/{team.player_count}</span>
+                    </div>
+                    <div className="stat">
+                      <span className="label">평균 OVR</span>
+                      <span className="value">{Math.round(team.avg_overall || 0)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {selectedTeam && (
         <div className="team-detail">
           <button className="back-btn" onClick={() => setSelectedTeam(null)}>
-            ← 검색 결과로
+            ← 목록으로
           </button>
 
           <div className="detail-header">

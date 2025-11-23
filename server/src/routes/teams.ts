@@ -42,6 +42,25 @@ const uploadLogo = multer({
   }
 });
 
+// 전체 팀 목록 조회
+router.get('/all', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const teams = await pool.query(
+      `SELECT t.id, t.name, t.league, t.logo_url, t.team_color, t.fan_count, t.gold, t.is_ai,
+              (SELECT COUNT(*) FROM player_cards pc WHERE pc.team_id = t.id AND pc.is_contracted = true) as player_count,
+              (SELECT COUNT(*) FROM player_cards pc WHERE pc.team_id = t.id AND pc.is_starter = true AND pc.is_contracted = true) as starter_count,
+              (SELECT COALESCE(AVG(pc.ovr), 0) FROM player_cards pc WHERE pc.team_id = t.id AND pc.is_starter = true AND pc.is_contracted = true) as avg_overall
+       FROM teams t
+       ORDER BY t.fan_count DESC`
+    );
+
+    res.json(teams);
+  } catch (error: any) {
+    console.error('Get all teams error:', error);
+    res.status(500).json({ error: '팀 목록 조회 실패' });
+  }
+});
+
 // 팀 검색
 router.get('/search', authenticateToken, async (req: AuthRequest, res) => {
   try {
