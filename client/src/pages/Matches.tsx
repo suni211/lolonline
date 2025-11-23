@@ -234,7 +234,7 @@ export default function Matches() {
           {filteredMatches.map((match) => (
             <div
               key={match.id}
-              className={`match-item ${match.status.toLowerCase()} ${selectedMatch?.id === match.id ? 'selected' : ''}`}
+              className={`match-item ${match.status?.toLowerCase() || ''} ${selectedMatch?.id === match.id ? 'selected' : ''}`}
               onClick={() => watchMatch(match.id)}
             >
               <div className="match-teams">
@@ -321,7 +321,7 @@ export default function Matches() {
                 <h3>경기 이벤트</h3>
                 <div className="events-list">
                   {matchEvents.map((event, idx) => (
-                    <div key={idx} className={`event-item ${event.type.toLowerCase()}`}>
+                    <div key={idx} className={`event-item ${event.type?.toLowerCase() || ''}`}>
                       <span className="event-time">{formatTime(event.time)}</span>
                       <span className="event-description">
                         {event.data?.killer_name && (

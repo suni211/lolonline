@@ -148,15 +148,16 @@
 }
 
 .player-stat-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto;
-  gap: 10px;
-  padding: 8px;
-  border-radius: 4px;
-  margin-bottom: 5px;
-  background: #252535;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  font-size: 0.85rem;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  background: #252535;
+  font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 .player-stat-row:hover {
