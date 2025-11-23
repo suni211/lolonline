@@ -471,7 +471,10 @@ router.post('/discoveries/:discoveryId/sign', authenticateToken, async (req: Aut
 
     // 발굴 기록 조회
     const discoveries = await pool.query(
-      `SELECT sd.*, pp.*, pp.base_ovr as overall
+      `SELECT sd.id, sd.scouter_id, sd.team_id, sd.pro_player_id, sd.scouter_name,
+              sd.scouter_star, sd.personality, sd.mental, sd.teamfight, sd.focus,
+              sd.laning, sd.signed, sd.discovered_at,
+              pp.name, pp.position, pp.nationality, pp.face_image, pp.base_ovr as overall
        FROM scouter_discoveries sd
        INNER JOIN pro_players pp ON sd.pro_player_id = pp.id
        WHERE sd.id = ? AND sd.team_id = ? AND sd.signed = false`,
