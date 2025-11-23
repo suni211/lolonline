@@ -291,31 +291,37 @@ export class LPOLeagueService {
 
       const MATCH_INTERVAL_MS = 30 * 60 * 1000; // 30분 간격
 
-      // 다음 유효한 경기 시간 찾기
+      // 다음 유효한 경기 시간 찾기 (한국 시간 기준)
       const getNextValidMatchTime = (date: Date): Date => {
         const result = new Date(date);
 
         while (true) {
-          const dayOfWeek = result.getDay(); // 0=일, 6=토
-          const hours = result.getHours();
+          // 한국 시간으로 변환 (UTC+9)
+          const kstOffset = 9 * 60 * 60 * 1000;
+          const kstTime = new Date(result.getTime() + kstOffset);
+          const dayOfWeek = kstTime.getUTCDay(); // 0=일, 6=토
+          const hours = kstTime.getUTCHours();
 
-          // 토요일이면 다음 일요일 17:00으로
+          // 토요일이면 다음 일요일 17:00 KST로
           if (dayOfWeek === 6) {
-            result.setDate(result.getDate() + 1);
-            result.setHours(17, 0, 0, 0);
+            result.setTime(result.getTime() + 24 * 60 * 60 * 1000); // +1일
+            // 17:00 KST = 08:00 UTC
+            const nextDay = new Date(result);
+            nextDay.setUTCHours(8, 0, 0, 0);
+            result.setTime(nextDay.getTime());
             continue;
           }
 
-          // 17:00 이전이면 17:00으로
-          if (hours < 17) {
-            result.setHours(17, 0, 0, 0);
+          // 17:00 KST (08:00 UTC) 이전이면 17:00 KST로
+          if (hours < 8) {
+            result.setUTCHours(8, 0, 0, 0);
             continue;
           }
 
-          // 자정 이후면 다음 날 17:00으로
-          if (hours >= 24) {
-            result.setDate(result.getDate() + 1);
-            result.setHours(17, 0, 0, 0);
+          // 24:00 KST (15:00 UTC) 이후면 다음 날 17:00 KST로
+          if (hours >= 15) {
+            result.setTime(result.getTime() + 24 * 60 * 60 * 1000); // +1일
+            result.setUTCHours(8, 0, 0, 0);
             continue;
           }
 
