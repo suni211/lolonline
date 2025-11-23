@@ -146,7 +146,7 @@ router.get('/:teamId/info', authenticateToken, async (req: AuthRequest, res) => 
       `SELECT lp.wins, lp.losses, lp.draws, lp.points, l.name as league_name
        FROM league_participants lp
        INNER JOIN leagues l ON lp.league_id = l.id
-       WHERE lp.team_id = ? AND l.status = 'IN_PROGRESS'
+       WHERE lp.team_id = ? AND l.status IN ('REGULAR', 'PLAYOFF')
        LIMIT 1`,
       [teamId]
     );
@@ -168,9 +168,9 @@ router.get('/:teamId/info', authenticateToken, async (req: AuthRequest, res) => 
 router.get('/', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const teams = await pool.query(
-      `SELECT t.*, 
-              (SELECT COUNT(*) FROM player_ownership po WHERE po.team_id = t.id) as player_count,
-              (SELECT COUNT(*) FROM player_ownership po WHERE po.team_id = t.id AND po.is_starter = true) as starter_count
+      `SELECT t.*,
+              (SELECT COUNT(*) FROM player_cards pc WHERE pc.team_id = t.id AND pc.is_contracted = true) as player_count,
+              (SELECT COUNT(*) FROM player_cards pc WHERE pc.team_id = t.id AND pc.is_starter = true AND pc.is_contracted = true) as starter_count
        FROM teams t WHERE id = ?`,
       [req.teamId]
     );

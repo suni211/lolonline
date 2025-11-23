@@ -85,6 +85,9 @@ app.use('/api/cup', cupRoutes);
 // 경기별 접속자 관리
 const matchViewers: Map<number, Map<string, string>> = new Map();
 
+// 전역 채팅 접속자 관리
+const globalChatViewers: Map<string, string> = new Map();
+
 // Socket.IO 연결
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
@@ -158,6 +161,55 @@ io.on('connection', (socket) => {
     });
   });
 
+  // 전역 채팅 참가
+  socket.on('join_global_chat', (data: { username: string }) => {
+    const { username } = data;
+    socket.join('global_chat');
+    globalChatViewers.set(socket.id, username);
+
+    const viewers = Array.from(globalChatViewers.values());
+    io.to('global_chat').emit('global_viewers_update', viewers);
+
+    io.to('global_chat').emit('global_chat_message', {
+      type: 'system',
+      username: 'System',
+      message: `${username}님이 입장했습니다.`,
+      timestamp: Date.now()
+    });
+  });
+
+  // 전역 채팅 퇴장
+  socket.on('leave_global_chat', () => {
+    const username = globalChatViewers.get(socket.id);
+    if (username) {
+      globalChatViewers.delete(socket.id);
+      socket.leave('global_chat');
+
+      const viewers = Array.from(globalChatViewers.values());
+      io.to('global_chat').emit('global_viewers_update', viewers);
+
+      io.to('global_chat').emit('global_chat_message', {
+        type: 'system',
+        username: 'System',
+        message: `${username}님이 퇴장했습니다.`,
+        timestamp: Date.now()
+      });
+    }
+  });
+
+  // 전역 채팅 메시지
+  socket.on('send_global_chat', (data: { message: string }) => {
+    const username = globalChatViewers.get(socket.id);
+    if (!username) return;
+
+    io.to('global_chat').emit('global_chat_message', {
+      type: 'user',
+      username,
+      message: data.message,
+      timestamp: Date.now()
+    });
+  });
+
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
 
@@ -179,6 +231,23 @@ io.on('connection', (socket) => {
         }
       }
     });
+
+    // 전역 채팅에서 제거
+    if (globalChatViewers.has(socket.id)) {
+      const username = globalChatViewers.get(socket.id);
+      globalChatViewers.delete(socket.id);
+
+      if (username) {
+        const viewers = Array.from(globalChatViewers.values());
+        io.to('global_chat').emit('global_viewers_update', viewers);
+        io.to('global_chat').emit('global_chat_message', {
+          type: 'system',
+          username: 'System',
+          message: `${username}님이 퇴장했습니다.`,
+          timestamp: Date.now()
+        });
+      }
+    }
   });
 });
 

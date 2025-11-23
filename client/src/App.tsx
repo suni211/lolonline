@@ -26,6 +26,7 @@ import TeamInfo from './pages/TeamInfo';
 import Scout from './pages/Scout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import GlobalChat from './components/GlobalChat';
 
 function App() {
   return (
@@ -45,7 +46,10 @@ function App() {
             path="/"
             element={
               <ProtectedRoute>
-                <Layout />
+                <>
+                  <Layout />
+                  <GlobalChat />
+                </>
               </ProtectedRoute>
             }
           >
