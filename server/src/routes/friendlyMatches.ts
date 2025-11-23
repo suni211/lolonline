@@ -114,10 +114,11 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
 
     // 생성된 경기 정보 조회
     const matches = await pool.query(
-      `SELECT m.*,
+      `SELECT m.id, m.home_team_id, m.away_team_id, m.home_score, m.away_score,
+              m.status, m.match_type, m.league_id,
+              DATE_FORMAT(m.scheduled_at, '%Y-%m-%d %H:%i:%s') as scheduled_at,
               ht.name as home_team_name, ht.logo_url as home_team_logo,
-              at.name as away_team_name, at.logo_url as away_team_logo,
-              DATE_FORMAT(m.scheduled_at, '%Y-%m-%d %H:%i:%s') as scheduled_at
+              at.name as away_team_name, at.logo_url as away_team_logo
        FROM matches m
        INNER JOIN teams ht ON m.home_team_id = ht.id
        INNER JOIN teams at ON m.away_team_id = at.id

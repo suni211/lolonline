@@ -406,6 +406,11 @@ async function createRandomEvent(match: any, gameTime: number) {
   const winningPlayers = winningTeam === 'home' ? homePlayers : awayPlayers;
   const losingPlayers = winningTeam === 'home' ? awayPlayers : homePlayers;
 
+  // 선수가 없으면 이벤트 생성 불가
+  if (winningPlayers.length === 0 || losingPlayers.length === 0) {
+    return null;
+  }
+
   let eventData: any = {
     team: winningTeam,
     description: descriptions
@@ -414,12 +419,20 @@ async function createRandomEvent(match: any, gameTime: number) {
   if (eventType === 'KILL') {
     const killer = winningPlayers[Math.floor(Math.random() * winningPlayers.length)];
     const victim = losingPlayers[Math.floor(Math.random() * losingPlayers.length)];
+
+    if (!killer || !victim) {
+      return null;
+    }
+
     const assistCount = Math.floor(Math.random() * 3); // 0-2명 어시스트
     const assistIds: number[] = [];
     for (let i = 0; i < assistCount && i < winningPlayers.length - 1; i++) {
-      const assistPlayer = winningPlayers.filter((p: any) => p.id !== killer.id)[Math.floor(Math.random() * (winningPlayers.length - 1))];
-      if (assistPlayer && !assistIds.includes(assistPlayer.id)) {
-        assistIds.push(assistPlayer.id);
+      const otherPlayers = winningPlayers.filter((p: any) => p.id !== killer.id);
+      if (otherPlayers.length > 0) {
+        const assistPlayer = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
+        if (assistPlayer && !assistIds.includes(assistPlayer.id)) {
+          assistIds.push(assistPlayer.id);
+        }
       }
     }
 
@@ -443,6 +456,9 @@ async function createRandomEvent(match: any, gameTime: number) {
     }
   } else if (eventType === 'TOWER') {
     const turretKiller = winningPlayers[Math.floor(Math.random() * winningPlayers.length)];
+    if (!turretKiller) {
+      return null;
+    }
     eventData.killer_id = turretKiller.id;
     eventData.killer_name = turretKiller.name;
     await pool.query(
