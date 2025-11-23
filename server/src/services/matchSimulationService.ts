@@ -356,8 +356,7 @@ async function simulateMatchProgress(match: any, io: Server) {
     // === 선수 통계 업데이트 ===
     await updatePlayerStatsLOL(match.id, homePlayers, awayPlayers, gameTime);
 
-    // === 경기 종료 조건 체크 ===
-    // 1. 넥서스 파괴
+    // === 경기 종료 조건 체크 (넥서스 파괴만) ===
     if (!matchData.home.turrets.nexus.nexus) {
       matchData.game_over = true;
       matchData.winner = 'away';
@@ -366,23 +365,6 @@ async function simulateMatchProgress(match: any, io: Server) {
       matchData.game_over = true;
       matchData.winner = 'home';
       matchData.home_score = 1;
-    }
-    // 2. 최대 시간 초과 시 킬/골드로 승자 결정
-    else if (gameTime >= matchData.max_game_time) {
-      matchData.game_over = true;
-      if (matchData.home.kills > matchData.away.kills) {
-        matchData.winner = 'home';
-        matchData.home_score = 1;
-      } else if (matchData.away.kills > matchData.home.kills) {
-        matchData.winner = 'away';
-        matchData.away_score = 1;
-      } else if (matchData.home.gold > matchData.away.gold) {
-        matchData.winner = 'home';
-        matchData.home_score = 1;
-      } else {
-        matchData.winner = 'away';
-        matchData.away_score = 1;
-      }
     }
 
     // 경기 종료 처리
