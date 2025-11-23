@@ -294,8 +294,14 @@ export class LPOLeagueService {
       // 다음 유효한 경기 시간 찾기 (한국 시간 기준)
       const getNextValidMatchTime = (date: Date): Date => {
         const result = new Date(date);
+        const now = new Date();
 
         while (true) {
+          // 과거 시간이면 현재 시간으로 조정
+          if (result.getTime() < now.getTime()) {
+            result.setTime(now.getTime());
+          }
+
           // 한국 시간으로 변환 (UTC+9)
           const kstOffset = 9 * 60 * 60 * 1000;
           const kstTime = new Date(result.getTime() + kstOffset);
