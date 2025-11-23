@@ -362,11 +362,6 @@ export default function LiveMatch() {
     }
   };
 
-  const getNextDragonType = () => {
-    const types = ['INFERNAL', 'OCEAN', 'CLOUD', 'MOUNTAIN', 'HEXTECH', 'CHEMTECH'];
-    return types[Math.floor(Math.random() * types.length)];
-  };
-
   // 포지션별 주요 활동 영역 정의
   const getLaneArea = (position: string, team: 'blue' | 'red') => {
     const areas = {
@@ -417,22 +412,6 @@ export default function LiveMatch() {
 
     return () => clearInterval(interval);
   }, [isLive, champions.length]);
-
-  const getEventIcon = (type: string) => {
-    switch (type) {
-      case 'KILL': return '⚔️';
-      case 'DRAGON': return '🐉';
-      case 'BARON': return '👿';
-      case 'HERALD': return '👁️';
-      case 'TURRET': return '🗼';
-      case 'INHIBITOR': return '💎';
-      case 'NEXUS_TURRET': return '🏰';
-      case 'NEXUS_DESTROYED': return '🏆';
-      case 'TEAMFIGHT': return '⚡';
-      case 'GANK': return '🎯';
-      default: return '📢';
-    }
-  };
 
   if (loading) {
     return <div className="live-match loading">로딩 중...</div>;
