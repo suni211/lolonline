@@ -667,12 +667,10 @@ router.post('/ai-teams/generate-cards', authenticateToken, adminMiddleware, asyn
 
         // 카드 생성
         await pool.query(
-          `INSERT INTO player_cards (team_id, pro_player_id, name, team, position, league, nationality,
-                                     mental, teamfight, focus, laning, ovr, card_type, is_contracted, is_starter)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'NORMAL', true, true)`,
+          `INSERT INTO player_cards (team_id, pro_player_id, mental, teamfight, focus, laning, ovr, card_type, is_contracted, is_starter)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'NORMAL', true, true)`,
           [
-            aiTeam.id, randomPlayer.id, randomPlayer.name, randomPlayer.team,
-            randomPlayer.position, randomPlayer.league, randomPlayer.nationality,
+            aiTeam.id, randomPlayer.id,
             randomPlayer.mental, randomPlayer.teamfight, randomPlayer.focus,
             randomPlayer.laning, randomPlayer.base_ovr
           ]
