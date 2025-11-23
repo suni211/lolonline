@@ -42,6 +42,7 @@ export default function Layout() {
     { path: '/matches', label: '경기' },
     { path: '/friendly', label: '친선전' },
     { path: '/leagues', label: '리그' },
+    { path: '/cup', label: '컵 대회' },
     { path: '/transfer', label: '이적시장' },
     { path: '/scout', label: '스카우트' },
     { path: '/team-info', label: '팀 정보' },

@@ -764,16 +764,12 @@ router.post('/players/adjust-stats', authenticateToken, adminMiddleware, async (
       return res.status(400).json({ error: '조정값을 입력해주세요' });
     }
 
-    // pro_players 테이블 스탯 조정
+    // pro_players 테이블 스탯 조정 (base_ovr만 있음)
     await pool.query(
       `UPDATE pro_players SET
-        mental = GREATEST(1, mental + ?),
-        teamfight = GREATEST(1, teamfight + ?),
-        focus = GREATEST(1, focus + ?),
-        laning = GREATEST(1, laning + ?),
-        base_ovr = GREATEST(4, base_ovr + ?)
+        base_ovr = GREATEST(1, base_ovr + ?)
        WHERE is_active = true`,
-      [adjustment, adjustment, adjustment, adjustment, adjustment * 4]
+      [adjustment]
     );
 
     // player_cards 테이블 스탯 조정
