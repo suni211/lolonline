@@ -13,11 +13,10 @@ const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
-// 로고 업로드 설정
+// 로고 업로드 설정 - server/uploads/logos에 영구 저장
 const logoStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // dist에서 실행되므로 상위로 3단계 올라가서 client/dist/logos로
-    const uploadPath = path.join(__dirname, '..', '..', '..', 'client', 'dist', 'logos');
+    const uploadPath = path.join(__dirname, '..', '..', 'uploads', 'logos');
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
@@ -255,14 +254,14 @@ router.post('/logo', authenticateToken, uploadLogo.single('logo'), async (req: A
     // 기존 로고 삭제
     const teams = await pool.query('SELECT logo_url FROM teams WHERE id = ?', [req.teamId]);
     if (teams.length > 0 && teams[0].logo_url) {
-      const oldPath = path.join(__dirname, '..', '..', '..', 'client', 'dist', teams[0].logo_url);
+      const oldPath = path.join(__dirname, '..', '..', teams[0].logo_url);
       if (fs.existsSync(oldPath)) {
         fs.unlinkSync(oldPath);
       }
     }
 
     // 새 로고 경로 저장
-    const logoPath = `/logos/${req.file.filename}`;
+    const logoPath = `/uploads/logos/${req.file.filename}`;
     await pool.query('UPDATE teams SET logo_url = ? WHERE id = ?', [logoPath, req.teamId]);
 
     res.json({

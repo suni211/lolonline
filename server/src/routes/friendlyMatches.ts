@@ -79,10 +79,10 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(404).json({ error: '상대 팀을 찾을 수 없습니다' });
     }
 
-    // 내 팀 스타터 확인
+    // 내 팀 스타터 확인 (player_cards 테이블 사용)
     const myStarters = await pool.query(
-      `SELECT COUNT(*) as count FROM player_ownership
-       WHERE team_id = ? AND is_starter = true`,
+      `SELECT COUNT(*) as count FROM player_cards
+       WHERE team_id = ? AND is_starter = true AND is_contracted = true`,
       [req.teamId]
     );
 
