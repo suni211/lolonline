@@ -544,17 +544,14 @@ router.get('/worlds/:tournamentId', authenticateToken, adminMiddleware, async (r
   }
 });
 
-// 전체 선수 목록 조회 (어드민용)
+// 전체 선수 목록 조회 (어드민용) - pro_players 테이블 사용
 router.get('/players', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
   try {
     const players = await pool.query(
-      `SELECT p.id, p.name, p.position, p.face_image,
-              (p.mental + p.teamfight + p.focus + p.laning) as overall,
-              t.name as team_name
-       FROM players p
-       LEFT JOIN player_ownership po ON p.id = po.player_id
-       LEFT JOIN teams t ON po.team_id = t.id
-       ORDER BY p.id`
+      `SELECT id, name, team as team_name, position, base_ovr as overall, face_image
+       FROM pro_players
+       WHERE is_active = true
+       ORDER BY league, team, position`
     );
     res.json(players);
   } catch (error) {
@@ -572,8 +569,8 @@ router.post('/players/:playerId/face', authenticateToken, adminMiddleware, uploa
       return res.status(400).json({ error: '이미지 파일이 필요합니다' });
     }
 
-    // 선수 존재 확인
-    const players = await pool.query('SELECT id FROM players WHERE id = ?', [playerId]);
+    // 선수 존재 확인 (pro_players 테이블)
+    const players = await pool.query('SELECT id FROM pro_players WHERE id = ?', [playerId]);
     if (players.length === 0) {
       // 업로드된 파일 삭제
       fs.unlinkSync(req.file.path);
@@ -584,7 +581,7 @@ router.post('/players/:playerId/face', authenticateToken, adminMiddleware, uploa
     const imagePath = `/players/${req.file.filename}`;
 
     await pool.query(
-      'UPDATE players SET face_image = ? WHERE id = ?',
+      'UPDATE pro_players SET face_image = ? WHERE id = ?',
       [imagePath, playerId]
     );
 
@@ -604,8 +601,8 @@ router.delete('/players/:playerId/face', authenticateToken, adminMiddleware, asy
   try {
     const playerId = parseInt(req.params.playerId);
 
-    // 현재 이미지 경로 조회
-    const players = await pool.query('SELECT face_image FROM players WHERE id = ?', [playerId]);
+    // 현재 이미지 경로 조회 (pro_players 테이블)
+    const players = await pool.query('SELECT face_image FROM pro_players WHERE id = ?', [playerId]);
     if (players.length === 0) {
       return res.status(404).json({ error: '선수를 찾을 수 없습니다' });
     }
@@ -619,7 +616,7 @@ router.delete('/players/:playerId/face', authenticateToken, adminMiddleware, asy
     }
 
     // DB에서 이미지 경로 제거
-    await pool.query('UPDATE players SET face_image = NULL WHERE id = ?', [playerId]);
+    await pool.query('UPDATE pro_players SET face_image = NULL WHERE id = ?', [playerId]);
 
     res.json({ success: true, message: '이미지가 삭제되었습니다' });
   } catch (error) {

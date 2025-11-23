@@ -250,8 +250,16 @@
 }
 
 .match-time {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+  color: #ffd700;
+  font-weight: 600;
+  background: rgba(255, 215, 0, 0.1);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
 }
 
 .match-time-info {
