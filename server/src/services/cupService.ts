@@ -108,8 +108,8 @@ export class CupService {
 
         // 23:30 KST (14:30 UTC) 넘으면 다음 수요일로
         const kstOffset = 9 * 60 * 60 * 1000;
-        const kstTime = new Date(matchTime.getTime() + kstOffset);
-        if (kstTime.getUTCHours() > 14 || (kstTime.getUTCHours() === 14 && kstTime.getUTCMinutes() > 30)) {
+        const kstCheckTime = new Date(matchTime.getTime() + kstOffset);
+        if (kstCheckTime.getUTCHours() > 14 || (kstCheckTime.getUTCHours() === 14 && kstCheckTime.getUTCMinutes() > 30)) {
           matchTime = this.getNextWednesday(matchTime);
           matchTime.setUTCHours(8, 0, 0, 0);
         }
