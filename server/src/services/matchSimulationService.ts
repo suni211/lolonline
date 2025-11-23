@@ -193,8 +193,15 @@ async function simulateMatchProgress(match: any, io: Server) {
     } else if (typeof match.match_data === 'string') {
       matchData = JSON.parse(match.match_data);
     } else {
-      matchData = match.match_data;
+      // 객체인 경우 깊은 복사로 새 객체 생성
+      matchData = JSON.parse(JSON.stringify(match.match_data));
     }
+
+    // 필드가 없으면 초기화
+    if (typeof matchData.game_time !== 'number') matchData.game_time = 0;
+    if (typeof matchData.home_score !== 'number') matchData.home_score = 0;
+    if (typeof matchData.away_score !== 'number') matchData.away_score = 0;
+    if (!Array.isArray(matchData.events)) matchData.events = [];
     
     matchData.game_time += 10; // 10초씩 진행
 
