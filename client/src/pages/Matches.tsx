@@ -66,6 +66,7 @@ export default function Matches() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [gameTime, setGameTime] = useState(0);
   const [filter, setFilter] = useState<'all' | 'scheduled' | 'live' | 'finished'>('all');
+  const [matchTypeFilter, setMatchTypeFilter] = useState<'all' | 'LEAGUE' | 'FRIENDLY'>('all');
   const [showStats, setShowStats] = useState(false);
   const [aggressionLevel, setAggressionLevel] = useState('NORMAL');
   const [isMyMatch, setIsMyMatch] = useState(false);
@@ -187,8 +188,11 @@ export default function Matches() {
   };
 
   const filteredMatches = matches.filter(m => {
-    if (filter === 'all') return true;
-    return m.status === filter.toUpperCase();
+    // 상태 필터
+    if (filter !== 'all' && m.status !== filter.toUpperCase()) return false;
+    // 경기 타입 필터
+    if (matchTypeFilter !== 'all' && m.match_type !== matchTypeFilter) return false;
+    return true;
   });
 
   const formatTime = (seconds: number) => {
@@ -202,30 +206,52 @@ export default function Matches() {
       <h1 className="page-title">경기</h1>
 
       <div className="match-filters">
-        <button
-          onClick={() => setFilter('all')}
-          className={filter === 'all' ? 'filter-active' : ''}
-        >
-          전체
-        </button>
-        <button
-          onClick={() => setFilter('scheduled')}
-          className={filter === 'scheduled' ? 'filter-active' : ''}
-        >
-          예정
-        </button>
-        <button
-          onClick={() => setFilter('live')}
-          className={filter === 'live' ? 'filter-active' : ''}
-        >
-          진행중
-        </button>
-        <button
-          onClick={() => setFilter('finished')}
-          className={filter === 'finished' ? 'filter-active' : ''}
-        >
-          종료
-        </button>
+        <div className="filter-group">
+          <button
+            onClick={() => setFilter('all')}
+            className={filter === 'all' ? 'filter-active' : ''}
+          >
+            전체
+          </button>
+          <button
+            onClick={() => setFilter('scheduled')}
+            className={filter === 'scheduled' ? 'filter-active' : ''}
+          >
+            예정
+          </button>
+          <button
+            onClick={() => setFilter('live')}
+            className={filter === 'live' ? 'filter-active' : ''}
+          >
+            진행중
+          </button>
+          <button
+            onClick={() => setFilter('finished')}
+            className={filter === 'finished' ? 'filter-active' : ''}
+          >
+            종료
+          </button>
+        </div>
+        <div className="filter-group">
+          <button
+            onClick={() => setMatchTypeFilter('all')}
+            className={matchTypeFilter === 'all' ? 'filter-active' : ''}
+          >
+            전체
+          </button>
+          <button
+            onClick={() => setMatchTypeFilter('LEAGUE')}
+            className={matchTypeFilter === 'LEAGUE' ? 'filter-active' : ''}
+          >
+            리그전
+          </button>
+          <button
+            onClick={() => setMatchTypeFilter('FRIENDLY')}
+            className={matchTypeFilter === 'FRIENDLY' ? 'filter-active' : ''}
+          >
+            친선전
+          </button>
+        </div>
       </div>
 
       <div className="matches-container">
@@ -369,35 +395,38 @@ export default function Matches() {
                       </thead>
                       <tbody>
                         {matchStats.map((stat, index) => {
-                          const kda = stat.deaths === 0 
-                            ? (stat.kills + stat.assists).toFixed(1)
-                            : ((stat.kills + stat.assists) / stat.deaths).toFixed(2);
+                          const kills = stat.kills || 0;
+                          const deaths = stat.deaths || 0;
+                          const assists = stat.assists || 0;
+                          const kda = deaths === 0
+                            ? (kills + assists).toFixed(1)
+                            : ((kills + assists) / deaths).toFixed(2);
                           const kdaValue = parseFloat(kda);
                           const kdaClass = kdaValue >= 3 ? 'kda-excellent' : kdaValue >= 2 ? 'kda-good' : kdaValue >= 1 ? 'kda-average' : 'kda-poor';
                           return (
-                            <tr 
-                              key={stat.id} 
+                            <tr
+                              key={stat.id}
                               className={`${stat.first_blood ? 'first-blood' : ''} stat-row-${index}`}
                               style={{ animationDelay: `${index * 0.05}s` }}
                             >
                               <td className="player-name">
-                                <span className="player-name-text">{stat.player_name}</span>
-                                <span className="team-name-badge">{stat.team_name}</span>
+                                <span className="player-name-text">{stat.player_name || '-'}</span>
+                                <span className="team-name-badge">{stat.team_name || '-'}</span>
                               </td>
                               <td className="position">
-                                <span className={`position-badge ${stat.position}`}>{stat.position}</span>
+                                <span className={`position-badge ${stat.position || ''}`}>{stat.position || '-'}</span>
                               </td>
-                              <td className="kills">{stat.kills}</td>
-                              <td className="deaths">{stat.deaths}</td>
-                              <td className="assists">{stat.assists}</td>
+                              <td className="kills">{kills}</td>
+                              <td className="deaths">{deaths}</td>
+                              <td className="assists">{assists}</td>
                               <td className={`kda ${kdaClass}`}>{kda}</td>
-                              <td className="cs">{stat.cs.toLocaleString()}</td>
-                              <td className="gold">{stat.gold_earned.toLocaleString()}</td>
-                              <td className="damage">{stat.damage_dealt.toLocaleString()}</td>
-                              <td className="damage-taken">{stat.damage_taken.toLocaleString()}</td>
-                              <td className="vision">{stat.vision_score}</td>
-                              <td className="wards">{stat.wards_placed}/{stat.wards_destroyed}</td>
-                              <td className="turrets">{stat.turret_kills}</td>
+                              <td className="cs">{(stat.cs || 0).toLocaleString()}</td>
+                              <td className="gold">{(stat.gold_earned || 0).toLocaleString()}</td>
+                              <td className="damage">{(stat.damage_dealt || 0).toLocaleString()}</td>
+                              <td className="damage-taken">{(stat.damage_taken || 0).toLocaleString()}</td>
+                              <td className="vision">{stat.vision_score || 0}</td>
+                              <td className="wards">{stat.wards_placed || 0}/{stat.wards_destroyed || 0}</td>
+                              <td className="turrets">{stat.turret_kills || 0}</td>
                               <td className="fb">{stat.first_blood ? '✓' : '-'}</td>
                             </tr>
                           );

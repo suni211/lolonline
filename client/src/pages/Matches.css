@@ -4,8 +4,14 @@
 
 .match-filters {
   display: flex;
-  gap: 1rem;
+  gap: 2rem;
   margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .match-filters button {
