@@ -537,6 +537,141 @@ export async function initializeDatabase() {
       }
     }
 
+    // player_cards에 잠재력, 계약기간, 부상 필드 추가
+    try {
+      await pool.query(`ALTER TABLE player_cards ADD COLUMN potential INT DEFAULT 50`);
+      console.log('Added potential column to player_cards');
+    } catch (error: any) {
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        console.error('Error adding potential column:', error);
+      }
+    }
+
+    try {
+      await pool.query(`ALTER TABLE player_cards ADD COLUMN contract_end_date DATETIME`);
+      console.log('Added contract_end_date column to player_cards');
+    } catch (error: any) {
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        console.error('Error adding contract_end_date column:', error);
+      }
+    }
+
+    try {
+      await pool.query(`ALTER TABLE player_cards ADD COLUMN injury_status ENUM('NONE', 'MINOR', 'MODERATE', 'SEVERE') DEFAULT 'NONE'`);
+      await pool.query(`ALTER TABLE player_cards ADD COLUMN injury_recovery_days INT DEFAULT 0`);
+      await pool.query(`ALTER TABLE player_cards ADD COLUMN injury_started_at DATETIME`);
+      console.log('Added injury columns to player_cards');
+    } catch (error: any) {
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        // 이미 존재하면 무시
+      }
+    }
+
+    // teams에 굿즈 판매 관련 필드 추가
+    try {
+      await pool.query(`ALTER TABLE teams ADD COLUMN merchandise_rate DECIMAL(3,2) DEFAULT 1.0`);
+      await pool.query(`ALTER TABLE teams ADD COLUMN merchandise_revenue BIGINT DEFAULT 0`);
+      console.log('Added merchandise columns to teams');
+    } catch (error: any) {
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        // 이미 존재하면 무시
+      }
+    }
+
+    // season_history 테이블 생성
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS season_history (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          season INT NOT NULL,
+          league_id INT NOT NULL,
+          team_id INT NOT NULL,
+          final_rank INT NOT NULL,
+          wins INT DEFAULT 0,
+          losses INT DEFAULT 0,
+          points INT DEFAULT 0,
+          prize_money BIGINT DEFAULT 0,
+          is_champion BOOLEAN DEFAULT FALSE,
+          is_playoff_winner BOOLEAN DEFAULT FALSE,
+          recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (league_id) REFERENCES leagues(id) ON DELETE CASCADE,
+          FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+          INDEX idx_season_team (season, team_id),
+          INDEX idx_season_league (season, league_id)
+        )
+      `);
+      console.log('Season history table created/verified');
+    } catch (error: any) {
+      if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
+        console.error('Error creating season_history table:', error);
+      }
+    }
+
+    // season_prizes 테이블 생성
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS season_prizes (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          league_type ENUM('SUPER', 'FIRST', 'SECOND') NOT NULL,
+          rank_position INT NOT NULL,
+          prize_gold BIGINT NOT NULL,
+          prize_diamond INT DEFAULT 0,
+          UNIQUE KEY unique_league_rank (league_type, rank_position)
+        )
+      `);
+
+      // 기본 상금 설정
+      const defaultPrizes = [
+        ['SUPER', 1, 500000000, 500], ['SUPER', 2, 300000000, 300], ['SUPER', 3, 200000000, 200],
+        ['SUPER', 4, 150000000, 100], ['SUPER', 5, 100000000, 50], ['SUPER', 6, 80000000, 30],
+        ['SUPER', 7, 60000000, 20], ['SUPER', 8, 50000000, 10],
+        ['FIRST', 1, 200000000, 200], ['FIRST', 2, 150000000, 150], ['FIRST', 3, 100000000, 100],
+        ['FIRST', 4, 80000000, 50], ['FIRST', 5, 60000000, 30], ['FIRST', 6, 50000000, 20],
+        ['FIRST', 7, 40000000, 10], ['FIRST', 8, 30000000, 5],
+        ['SECOND', 1, 100000000, 100], ['SECOND', 2, 80000000, 80], ['SECOND', 3, 60000000, 60],
+        ['SECOND', 4, 50000000, 30], ['SECOND', 5, 40000000, 20], ['SECOND', 6, 30000000, 10],
+        ['SECOND', 7, 20000000, 5], ['SECOND', 8, 10000000, 0]
+      ];
+
+      for (const prize of defaultPrizes) {
+        try {
+          await pool.query(
+            `INSERT IGNORE INTO season_prizes (league_type, rank_position, prize_gold, prize_diamond) VALUES (?, ?, ?, ?)`,
+            prize
+          );
+        } catch (e) {
+          // 이미 존재하면 무시
+        }
+      }
+      console.log('Season prizes table created/verified');
+    } catch (error: any) {
+      if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
+        console.error('Error creating season_prizes table:', error);
+      }
+    }
+
+    // merchandise_sales 테이블 생성
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS merchandise_sales (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          team_id INT NOT NULL,
+          sale_date DATE NOT NULL,
+          units_sold INT DEFAULT 0,
+          revenue BIGINT DEFAULT 0,
+          fan_count_at_time BIGINT,
+          merchandise_level INT,
+          FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+          INDEX idx_team_date (team_id, sale_date)
+        )
+      `);
+      console.log('Merchandise sales table created/verified');
+    } catch (error: any) {
+      if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
+        console.error('Error creating merchandise_sales table:', error);
+      }
+    }
+
     console.log('Database initialized successfully');
 
     // 초기 리그 생성

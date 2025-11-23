@@ -307,3 +307,174 @@ export async function getCurrentSeasonInfo() {
   return leagues;
 }
 
+// 시즌 종료 처리 및 상금 분배
+export async function endSeasonAndDistributePrizes(leagueId: number) {
+  try {
+    // 리그 정보 조회
+    const leagues = await pool.query(
+      'SELECT * FROM leagues WHERE id = ?',
+      [leagueId]
+    );
+
+    if (leagues.length === 0) {
+      throw new Error('League not found');
+    }
+
+    const league = leagues[0];
+
+    // 최종 순위 조회
+    const standings = await pool.query(
+      `SELECT lp.*, t.name as team_name
+       FROM league_participants lp
+       JOIN teams t ON lp.team_id = t.id
+       WHERE lp.league_id = ?
+       ORDER BY lp.points DESC, lp.goal_difference DESC, lp.wins DESC`,
+      [leagueId]
+    );
+
+    // 상금 설정 조회
+    const prizes = await pool.query(
+      'SELECT * FROM season_prizes WHERE league_type = ? ORDER BY rank_position',
+      [league.region]
+    );
+
+    const prizeMap = new Map();
+    for (const prize of prizes) {
+      prizeMap.set(prize.rank_position, prize);
+    }
+
+    // 각 팀에 상금 분배 및 기록
+    for (let i = 0; i < standings.length; i++) {
+      const team = standings[i];
+      const rank = i + 1;
+      const prize = prizeMap.get(rank);
+
+      const prizeGold = prize?.prize_gold || 0;
+      const prizeDiamond = prize?.prize_diamond || 0;
+
+      // 상금 지급
+      if (prizeGold > 0 || prizeDiamond > 0) {
+        await pool.query(
+          'UPDATE teams SET gold = gold + ?, diamond = diamond + ? WHERE id = ?',
+          [prizeGold, prizeDiamond, team.team_id]
+        );
+
+        // 재정 기록
+        await pool.query(
+          `INSERT INTO financial_records (team_id, record_type, category, amount, description)
+           VALUES (?, 'INCOME', 'OTHER', ?, ?)`,
+          [team.team_id, prizeGold, `시즌 ${league.season} ${rank}위 상금`]
+        );
+      }
+
+      // 시즌 기록 저장
+      await pool.query(
+        `INSERT INTO season_history
+         (season, league_id, team_id, final_rank, wins, losses, points, prize_money, is_champion)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          league.season,
+          leagueId,
+          team.team_id,
+          rank,
+          team.wins,
+          team.losses,
+          team.points,
+          prizeGold,
+          rank === 1
+        ]
+      );
+    }
+
+    // 리그 상태를 오프시즌으로 변경
+    await pool.query(
+      'UPDATE leagues SET status = "OFFSEASON", is_offseason = true WHERE id = ?',
+      [leagueId]
+    );
+
+    console.log(`Season ${league.season} ended for league ${leagueId}. Prizes distributed.`);
+
+    return {
+      success: true,
+      season: league.season,
+      standings: standings.map((t: any, i: number) => ({
+        rank: i + 1,
+        teamName: t.team_name,
+        wins: t.wins,
+        losses: t.losses,
+        points: t.points,
+        prize: prizeMap.get(i + 1)?.prize_gold || 0
+      }))
+    };
+  } catch (error) {
+    console.error('Error ending season:', error);
+    throw error;
+  }
+}
+
+// 팀 시즌 기록 조회
+export async function getTeamSeasonHistory(teamId: number) {
+  try {
+    const history = await pool.query(
+      `SELECT sh.*, l.name as league_name, l.region
+       FROM season_history sh
+       JOIN leagues l ON sh.league_id = l.id
+       WHERE sh.team_id = ?
+       ORDER BY sh.season DESC`,
+      [teamId]
+    );
+
+    return history;
+  } catch (error) {
+    console.error('Error getting team history:', error);
+    return [];
+  }
+}
+
+// 역대 시즌 순위 조회
+export async function getSeasonStandings(season: number, leagueId?: number) {
+  try {
+    let query = `
+      SELECT sh.*, t.name as team_name, t.logo_url, l.name as league_name, l.region
+      FROM season_history sh
+      JOIN teams t ON sh.team_id = t.id
+      JOIN leagues l ON sh.league_id = l.id
+      WHERE sh.season = ?
+    `;
+    const params: any[] = [season];
+
+    if (leagueId) {
+      query += ' AND sh.league_id = ?';
+      params.push(leagueId);
+    }
+
+    query += ' ORDER BY l.region, sh.final_rank';
+
+    const standings = await pool.query(query, params);
+    return standings;
+  } catch (error) {
+    console.error('Error getting season standings:', error);
+    return [];
+  }
+}
+
+// 명예의 전당 (우승 기록)
+export async function getHallOfFame() {
+  try {
+    const champions = await pool.query(
+      `SELECT sh.season, sh.league_id, t.id as team_id, t.name as team_name, t.logo_url,
+              l.name as league_name, l.region, sh.wins, sh.prize_money
+       FROM season_history sh
+       JOIN teams t ON sh.team_id = t.id
+       JOIN leagues l ON sh.league_id = l.id
+       WHERE sh.is_champion = true OR sh.is_playoff_winner = true
+       ORDER BY sh.season DESC, l.region`
+    );
+
+    return champions;
+  } catch (error) {
+    console.error('Error getting hall of fame:', error);
+    return [];
+  }
+}
+

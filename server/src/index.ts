@@ -37,6 +37,7 @@ import { initializeMatchSimulation } from './services/matchSimulationService.js'
 import { initializeInjurySystem } from './services/injuryService.js';
 import { initializeConditionRecovery } from './services/conditionService.js';
 import { initializeLeagueMatchService } from './services/leagueMatchService.js';
+import { initializeMerchandiseSystem } from './services/merchandiseService.js';
 
 dotenv.config();
 
@@ -266,6 +267,7 @@ async function startServer() {
     initializeConditionRecovery();
     initializeFacilityRevenue();
     initializeLeagueMatchService();
+    initializeMerchandiseSystem();
 
     // 프로 선수 및 선수팩 초기화
     await ProPlayerService.initializeProPlayers();
