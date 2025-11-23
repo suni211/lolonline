@@ -16,8 +16,8 @@ router.get('/', async (req, res) => {
              DATE_FORMAT(m.scheduled_at, '%Y-%m-%d %H:%i:%s') as scheduled_at,
              DATE_FORMAT(m.started_at, '%Y-%m-%d %H:%i:%s') as started_at,
              DATE_FORMAT(m.finished_at, '%Y-%m-%d %H:%i:%s') as finished_at,
-             ht.name as home_team_name, ht.logo_url as home_team_logo,
-             at.name as away_team_name, at.logo_url as away_team_logo,
+             ht.name as home_team_name, ht.abbreviation as home_team_abbr, ht.logo_url as home_team_logo,
+             at.name as away_team_name, at.abbreviation as away_team_abbr, at.logo_url as away_team_logo,
              l.name as league_name
       FROM matches m
       INNER JOIN teams ht ON m.home_team_id = ht.id

@@ -23,7 +23,9 @@ const formatDate = (dateString: string | null | undefined): string => {
 interface Match {
   id: number;
   home_team_name: string;
+  home_team_abbr: string | null;
   away_team_name: string;
+  away_team_abbr: string | null;
   home_score: number;
   away_score: number;
   status: string;
@@ -40,12 +42,20 @@ interface CupMatch {
   home_team_id: number;
   away_team_id: number;
   home_team_name: string;
+  home_team_abbr: string | null;
   away_team_name: string;
+  away_team_abbr: string | null;
   home_score: number;
   away_score: number;
   scheduled_at: string;
   status: string;
 }
+
+// 팀 약자 표시 (약자가 없으면 팀 이름 앞 3글자)
+const getTeamAbbr = (name: string, abbr: string | null) => {
+  if (abbr) return abbr;
+  return name.replace(/[^A-Za-z0-9가-힣]/g, '').substring(0, 3).toUpperCase();
+};
 
 export default function Matches() {
   const navigate = useNavigate();
@@ -78,7 +88,9 @@ export default function Matches() {
           cupMatches = cupResponse.data.matches.map((cm: CupMatch) => ({
             id: cm.id,
             home_team_name: cm.home_team_name,
+            home_team_abbr: cm.home_team_abbr,
             away_team_name: cm.away_team_name,
+            away_team_abbr: cm.away_team_abbr,
             home_score: cm.home_score,
             away_score: cm.away_score,
             status: cm.status === 'COMPLETED' ? 'FINISHED' : cm.status === 'IN_PROGRESS' ? 'LIVE' : 'SCHEDULED',
@@ -189,12 +201,18 @@ export default function Matches() {
               onClick={() => navigate(`/live/${match.id}`)}
             >
               <div className="match-teams">
-                <span className={match.home_score > match.away_score ? 'winner' : ''}>
-                  {match.home_team_name}
+                <span
+                  className={match.home_score > match.away_score ? 'winner' : ''}
+                  title={match.home_team_name}
+                >
+                  {getTeamAbbr(match.home_team_name, match.home_team_abbr)}
                 </span>
                 <span className="vs">vs</span>
-                <span className={match.away_score > match.home_score ? 'winner' : ''}>
-                  {match.away_team_name}
+                <span
+                  className={match.away_score > match.home_score ? 'winner' : ''}
+                  title={match.away_team_name}
+                >
+                  {getTeamAbbr(match.away_team_name, match.away_team_abbr)}
                 </span>
               </div>
               <div className="match-score">
