@@ -260,6 +260,20 @@ export default function Admin() {
     }
   };
 
+  const deleteCup = async (cupId: number, cupName: string) => {
+    if (!confirm(`정말로 "${cupName}"을(를) 삭제하시겠습니까? 모든 경기 데이터가 삭제됩니다.`)) return;
+    try {
+      setLoading(true);
+      const res = await axios.delete(`/api/admin/cup/${cupId}`);
+      setMessage(res.data.message);
+      fetchData();
+    } catch (error: any) {
+      setMessage(error.response?.data?.error || '컵 대회 삭제 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleTrophyUpload = async (cupId: number, file: File) => {
     try {
       setUploadingCupId(cupId);
@@ -453,10 +467,18 @@ export default function Admin() {
                       </label>
                       {cup.trophy_image && (
                         <button onClick={() => deleteTrophy(cup.id)} className="danger">
-                          삭제
+                          이미지삭제
                         </button>
                       )}
                     </div>
+                    <button
+                      onClick={() => deleteCup(cup.id, cup.name)}
+                      className="danger"
+                      style={{ marginTop: '0.5rem', width: '100%' }}
+                      disabled={loading}
+                    >
+                      컵 대회 삭제
+                    </button>
                   </div>
                 ))}
               </div>

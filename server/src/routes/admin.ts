@@ -875,6 +875,37 @@ router.post('/cup/create', authenticateToken, adminMiddleware, async (req: AuthR
   }
 });
 
+// 컵 대회 삭제
+router.delete('/cup/:cupId', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const cupId = parseInt(req.params.cupId);
+
+    if (!cupId || isNaN(cupId)) {
+      return res.status(400).json({ error: '컵 대회 ID가 필요합니다' });
+    }
+
+    // 컵 대회 존재 확인
+    const cups = await pool.query('SELECT * FROM cup_tournaments WHERE id = ?', [cupId]);
+    if (cups.length === 0) {
+      return res.status(404).json({ error: '컵 대회를 찾을 수 없습니다' });
+    }
+
+    // 컵 경기 삭제
+    await pool.query('DELETE FROM cup_matches WHERE cup_id = ?', [cupId]);
+
+    // 컵 대회 삭제
+    await pool.query('DELETE FROM cup_tournaments WHERE id = ?', [cupId]);
+
+    res.json({
+      success: true,
+      message: `컵 대회 ${cups[0].name}이(가) 삭제되었습니다`
+    });
+  } catch (error: any) {
+    console.error('Delete cup error:', error);
+    res.status(500).json({ error: '컵 대회 삭제 실패: ' + error.message });
+  }
+});
+
 // 컵 대회 다음 라운드 진행
 router.post('/cup/:cupId/next-round', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
   try {
