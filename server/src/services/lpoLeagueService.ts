@@ -298,15 +298,10 @@ export class LPOLeagueService {
 
         // 최대 14일만 체크 (무한 루프 방지)
         let iterations = 0;
-        const maxIterations = 14 * 24; // 14일 * 24시간
+        const maxIterations = 14 * 24;
 
         while (iterations < maxIterations) {
           iterations++;
-
-          // 과거 시간이면 현재 시간으로 조정
-          if (result.getTime() < now.getTime()) {
-            result = new Date(now.getTime());
-          }
 
           // 유효한 Date인지 확인
           if (isNaN(result.getTime())) {
@@ -314,45 +309,51 @@ export class LPOLeagueService {
             result = new Date();
           }
 
-          // 한국 시간으로 변환 (UTC+9)
-          const kstOffset = 9 * 60 * 60 * 1000;
-          const kstTime = new Date(result.getTime() + kstOffset);
-          const dayOfWeek = kstTime.getUTCDay(); // 0=일, 6=토
-          const hours = kstTime.getUTCHours();
-          const minutes = kstTime.getUTCMinutes();
+          // 한국 시간 계산 (UTC+9)
+          const kstHours = (result.getUTCHours() + 9) % 24;
+          const kstDay = result.getUTCDay();
+          // 9시간 더했을 때 날짜가 바뀌는지 확인
+          const dayOffset = (result.getUTCHours() + 9) >= 24 ? 1 : 0;
+          const adjustedDay = (kstDay + dayOffset) % 7;
+
+          // 과거 시간이면 현재 시간으로 조정
+          if (result.getTime() < now.getTime()) {
+            result = new Date(now.getTime());
+            continue;
+          }
 
           // 일요일이면 다음 월요일 17:00 KST로 (스토브리그)
-          if (dayOfWeek === 0) {
-            // 다음 날로 이동
-            const nextDay = new Date(result.getTime() + 24 * 60 * 60 * 1000);
-            nextDay.setUTCHours(8, 0, 0, 0);
-            result = nextDay;
+          if (adjustedDay === 0) {
+            result.setTime(result.getTime() + 24 * 60 * 60 * 1000);
+            result.setUTCHours(8, 0, 0, 0); // 17:00 KST = 08:00 UTC
             continue;
           }
 
-          // 17:00 KST (08:00 UTC) 이전이면 17:00 KST로
-          if (hours < 8) {
-            const adjusted = new Date(result.getTime());
-            adjusted.setUTCHours(8, 0, 0, 0);
-            result = adjusted;
+          // 17:00 KST 이전이면 17:00 KST로
+          if (kstHours < 17) {
+            result.setUTCHours(8, 0, 0, 0); // 17:00 KST = 08:00 UTC
+            // 다시 과거인지 체크
+            if (result.getTime() < now.getTime()) {
+              result.setTime(result.getTime() + 24 * 60 * 60 * 1000);
+            }
             continue;
           }
 
-          // 23:30 KST (14:30 UTC) 이후면 다음 날 17:00 KST로
-          if (hours > 14 || (hours === 14 && minutes > 30)) {
-            const nextDay = new Date(result.getTime() + 24 * 60 * 60 * 1000);
-            nextDay.setUTCHours(8, 0, 0, 0);
-            result = nextDay;
+          // 23:30 KST 이후면 다음 날 17:00 KST로
+          if (kstHours >= 24 || (kstHours === 23 && result.getUTCMinutes() > 30)) {
+            result.setTime(result.getTime() + 24 * 60 * 60 * 1000);
+            result.setUTCHours(8, 0, 0, 0);
             continue;
           }
 
           break;
         }
 
-        // 무한 루프 방지 - 기본값 반환
+        // 무한 루프 방지
         if (iterations >= maxIterations) {
           console.error('Max iterations reached in getNextValidMatchTime');
           const fallback = new Date();
+          fallback.setTime(fallback.getTime() + 24 * 60 * 60 * 1000);
           fallback.setUTCHours(8, 0, 0, 0);
           return fallback;
         }
