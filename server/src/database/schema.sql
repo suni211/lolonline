@@ -695,7 +695,7 @@ CREATE TABLE IF NOT EXISTS playoff_matches (
     INDEX idx_playoff_round (playoff_id, round)
 );
 
--- 스페셜 스폰서 테이블 (0.001% 확률, 1시간마다 갱신)
+-- 스페셜 스폰서 테이블 (1부 전용, 0.001% 확률, 1시간 만료)
 CREATE TABLE IF NOT EXISTS special_sponsors (
     id INT PRIMARY KEY AUTO_INCREMENT,
     team_id INT NOT NULL,
@@ -708,5 +708,19 @@ CREATE TABLE IF NOT EXISTS special_sponsors (
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
     INDEX idx_sponsor_team (team_id),
     INDEX idx_sponsor_expires (expires_at)
+);
+
+-- 일반 스폰서 테이블 (2부/3부, 팬수 기반, 1시즌 유지, 최대 2개)
+CREATE TABLE IF NOT EXISTS regular_sponsors (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    team_id INT NOT NULL,
+    sponsor_name VARCHAR(100) NOT NULL,
+    bonus_gold BIGINT NOT NULL,
+    bonus_diamond INT DEFAULT 0,
+    season INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    INDEX idx_regular_sponsor_team (team_id),
+    INDEX idx_regular_sponsor_season (season)
 );
 

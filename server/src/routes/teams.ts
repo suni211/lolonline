@@ -509,5 +509,29 @@ router.post('/check-special-sponsor', authenticateToken, async (req: AuthRequest
   }
 });
 
+// 일반 스폰서 조회 (2부/3부)
+router.get('/regular-sponsors', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const season = parseInt(req.query.season as string) || 1;
+    const sponsors = await SponsorService.getRegularSponsors(req.teamId!, season);
+    res.json({ sponsors });
+  } catch (error: any) {
+    console.error('Get regular sponsors error:', error);
+    res.status(500).json({ error: '일반 스폰서 조회에 실패했습니다' });
+  }
+});
+
+// 일반 스폰서 체크 (시즌 시작 시)
+router.post('/check-regular-sponsors', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { season } = req.body;
+    const sponsors = await SponsorService.checkRegularSponsors(req.teamId!, season || 1);
+    res.json({ sponsors });
+  } catch (error: any) {
+    console.error('Check regular sponsors error:', error);
+    res.status(500).json({ error: '일반 스폰서 체크에 실패했습니다' });
+  }
+});
+
 export default router;
 
