@@ -27,7 +27,7 @@ router.get('/my', authenticateToken, async (req: AuthRequest, res) => {
 router.post('/scout', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { cost_type } = req.body;
-    const cost = cost_type === 'diamond' ? 20 : 2000;
+    const cost = cost_type === 'diamond' ? 20 : 3000000;
 
     // 재화 확인
     const teams = await pool.query('SELECT gold, diamond FROM teams WHERE id = ?', [req.teamId]);

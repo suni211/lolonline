@@ -104,7 +104,7 @@ router.post('/scout', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { cost_type, cost_amount } = req.body; // cost_type: 'gold' or 'diamond'
 
-    const cost = cost_type === 'diamond' ? 10 : 1000;
+    const cost = cost_type === 'diamond' ? 10 : 1000000;
 
     // 재화 확인
     const teams = await pool.query('SELECT gold, diamond FROM teams WHERE id = ?', [req.teamId]);
@@ -350,8 +350,8 @@ router.post('/:playerId/uniform/upgrade', authenticateToken, async (req: AuthReq
       return res.status(400).json({ error: 'Uniform already at maximum level' });
     }
 
-    // 강화 비용 (레벨당 5000 골드)
-    const cost = (player.uniform_level + 1) * 5000;
+    // 강화 비용 (레벨당 100만 골드)
+    const cost = (player.uniform_level + 1) * 1000000;
 
     // 골드 확인
     const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);

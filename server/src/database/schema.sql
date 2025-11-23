@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS teams (
     logo_url VARCHAR(255),
     team_color VARCHAR(7) DEFAULT '#1E3A8A',
     home_stadium VARCHAR(100),
-    gold BIGINT DEFAULT 10000000,
+    gold BIGINT DEFAULT 100000000,
     diamond INT DEFAULT 100,
     fan_count BIGINT DEFAULT 1000,
     fan_morale INT DEFAULT 50 CHECK (fan_morale >= 0 AND fan_morale <= 100),

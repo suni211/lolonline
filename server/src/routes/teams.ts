@@ -245,10 +245,10 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: '팀 이름을 입력해주세요' });
     }
 
-    // 팀 생성 (자동으로 LPO 2 LEAGUE로 배정)
+    // 팀 생성 (자동으로 LPO 2 LEAGUE로 배정, 기본 1억 골드)
     const teamResult = await pool.query(
       `INSERT INTO teams (user_id, name, league, logo_url, team_color, gold, diamond)
-       VALUES (?, ?, 'SECOND', ?, ?, 10000000, 100)`,
+       VALUES (?, ?, 'SECOND', ?, ?, 100000000, 100)`,
       [req.userId, name, logo_url || null, team_color || '#1E3A8A']
     );
 
@@ -419,8 +419,8 @@ router.post('/facilities/upgrade', authenticateToken, async (req: AuthRequest, r
     const currentLevel = facilities.length > 0 ? facilities[0].level : 0;
     const nextLevel = currentLevel + 1;
 
-    // 업그레이드 비용 계산 (레벨당 10000 골드)
-    const cost = nextLevel * 10000;
+    // 업그레이드 비용 계산 (레벨당 500만 골드)
+    const cost = nextLevel * 5000000;
 
     // 팀 골드 확인
     const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);
