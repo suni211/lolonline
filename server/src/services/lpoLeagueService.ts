@@ -592,7 +592,7 @@ export class LPOLeagueService {
         }
 
         // 새 시즌 경기 일정 생성 (현재 시간 이후로)
-        await this.generateSchedule(leagueResult.insertId);
+        await this.generateLeagueSchedule(leagueResult.insertId);
       }
 
       console.log(`Season ${newSeason} started!`);
