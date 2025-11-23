@@ -98,13 +98,13 @@ export default function LiveMatch() {
     });
 
     // 경기 종료
-    socket.on('match_finished', (data) => {
+    socket.on('match_finished', () => {
       setIsLive(false);
       fetchMatchData(); // 최종 데이터 갱신
     });
 
     // 경기 시작
-    socket.on('match_started', (data) => {
+    socket.on('match_started', () => {
       setIsLive(true);
       setEvents([]);
     });
