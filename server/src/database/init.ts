@@ -380,6 +380,107 @@ export async function initializeDatabase() {
       }
     }
 
+    // cup_tournaments 테이블 생성
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS cup_tournaments (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          name VARCHAR(100) NOT NULL,
+          season INT NOT NULL,
+          status ENUM('UPCOMING', 'ROUND_32', 'ROUND_16', 'QUARTER', 'SEMI', 'FINAL', 'COMPLETED') DEFAULT 'UPCOMING',
+          prize_pool BIGINT DEFAULT 100000000,
+          winner_team_id INT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (winner_team_id) REFERENCES teams(id) ON DELETE SET NULL,
+          INDEX idx_cup_season (season)
+        )
+      `);
+      console.log('Cup tournaments table created/verified');
+    } catch (error: any) {
+      if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
+        console.error('Error creating cup_tournaments table:', error);
+      }
+    }
+
+    // cup_matches 테이블 생성
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS cup_matches (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          cup_id INT NOT NULL,
+          round ENUM('ROUND_32', 'ROUND_16', 'QUARTER', 'SEMI', 'FINAL') NOT NULL,
+          match_number INT NOT NULL,
+          home_team_id INT NOT NULL,
+          away_team_id INT NOT NULL,
+          home_score INT DEFAULT 0,
+          away_score INT DEFAULT 0,
+          winner_team_id INT,
+          scheduled_at DATETIME NOT NULL,
+          status ENUM('SCHEDULED', 'IN_PROGRESS', 'COMPLETED') DEFAULT 'SCHEDULED',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (cup_id) REFERENCES cup_tournaments(id) ON DELETE CASCADE,
+          FOREIGN KEY (home_team_id) REFERENCES teams(id) ON DELETE CASCADE,
+          FOREIGN KEY (away_team_id) REFERENCES teams(id) ON DELETE CASCADE,
+          FOREIGN KEY (winner_team_id) REFERENCES teams(id) ON DELETE SET NULL,
+          INDEX idx_cup_round (cup_id, round),
+          INDEX idx_cup_schedule (scheduled_at)
+        )
+      `);
+      console.log('Cup matches table created/verified');
+    } catch (error: any) {
+      if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
+        console.error('Error creating cup_matches table:', error);
+      }
+    }
+
+    // special_sponsors 테이블 생성 (1부 전용)
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS special_sponsors (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          team_id INT NOT NULL,
+          sponsor_name VARCHAR(100) NOT NULL,
+          bonus_gold BIGINT NOT NULL,
+          bonus_diamond INT DEFAULT 0,
+          start_season INT NOT NULL,
+          end_season INT NOT NULL,
+          claimed BOOLEAN DEFAULT FALSE,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+          INDEX idx_sponsor_team (team_id),
+          INDEX idx_sponsor_season (start_season, end_season)
+        )
+      `);
+      console.log('Special sponsors table created/verified');
+    } catch (error: any) {
+      if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
+        console.error('Error creating special_sponsors table:', error);
+      }
+    }
+
+    // regular_sponsors 테이블 생성 (2부/3부용)
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS regular_sponsors (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          team_id INT NOT NULL,
+          sponsor_name VARCHAR(100) NOT NULL,
+          bonus_gold BIGINT NOT NULL,
+          bonus_diamond INT DEFAULT 0,
+          season INT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+          INDEX idx_regular_sponsor_team (team_id),
+          INDEX idx_regular_sponsor_season (season)
+        )
+      `);
+      console.log('Regular sponsors table created/verified');
+    } catch (error: any) {
+      if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
+        console.error('Error creating regular_sponsors table:', error);
+      }
+    }
+
     console.log('Database initialized successfully');
 
     // 초기 리그 생성

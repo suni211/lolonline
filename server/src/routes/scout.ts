@@ -338,8 +338,8 @@ router.post('/discoveries/:discoveryId/sign', authenticateToken, async (req: Aut
       return res.status(400).json({ error: '이 선수는 이미 다른 팀에 소속되었습니다' });
     }
 
-    // 계약금 (오버롤 * 1000)
-    const signCost = discovery.overall * 1000;
+    // 계약금 (오버롤 * 100000) - 58 OVR = 580만
+    const signCost = discovery.overall * 100000;
 
     // 팀 골드 확인
     const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);

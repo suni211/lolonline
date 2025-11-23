@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 import './Matches.css';
 
-// 날짜 포맷 헬퍼 함수
+// 날짜 포맷 헬퍼 함수 (한국 시간대)
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return '-';
   // MySQL datetime 형식 처리
@@ -11,6 +12,7 @@ const formatDate = (dateString: string | null | undefined): string => {
   const date = new Date(normalized);
   if (isNaN(date.getTime())) return '-';
   return date.toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
@@ -29,22 +31,74 @@ interface Match {
   started_at?: string;
   finished_at?: string;
   match_type: string;
+  source?: string; // 'matches' | 'cup'
+}
+
+interface CupMatch {
+  id: number;
+  round: string;
+  home_team_id: number;
+  away_team_id: number;
+  home_team_name: string;
+  away_team_name: string;
+  home_score: number;
+  away_score: number;
+  scheduled_at: string;
+  status: string;
 }
 
 export default function Matches() {
   const navigate = useNavigate();
+  const { token } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [filter, setFilter] = useState<'all' | 'scheduled' | 'live' | 'finished'>('all');
-  const [matchTypeFilter, setMatchTypeFilter] = useState<'all' | 'LEAGUE' | 'FRIENDLY'>('all');
+  const [matchTypeFilter, setMatchTypeFilter] = useState<'all' | 'LEAGUE' | 'CUP' | 'FRIENDLY'>('all');
 
   useEffect(() => {
-    fetchMatches();
-  }, []);
+    fetchAllMatches();
+  }, [token]);
 
-  const fetchMatches = async () => {
+  const fetchAllMatches = async () => {
     try {
-      const response = await axios.get('/api/matches');
-      setMatches(response.data);
+      // 일반 경기 (리그전, 친선전)
+      const matchesResponse = await axios.get('/api/matches');
+      const regularMatches = matchesResponse.data.map((m: Match) => ({
+        ...m,
+        source: 'matches'
+      }));
+
+      // 컵 경기 조회
+      let cupMatches: Match[] = [];
+      try {
+        const cupResponse = await axios.get('/api/cup/current?season=1', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (cupResponse.data && cupResponse.data.matches) {
+          cupMatches = cupResponse.data.matches.map((cm: CupMatch) => ({
+            id: cm.id,
+            home_team_name: cm.home_team_name,
+            away_team_name: cm.away_team_name,
+            home_score: cm.home_score,
+            away_score: cm.away_score,
+            status: cm.status === 'COMPLETED' ? 'FINISHED' : cm.status === 'IN_PROGRESS' ? 'LIVE' : 'SCHEDULED',
+            scheduled_at: cm.scheduled_at,
+            match_type: 'CUP',
+            source: 'cup'
+          }));
+        }
+      } catch (cupError) {
+        console.log('No cup matches available');
+      }
+
+      // 모든 경기 병합 및 시간순 정렬
+      const allMatches = [...regularMatches, ...cupMatches].sort((a, b) => {
+        const dateA = new Date(a.scheduled_at.replace(' ', 'T'));
+        const dateB = new Date(b.scheduled_at.replace(' ', 'T'));
+        return dateA.getTime() - dateB.getTime();
+      });
+
+      setMatches(allMatches);
     } catch (error) {
       console.error('Failed to fetch matches:', error);
     }
@@ -54,7 +108,15 @@ export default function Matches() {
     // 상태 필터
     if (filter !== 'all' && m.status !== filter.toUpperCase()) return false;
     // 경기 타입 필터
-    if (matchTypeFilter !== 'all' && m.match_type !== matchTypeFilter) return false;
+    if (matchTypeFilter === 'LEAGUE') {
+      return m.match_type === 'REGULAR' || m.match_type === 'PLAYOFF' || m.match_type === 'LEAGUE';
+    }
+    if (matchTypeFilter === 'CUP') {
+      return m.match_type === 'CUP';
+    }
+    if (matchTypeFilter === 'FRIENDLY') {
+      return m.match_type === 'FRIENDLY';
+    }
     return true;
   });
 
@@ -101,6 +163,12 @@ export default function Matches() {
             className={matchTypeFilter === 'LEAGUE' ? 'filter-active' : ''}
           >
             리그전
+          </button>
+          <button
+            onClick={() => setMatchTypeFilter('CUP')}
+            className={matchTypeFilter === 'CUP' ? 'filter-active' : ''}
+          >
+            컵경기
           </button>
           <button
             onClick={() => setMatchTypeFilter('FRIENDLY')}
