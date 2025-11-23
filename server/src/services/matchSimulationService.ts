@@ -131,14 +131,21 @@ async function processScheduledMatches(io: Server) {
 
 async function startMatch(match: any, io: Server) {
   try {
-    // 팀 선수 정보 가져오기 (스타터 체크) - player_cards + pro_players JOIN
+    // 팀 선수 정보 가져오기 (스타터 체크) - 포지션별 1명만 선택
     const homePlayers = await pool.query(
       `SELECT pc.id, pp.name, pp.team, pp.position, pp.league, pp.nationality,
               pc.mental, pc.teamfight, pc.focus, pc.laning, pc.ovr
        FROM player_cards pc
        JOIN pro_players pp ON pc.pro_player_id = pp.id
        WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true
-       ORDER BY pp.position`,
+         AND pc.id = (
+           SELECT pc2.id FROM player_cards pc2
+           JOIN pro_players pp2 ON pc2.pro_player_id = pp2.id
+           WHERE pc2.team_id = pc.team_id AND pp2.position = pp.position
+             AND pc2.is_starter = true AND pc2.is_contracted = true
+           ORDER BY pc2.ovr DESC LIMIT 1
+         )
+       ORDER BY FIELD(pp.position, 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
       [match.home_team_id]
     );
 
@@ -148,7 +155,14 @@ async function startMatch(match: any, io: Server) {
        FROM player_cards pc
        JOIN pro_players pp ON pc.pro_player_id = pp.id
        WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true
-       ORDER BY pp.position`,
+         AND pc.id = (
+           SELECT pc2.id FROM player_cards pc2
+           JOIN pro_players pp2 ON pc2.pro_player_id = pp2.id
+           WHERE pc2.team_id = pc.team_id AND pp2.position = pp.position
+             AND pc2.is_starter = true AND pc2.is_contracted = true
+           ORDER BY pc2.ovr DESC LIMIT 1
+         )
+       ORDER BY FIELD(pp.position, 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
       [match.away_team_id]
     );
 
