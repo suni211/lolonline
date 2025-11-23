@@ -341,8 +341,9 @@ async function simulateMatchProgress(match: any, io: Server) {
 
     // === 오브젝트 스폰 체크 ===
 
-    // 드래곤 스폰 (5분)
-    if (gameTime >= matchData.dragon_respawn_at && !matchData.dragon_alive) {
+    // 드래곤 스폰 (5분) - 양 팀 합쳐서 4마리까지만
+    const totalDragons = matchData.home.dragons.length + matchData.away.dragons.length;
+    if (gameTime >= matchData.dragon_respawn_at && !matchData.dragon_alive && totalDragons < 4) {
       matchData.dragon_alive = true;
       const event = createEvent(gameTime, 'DRAGON_SPAWN', '드래곤이 출현했습니다!', {});
       matchData.events.push(event);
@@ -448,8 +449,8 @@ async function generateEvents(
   // 이벤트 타입 선택 (가중치 적용)
   const eventPool: string[] = [];
 
-  // 기본 이벤트 (항상)
-  eventPool.push('KILL', 'KILL', 'KILL', 'CS', 'CS', 'GOLD');
+  // 기본 이벤트 (항상) - 킬 빈도 감소
+  eventPool.push('KILL', 'CS', 'CS', 'CS', 'GOLD', 'GOLD');
 
   // 시간대별 이벤트
   if (gameMinutes >= 3) eventPool.push('GANK', 'LANE_PUSH');
