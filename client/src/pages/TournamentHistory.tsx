@@ -56,7 +56,9 @@ const getTeamAbbr = (name: string | null | undefined, abbr: string | null) => {
 // 날짜 포맷
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return '-';
-  const normalized = dateString.replace(' ', 'T');
+  // 문자열이 아닌 경우 문자열로 변환
+  const str = typeof dateString === 'string' ? dateString : String(dateString);
+  const normalized = str.replace(' ', 'T');
   const date = new Date(normalized);
   if (isNaN(date.getTime())) return '-';
   return date.toLocaleString('ko-KR', {

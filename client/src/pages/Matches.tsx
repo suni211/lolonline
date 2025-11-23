@@ -7,8 +7,10 @@ import './Matches.css';
 // 날짜 포맷 헬퍼 함수 (한국 시간대)
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return '-';
+  // 문자열이 아닌 경우 문자열로 변환
+  const str = typeof dateString === 'string' ? dateString : String(dateString);
   // MySQL datetime 형식 처리
-  const normalized = dateString.replace(' ', 'T');
+  const normalized = str.replace(' ', 'T');
   const date = new Date(normalized);
   if (isNaN(date.getTime())) return '-';
   return date.toLocaleString('ko-KR', {
