@@ -216,8 +216,7 @@ export default function LiveMatch() {
       if (res.data.stats && res.data.stats.length > 0) {
         initializeChampionPositions(
           res.data.stats,
-          res.data.match.home_team_name,
-          res.data.match.away_team_name
+          res.data.match.home_team_name
         );
       }
     } catch (error) {
@@ -250,7 +249,7 @@ export default function LiveMatch() {
   };
 
   // 챔피언 위치 초기화
-  const initializeChampionPositions = (stats: PlayerStats[], homeName: string, awayName: string) => {
+  const initializeChampionPositions = (stats: PlayerStats[], homeName: string) => {
     const positions: ChampionPosition[] = stats.map(player => {
       const isHome = player.team_name === homeName;
       const team = isHome ? 'blue' : 'red';
@@ -398,33 +397,6 @@ export default function LiveMatch() {
       case 'GANK': return '🎯';
       default: return '📢';
     }
-  };
-
-  const renderTurrets = (turrets: TurretState, team: 'home' | 'away') => {
-    const lanes = ['top', 'mid', 'bot'] as const;
-    return (
-      <div className={`turrets-display ${team}`}>
-        {lanes.map(lane => (
-          <div key={lane} className="lane-turrets">
-            <span className="lane-name">{lane.toUpperCase()}</span>
-            <div className="turret-icons">
-              <span className={`turret ${turrets[lane].t1 ? 'alive' : 'dead'}`}>T1</span>
-              <span className={`turret ${turrets[lane].t2 ? 'alive' : 'dead'}`}>T2</span>
-              <span className={`turret ${turrets[lane].t3 ? 'alive' : 'dead'}`}>T3</span>
-              <span className={`inhib ${turrets[lane].inhib ? 'alive' : 'dead'}`}>억</span>
-            </div>
-          </div>
-        ))}
-        <div className="nexus-turrets">
-          <span className="lane-name">NEXUS</span>
-          <div className="turret-icons">
-            <span className={`turret ${turrets.nexus.twin1 ? 'alive' : 'dead'}`}>쌍1</span>
-            <span className={`turret ${turrets.nexus.twin2 ? 'alive' : 'dead'}`}>쌍2</span>
-            <span className={`nexus ${turrets.nexus.nexus ? 'alive' : 'dead'}`}>넥</span>
-          </div>
-        </div>
-      </div>
-    );
   };
 
   if (loading) {
