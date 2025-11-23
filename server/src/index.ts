@@ -29,6 +29,7 @@ import tacticsRoutes from './routes/tactics.js';
 import transferRoutes from './routes/transfer.js';
 import aiRoutes from './routes/ai.js';
 import scoutRoutes from './routes/scout.js';
+import cupRoutes from './routes/cup.js';
 import { initializeDatabase } from './database/init.js';
 import { ProPlayerService } from './services/proPlayerService.js';
 import { initializeSeasonSystem } from './services/seasonService.js';
@@ -79,6 +80,7 @@ app.use('/api/tactics', tacticsRoutes);
 app.use('/api/transfer', transferRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/scout', scoutRoutes);
+app.use('/api/cup', cupRoutes);
 
 // Socket.IO 연결
 io.on('connection', (socket) => {
