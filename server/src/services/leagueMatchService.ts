@@ -28,13 +28,13 @@ export class LeagueMatchService {
     try {
       const now = new Date();
 
-      // 예정 시간이 지난 SCHEDULED 경기 조회
+      // 예정 시간이 지난 SCHEDULED 경기 조회 (matches 테이블 사용)
       const pendingMatches = await pool.query(
-        `SELECT lm.*, l.name as league_name
-         FROM league_matches lm
-         JOIN leagues l ON lm.league_id = l.id
-         WHERE lm.status = 'SCHEDULED' AND lm.scheduled_at <= ?
-         ORDER BY lm.scheduled_at
+        `SELECT m.*, l.name as league_name
+         FROM matches m
+         JOIN leagues l ON m.league_id = l.id
+         WHERE m.status = 'SCHEDULED' AND m.scheduled_at <= ? AND m.match_type = 'REGULAR'
+         ORDER BY m.scheduled_at
          LIMIT 5`,
         [now]
       );
@@ -50,9 +50,9 @@ export class LeagueMatchService {
   // 경기 시뮬레이션
   static async simulateMatch(match: any) {
     try {
-      // 경기 진행 중으로 변경
+      // 경기 진행 중으로 변경 (matches 테이블 사용)
       await pool.query(
-        `UPDATE league_matches SET status = 'IN_PROGRESS' WHERE id = ?`,
+        `UPDATE matches SET status = 'IN_PROGRESS' WHERE id = ?`,
         [match.id]
       );
 
@@ -84,27 +84,27 @@ export class LeagueMatchService {
         if (homeScore === 2 || awayScore === 2) break;
       }
 
-      // 경기 결과 저장
+      // 경기 결과 저장 (matches 테이블 사용)
       await pool.query(
-        `UPDATE league_matches
+        `UPDATE matches
          SET home_score = ?, away_score = ?, status = 'FINISHED', finished_at = NOW()
          WHERE id = ?`,
         [homeScore, awayScore, match.id]
       );
 
-      // 리그 순위 업데이트
+      // 리그 순위 업데이트 (league_participants 테이블 사용)
       const winnerId = homeScore > awayScore ? match.home_team_id : match.away_team_id;
       const loserId = homeScore > awayScore ? match.away_team_id : match.home_team_id;
 
       await pool.query(
-        `UPDATE league_standings
+        `UPDATE league_participants
          SET wins = wins + 1, points = points + 3
          WHERE league_id = ? AND team_id = ?`,
         [match.league_id, winnerId]
       );
 
       await pool.query(
-        `UPDATE league_standings
+        `UPDATE league_participants
          SET losses = losses + 1
          WHERE league_id = ? AND team_id = ?`,
         [match.league_id, loserId]
@@ -116,14 +116,14 @@ export class LeagueMatchService {
     }
   }
 
-  // 팀 전력 계산
+  // 팀 전력 계산 (player_cards 테이블 사용)
   static async getTeamPower(teamId: number): Promise<{ totalPower: number }> {
     try {
       // 스타터 선수들의 오버롤 합계
       const players = await pool.query(
         `SELECT SUM(mental + teamfight + focus + laning) as total_power
-         FROM players
-         WHERE team_id = ? AND is_starter = true`,
+         FROM player_cards
+         WHERE team_id = ? AND is_starter = true AND is_contracted = true`,
         [teamId]
       );
 
@@ -135,39 +135,41 @@ export class LeagueMatchService {
     }
   }
 
-  // 특정 경기 관전 데이터 조회
+  // 특정 경기 관전 데이터 조회 (matches 테이블 사용)
   static async getMatchDetails(matchId: number) {
     const match = await pool.query(
-      `SELECT lm.*,
+      `SELECT m.*,
               ht.name as home_team_name, ht.logo_url as home_team_logo,
               at.name as away_team_name, at.logo_url as away_team_logo,
               l.name as league_name
-       FROM league_matches lm
-       JOIN teams ht ON lm.home_team_id = ht.id
-       JOIN teams at ON lm.away_team_id = at.id
-       JOIN leagues l ON lm.league_id = l.id
-       WHERE lm.id = ?`,
+       FROM matches m
+       JOIN teams ht ON m.home_team_id = ht.id
+       JOIN teams at ON m.away_team_id = at.id
+       LEFT JOIN leagues l ON m.league_id = l.id
+       WHERE m.id = ?`,
       [matchId]
     );
 
     if (match.length === 0) return null;
 
-    // 양 팀 스타터 정보
+    // 양 팀 스타터 정보 (player_cards + pro_players 사용)
     const homePlayers = await pool.query(
-      `SELECT id, name, position, mental, teamfight, focus, laning,
-              (mental + teamfight + focus + laning) as overall
-       FROM players
-       WHERE team_id = ? AND is_starter = true
-       ORDER BY FIELD(position, 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
+      `SELECT pc.id, pp.name, pp.position, pc.mental, pc.teamfight, pc.focus, pc.laning,
+              (pc.mental + pc.teamfight + pc.focus + pc.laning) as overall
+       FROM player_cards pc
+       JOIN pro_players pp ON pc.pro_player_id = pp.id
+       WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true
+       ORDER BY FIELD(pp.position, 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
       [match[0].home_team_id]
     );
 
     const awayPlayers = await pool.query(
-      `SELECT id, name, position, mental, teamfight, focus, laning,
-              (mental + teamfight + focus + laning) as overall
-       FROM players
-       WHERE team_id = ? AND is_starter = true
-       ORDER BY FIELD(position, 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
+      `SELECT pc.id, pp.name, pp.position, pc.mental, pc.teamfight, pc.focus, pc.laning,
+              (pc.mental + pc.teamfight + pc.focus + pc.laning) as overall
+       FROM player_cards pc
+       JOIN pro_players pp ON pc.pro_player_id = pp.id
+       WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true
+       ORDER BY FIELD(pp.position, 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
       [match[0].away_team_id]
     );
 

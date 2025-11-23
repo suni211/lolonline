@@ -140,18 +140,10 @@ async function startMatch(match: any, io: Server) {
       away_players: awayPlayers
     });
 
-    // 부상 선수는 경기 출전 불가
-    const availableHomePlayers = homePlayers.filter((p: any) => p.injury_status === 'NONE');
-    const availableAwayPlayers = awayPlayers.filter((p: any) => p.injury_status === 'NONE');
-
-    if (availableHomePlayers.length < 5 || availableAwayPlayers.length < 5) {
-      // 경기 취소 (부상 선수로 인해 최소 인원 부족)
-      await pool.query(
-        'UPDATE matches SET status = "FINISHED", home_score = 0, away_score = 0, finished_at = NOW() WHERE id = ?',
-        [match.id]
-      );
-      return;
-    }
+    // player_cards 시스템에서는 is_starter=true인 선수만 조회하므로 추가 필터링 불필요
+    // 이미 스타터 5명 체크를 통과했으므로 바로 사용
+    const availableHomePlayers = homePlayers;
+    const availableAwayPlayers = awayPlayers;
 
     // 경기 통계 초기화
     for (const player of availableHomePlayers) {
@@ -396,17 +388,17 @@ async function createRandomEvent(match: any, gameTime: number) {
   // 오버롤에 따른 이벤트 결과 결정
   const homeWinChance = homeTeamOverall / (homeTeamOverall + awayTeamOverall);
 
-  // 선수 목록 가져오기
+  // 선수 목록 가져오기 (player_cards + pro_players 사용)
   const homePlayers = await pool.query(
-    `SELECT p.id, p.name, p.position FROM players p
-     INNER JOIN player_ownership po ON p.id = po.player_id
-     WHERE po.team_id = ? AND po.is_starter = true AND p.injury_status = 'NONE'`,
+    `SELECT pc.id, pp.name, pp.position FROM player_cards pc
+     JOIN pro_players pp ON pc.pro_player_id = pp.id
+     WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true`,
     [match.home_team_id]
   );
   const awayPlayers = await pool.query(
-    `SELECT p.id, p.name, p.position FROM players p
-     INNER JOIN player_ownership po ON p.id = po.player_id
-     WHERE po.team_id = ? AND po.is_starter = true AND p.injury_status = 'NONE'`,
+    `SELECT pc.id, pp.name, pp.position FROM player_cards pc
+     JOIN pro_players pp ON pc.pro_player_id = pp.id
+     WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true`,
     [match.away_team_id]
   );
 
@@ -550,10 +542,11 @@ function getTacticsBonus(tactics: any, gameTime: number): number {
 }
 
 async function calculateTeamOverall(teamId: number, gameTime: number = 0): Promise<number> {
+  // player_cards + pro_players 사용
   const players = await pool.query(
-    `SELECT p.* FROM players p
-     INNER JOIN player_ownership po ON p.id = po.player_id
-     WHERE po.team_id = ? AND po.is_starter = true AND p.injury_status = 'NONE'`,
+    `SELECT pc.id, pc.mental, pc.teamfight, pc.focus, pc.laning, pc.ovr
+     FROM player_cards pc
+     WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true`,
     [teamId]
   );
 
@@ -563,12 +556,9 @@ async function calculateTeamOverall(teamId: number, gameTime: number = 0): Promi
 
   let totalOverall = 0;
   for (const player of players) {
+    // player_cards의 스탯 사용
     const overall = player.mental + player.teamfight + player.focus + player.laning;
-    // 컨디션 반영
-    const adjustedOverall = overall * ((player as any).player_condition / 100);
-    // 부상 페널티 반영
-    const injuryPenalty = getInjuryPenalty(player.injury_status);
-    totalOverall += adjustedOverall * injuryPenalty;
+    totalOverall += overall;
   }
 
   // 전술 보너스 적용
@@ -658,17 +648,17 @@ async function finishMatch(match: any, matchData: any, io: Server) {
       await giveMatchExperience(match.id, match.away_team_id, match.away_team_id === winnerTeamId, awayExpMultiplier);
     }
 
-    // 경기 후 부상 체크 (모든 출전 선수)
-    const allPlayers = await pool.query(
-      `SELECT p.id FROM players p
-       INNER JOIN match_stats ms ON p.id = ms.player_id
-       WHERE ms.match_id = ?`,
-      [match.id]
-    );
-
-    for (const player of allPlayers) {
-      await checkInjuryAfterMatch(player.id, 1.0);
-    }
+    // 경기 후 부상 체크 (현재 player_cards 시스템에서는 미지원)
+    // TODO: player_cards에 부상 시스템 추가 시 활성화
+    // const allPlayers = await pool.query(
+    //   `SELECT pc.id FROM player_cards pc
+    //    INNER JOIN match_stats ms ON pc.id = ms.player_id
+    //    WHERE ms.match_id = ?`,
+    //   [match.id]
+    // );
+    // for (const player of allPlayers) {
+    //   await checkInjuryAfterMatch(player.id, 1.0);
+    // }
 
     // 순위 업데이트 (리그 경기만)
     if (match.league_id) {

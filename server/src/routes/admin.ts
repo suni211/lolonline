@@ -124,7 +124,7 @@ router.post('/users/:userId/reset', authenticateToken, adminMiddleware, async (r
     await pool.query('DELETE FROM team_facilities WHERE team_id = ?', [teamId]);
     await pool.query('DELETE FROM team_coaches WHERE team_id = ?', [teamId]);
     await pool.query('DELETE FROM match_results WHERE home_team_id = ? OR away_team_id = ?', [teamId, teamId]);
-    await pool.query('DELETE FROM league_standings WHERE team_id = ?', [teamId]);
+    await pool.query('DELETE FROM league_participants WHERE team_id = ?', [teamId]);
 
     // 팀 리소스 초기화
     await pool.query(
@@ -164,7 +164,7 @@ router.delete('/users/:userId', authenticateToken, adminMiddleware, async (req: 
       await pool.query('DELETE FROM team_facilities WHERE team_id = ?', [teamId]);
       await pool.query('DELETE FROM team_coaches WHERE team_id = ?', [teamId]);
       await pool.query('DELETE FROM match_results WHERE home_team_id = ? OR away_team_id = ?', [teamId, teamId]);
-      await pool.query('DELETE FROM league_standings WHERE team_id = ?', [teamId]);
+      await pool.query('DELETE FROM league_participants WHERE team_id = ?', [teamId]);
       await pool.query('DELETE FROM teams WHERE id = ?', [teamId]);
     }
 
@@ -195,7 +195,7 @@ router.get('/leagues', authenticateToken, adminMiddleware, async (req: AuthReque
   try {
     const leagues = await pool.query(
       `SELECT l.*,
-              (SELECT COUNT(*) FROM league_standings WHERE league_id = l.id) as team_count
+              (SELECT COUNT(*) FROM league_participants WHERE league_id = l.id) as team_count
        FROM leagues l
        ORDER BY l.created_at DESC`
     );

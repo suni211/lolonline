@@ -82,11 +82,12 @@ router.get('/:matchId', async (req, res) => {
       [matchId]
     );
 
-    // 경기 통계
+    // 경기 통계 (player_cards + pro_players 사용)
     const stats = await pool.query(
-      `SELECT ms.*, p.name as player_name, p.position, t.name as team_name
+      `SELECT ms.*, pp.name as player_name, pp.position, t.name as team_name
        FROM match_stats ms
-       INNER JOIN players p ON ms.player_id = p.id
+       INNER JOIN player_cards pc ON ms.player_id = pc.id
+       INNER JOIN pro_players pp ON pc.pro_player_id = pp.id
        INNER JOIN teams t ON ms.team_id = t.id
        WHERE ms.match_id = ?`,
       [matchId]
