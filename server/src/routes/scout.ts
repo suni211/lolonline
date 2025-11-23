@@ -185,7 +185,7 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
 
     // 소유되지 않은 선수 중에서 오버롤 범위에 맞는 선수 찾기
     let query = `
-      SELECT pp.*, (pp.mental + pp.teamfight + pp.focus + pp.laning) as overall
+      SELECT pp.*, pp.base_ovr as overall
       FROM pro_players pp
       WHERE NOT EXISTS (
         SELECT 1 FROM player_cards pc WHERE pc.pro_player_id = pp.id
@@ -193,8 +193,8 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
       AND NOT EXISTS (
         SELECT 1 FROM scouter_discoveries sd WHERE sd.pro_player_id = pp.id AND sd.signed = false
       )
-      AND (pp.mental + pp.teamfight + pp.focus + pp.laning) >= ?
-      AND (pp.mental + pp.teamfight + pp.focus + pp.laning) <= ?
+      AND pp.base_ovr >= ?
+      AND pp.base_ovr <= ?
     `;
 
     const params: any[] = [overallRange.min, overallRange.max];
@@ -232,10 +232,6 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
         name: player.name,
         position: player.position,
         nationality: player.nationality,
-        mental: player.mental,
-        teamfight: player.teamfight,
-        focus: player.focus,
-        laning: player.laning,
         overall: player.overall,
         face_image: player.face_image
       }
@@ -251,8 +247,7 @@ router.get('/discoveries', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const discoveries = await pool.query(
       `SELECT sd.*, pp.name, pp.position, pp.nationality, pp.face_image,
-              pp.mental, pp.teamfight, pp.focus, pp.laning,
-              (pp.mental + pp.teamfight + pp.focus + pp.laning) as overall
+              pp.base_ovr as overall
        FROM scouter_discoveries sd
        INNER JOIN pro_players pp ON sd.pro_player_id = pp.id
        WHERE sd.team_id = ? AND sd.signed = false
@@ -274,7 +269,7 @@ router.post('/discoveries/:discoveryId/sign', authenticateToken, async (req: Aut
 
     // 발굴 기록 조회
     const discoveries = await pool.query(
-      `SELECT sd.*, pp.*, (pp.mental + pp.teamfight + pp.focus + pp.laning) as overall
+      `SELECT sd.*, pp.*, pp.base_ovr as overall
        FROM scouter_discoveries sd
        INNER JOIN pro_players pp ON sd.pro_player_id = pp.id
        WHERE sd.id = ? AND sd.team_id = ? AND sd.signed = false`,
@@ -313,8 +308,21 @@ router.post('/discoveries/:discoveryId/sign', authenticateToken, async (req: Aut
     // 골드 차감
     await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [signCost, req.teamId]);
 
+    // base_ovr을 기반으로 개별 스탯 생성 (랜덤 변동 포함)
+    const baseOvr = discovery.overall;
+    const variance = 5; // 각 스탯의 변동 범위
+    const generateStat = () => {
+      const baseStat = Math.floor(baseOvr / 4);
+      return Math.max(1, Math.min(200, baseStat + Math.floor(Math.random() * variance * 2) - variance));
+    };
+
+    const mental = generateStat();
+    const teamfight = generateStat();
+    const focus = generateStat();
+    const laning = generateStat();
+
     // 성격 생성
-    const personality = generatePersonality(discovery.mental);
+    const personality = generatePersonality(mental);
 
     // 선수 카드 생성
     const result = await pool.query(
@@ -325,10 +333,10 @@ router.post('/discoveries/:discoveryId/sign', authenticateToken, async (req: Aut
       [
         discovery.pro_player_id,
         req.teamId,
-        discovery.mental,
-        discovery.teamfight,
-        discovery.focus,
-        discovery.laning,
+        mental,
+        teamfight,
+        focus,
+        laning,
         personality
       ]
     );

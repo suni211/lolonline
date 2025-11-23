@@ -293,13 +293,25 @@ export class LPOLeagueService {
 
       // 다음 유효한 경기 시간 찾기 (한국 시간 기준)
       const getNextValidMatchTime = (date: Date): Date => {
-        const result = new Date(date);
+        let result = new Date(date.getTime());
         const now = new Date();
 
-        while (true) {
+        // 최대 14일만 체크 (무한 루프 방지)
+        let iterations = 0;
+        const maxIterations = 14 * 24; // 14일 * 24시간
+
+        while (iterations < maxIterations) {
+          iterations++;
+
           // 과거 시간이면 현재 시간으로 조정
           if (result.getTime() < now.getTime()) {
-            result.setTime(now.getTime());
+            result = new Date(now.getTime());
+          }
+
+          // 유효한 Date인지 확인
+          if (isNaN(result.getTime())) {
+            console.error('Invalid date detected, resetting to now');
+            result = new Date();
           }
 
           // 한국 시간으로 변환 (UTC+9)
@@ -310,28 +322,38 @@ export class LPOLeagueService {
 
           // 토요일이면 다음 일요일 17:00 KST로
           if (dayOfWeek === 6) {
-            result.setTime(result.getTime() + 24 * 60 * 60 * 1000); // +1일
-            // 17:00 KST = 08:00 UTC
-            const nextDay = new Date(result);
+            // 다음 날로 이동
+            const nextDay = new Date(result.getTime() + 24 * 60 * 60 * 1000);
             nextDay.setUTCHours(8, 0, 0, 0);
-            result.setTime(nextDay.getTime());
+            result = nextDay;
             continue;
           }
 
           // 17:00 KST (08:00 UTC) 이전이면 17:00 KST로
           if (hours < 8) {
-            result.setUTCHours(8, 0, 0, 0);
+            const adjusted = new Date(result.getTime());
+            adjusted.setUTCHours(8, 0, 0, 0);
+            result = adjusted;
             continue;
           }
 
           // 24:00 KST (15:00 UTC) 이후면 다음 날 17:00 KST로
           if (hours >= 15) {
-            result.setTime(result.getTime() + 24 * 60 * 60 * 1000); // +1일
-            result.setUTCHours(8, 0, 0, 0);
+            const nextDay = new Date(result.getTime() + 24 * 60 * 60 * 1000);
+            nextDay.setUTCHours(8, 0, 0, 0);
+            result = nextDay;
             continue;
           }
 
           break;
+        }
+
+        // 무한 루프 방지 - 기본값 반환
+        if (iterations >= maxIterations) {
+          console.error('Max iterations reached in getNextValidMatchTime');
+          const fallback = new Date();
+          fallback.setUTCHours(8, 0, 0, 0);
+          return fallback;
         }
 
         return result;
@@ -348,6 +370,12 @@ export class LPOLeagueService {
         // 현재 시간이 유효한지 확인하고 조정
         currentTime = getNextValidMatchTime(currentTime);
 
+        // 유효한 날짜인지 확인
+        if (isNaN(currentTime.getTime())) {
+          console.error(`Invalid currentTime at match ${i}, resetting to now`);
+          currentTime = new Date();
+        }
+
         // MySQL 형식으로 변환 (한국 시간 기준)
         const year = currentTime.getFullYear();
         const month = String(currentTime.getMonth() + 1).padStart(2, '0');
@@ -356,6 +384,28 @@ export class LPOLeagueService {
         const minutes = String(currentTime.getMinutes()).padStart(2, '0');
         const seconds = String(currentTime.getSeconds()).padStart(2, '0');
         const scheduledAtStr = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+
+        // NaN 체크
+        if (scheduledAtStr.includes('NaN')) {
+          console.error(`NaN detected in scheduledAtStr: ${scheduledAtStr}, using fallback`);
+          const fallback = new Date();
+          const fYear = fallback.getFullYear();
+          const fMonth = String(fallback.getMonth() + 1).padStart(2, '0');
+          const fDay = String(fallback.getDate()).padStart(2, '0');
+          const fHours = String(fallback.getHours()).padStart(2, '0');
+          const fMinutes = String(fallback.getMinutes()).padStart(2, '0');
+          const fSeconds = String(fallback.getSeconds()).padStart(2, '0');
+          const fallbackStr = `${fYear}-${fMonth}-${fDay} ${fHours}:${fMinutes}:${fSeconds}`;
+
+          await pool.query(
+            `INSERT INTO matches (league_id, home_team_id, away_team_id, scheduled_at, status)
+             VALUES (?, ?, ?, ?, 'SCHEDULED')`,
+            [leagueId, match.home, match.away, fallbackStr]
+          );
+
+          currentTime = new Date(fallback.getTime() + MATCH_INTERVAL_MS);
+          continue;
+        }
 
         if (i === 0) {
           console.log(`First match scheduled at: ${scheduledAtStr}`);
