@@ -73,7 +73,7 @@ interface MatchData {
 
 export default function LiveMatch() {
   const { matchId } = useParams<{ matchId: string }>();
-  const { user } = useAuth();
+  const { user, team } = useAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [match, setMatch] = useState<MatchData | null>(null);
   const [gameTime, setGameTime] = useState(0);
@@ -124,7 +124,7 @@ export default function LiveMatch() {
     if (!socket || !matchId) return;
 
     // 경기 룸 참가 (채팅용)
-    const username = user?.team_name || user?.username || `Guest_${socket.id?.slice(0, 4)}`;
+    const username = team?.name || user?.username || `Guest_${socket.id?.slice(0, 4)}`;
     socket.emit('join_match', { matchId: parseInt(matchId), username });
 
     // 채팅 메시지 수신
@@ -214,7 +214,7 @@ export default function LiveMatch() {
       socket.off('chat_message');
       socket.off('viewers_update');
     };
-  }, [socket, matchId, user]);
+  }, [socket, matchId, user, team]);
 
   // 채팅창 자동 스크롤
   useEffect(() => {
