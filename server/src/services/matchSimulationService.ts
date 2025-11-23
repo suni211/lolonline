@@ -4,18 +4,69 @@ import cron from 'node-cron';
 import { giveMatchExperience } from './playerService.js';
 import { checkInjuryAfterMatch, getInjuryPenalty } from './injuryService.js';
 
-const matchEvents = [
-  '선수가 라인에서 CS를 먹고 있습니다.',
-  '정글러가 정글 몬스터를 처치했습니다.',
-  '한타가 벌어졌습니다!',
-  '킬이 발생했습니다!',
-  '드래곤을 처치했습니다!',
-  '바론을 처치했습니다!',
-  '타워가 파괴되었습니다!',
-  '킬 스트릭이 이어지고 있습니다!',
-  '역전의 기회가 왔습니다!',
-  '압도적인 팀파이트 승리!',
-];
+// 롤 게임 상수
+const GAME_CONSTANTS = {
+  // 시간 (초 단위, 실제 1초 = 게임 10초)
+  RIFT_HERALD_SPAWN: 480,      // 8분
+  DRAGON_SPAWN: 300,           // 5분
+  DRAGON_RESPAWN: 300,         // 5분
+  BARON_SPAWN: 1500,           // 25분
+  BARON_RESPAWN: 360,          // 6분
+  ELDER_DRAGON_SPAWN: 2100,    // 35분 (4용 이후)
+
+  // 포탑 체력
+  TURRET_HP: 3000,
+  INHIBITOR_HP: 2000,
+  NEXUS_HP: 5000,
+};
+
+// 포탑 구조
+interface TurretState {
+  top: { t1: boolean; t2: boolean; t3: boolean; inhib: boolean };
+  mid: { t1: boolean; t2: boolean; t3: boolean; inhib: boolean };
+  bot: { t1: boolean; t2: boolean; t3: boolean; inhib: boolean };
+  nexus: { twin1: boolean; twin2: boolean; nexus: boolean };
+}
+
+// 경기 상태 인터페이스
+interface MatchState {
+  game_time: number;
+  home_score: number;
+  away_score: number;
+  events: any[];
+
+  // 팀별 상태
+  home: {
+    kills: number;
+    gold: number;
+    dragons: string[];
+    barons: number;
+    heralds: number;
+    turrets: TurretState;
+  };
+  away: {
+    kills: number;
+    gold: number;
+    dragons: string[];
+    barons: number;
+    heralds: number;
+    turrets: TurretState;
+  };
+
+  // 오브젝트 상태
+  dragon_alive: boolean;
+  dragon_respawn_at: number;
+  baron_alive: boolean;
+  baron_respawn_at: number;
+  herald_alive: boolean;
+  herald_taken: boolean;
+  elder_available: boolean;
+
+  // 경기 종료 조건
+  game_over: boolean;
+  winner: string | null;
+  max_game_time: number;  // 15~90분 랜덤
+}
 
 export async function initializeMatchSimulation(io: Server) {
   // 매 1분마다 경기 진행 확인
@@ -23,12 +74,12 @@ export async function initializeMatchSimulation(io: Server) {
     await processScheduledMatches(io);
   });
 
-  // 매 10초마다 진행 중인 경기 업데이트
-  cron.schedule('*/10 * * * * *', async () => {
+  // 매 1초마다 진행 중인 경기 업데이트 (1초 = 게임 10초)
+  cron.schedule('* * * * * *', async () => {
     await updateLiveMatches(io);
   });
 
-  console.log('Match simulation system initialized');
+  console.log('Match simulation system initialized (1초=10초 진행)');
 }
 
 async function processScheduledMatches(io: Server) {
@@ -120,12 +171,52 @@ async function startMatch(match: any, io: Server) {
       [match.id]
     );
 
-    // 경기 데이터 초기화
-    const matchData = {
+    // 포탑 초기 상태 (모두 살아있음)
+    const initialTurrets: TurretState = {
+      top: { t1: true, t2: true, t3: true, inhib: true },
+      mid: { t1: true, t2: true, t3: true, inhib: true },
+      bot: { t1: true, t2: true, t3: true, inhib: true },
+      nexus: { twin1: true, twin2: true, nexus: true }
+    };
+
+    // 경기 시간 15~90분 랜덤 (초 단위)
+    const maxGameTime = (15 + Math.floor(Math.random() * 76)) * 60;
+
+    // 경기 데이터 초기화 (롤 시스템)
+    const matchData: MatchState = {
+      game_time: 0,
       home_score: 0,
       away_score: 0,
-      game_time: 0,
-      events: []
+      events: [],
+
+      home: {
+        kills: 0,
+        gold: 500 * 5, // 시작 골드
+        dragons: [],
+        barons: 0,
+        heralds: 0,
+        turrets: JSON.parse(JSON.stringify(initialTurrets))
+      },
+      away: {
+        kills: 0,
+        gold: 500 * 5,
+        dragons: [],
+        barons: 0,
+        heralds: 0,
+        turrets: JSON.parse(JSON.stringify(initialTurrets))
+      },
+
+      dragon_alive: false,
+      dragon_respawn_at: GAME_CONSTANTS.DRAGON_SPAWN,
+      baron_alive: false,
+      baron_respawn_at: GAME_CONSTANTS.BARON_SPAWN,
+      herald_alive: false,
+      herald_taken: false,
+      elder_available: false,
+
+      game_over: false,
+      winner: null,
+      max_game_time: maxGameTime
     };
 
     await pool.query(
@@ -181,109 +272,126 @@ async function updateLiveMatches(io: Server) {
 
 async function simulateMatchProgress(match: any, io: Server) {
   try {
-    let matchData;
+    // matchData 파싱
+    let matchData: MatchState;
     if (!match.match_data) {
-      matchData = {
-        game_time: 0,
-        home_score: 0,
-        away_score: 0,
-        events: [],
-        player_stats: {}
-      };
+      console.error('No match_data for match', match.id);
+      return;
     } else if (typeof match.match_data === 'string') {
       matchData = JSON.parse(match.match_data);
     } else {
-      // 객체인 경우 깊은 복사로 새 객체 생성
       matchData = JSON.parse(JSON.stringify(match.match_data));
     }
 
-    // 필드가 없으면 초기화
-    if (typeof matchData.game_time !== 'number') matchData.game_time = 0;
-    if (typeof matchData.home_score !== 'number') matchData.home_score = 0;
-    if (typeof matchData.away_score !== 'number') matchData.away_score = 0;
-    if (!Array.isArray(matchData.events)) matchData.events = [];
-    
-    matchData.game_time += 10; // 10초씩 진행
-
-    // 경기 시간이 30분(1800초) 이상이면 종료
-    if (matchData.game_time >= 1800) {
+    // 이미 종료된 경기는 스킵
+    if (matchData.game_over) {
       await finishMatch(match, matchData, io);
       return;
     }
 
-    // 선수 통계 업데이트 (CS, 골드 등 지속적으로 증가)
-    await updatePlayerStats(match.id, matchData.game_time);
+    // 시간 진행 (1초 = 10초)
+    matchData.game_time += 10;
+    const gameTime = matchData.game_time;
+    const gameMinutes = Math.floor(gameTime / 60);
 
-    // 랜덤 이벤트 발생 (10% 확률)
-    if (Math.random() < 0.1) {
-      const event = await createRandomEvent(match, matchData.game_time);
-      if (event) {
-        matchData.events.push(event);
-        
-        // 이벤트를 데이터베이스에 저장
-        await pool.query(
-          `INSERT INTO match_events (match_id, event_type, event_time, description, event_data)
-           VALUES (?, ?, ?, ?, ?)`,
-          [match.id, event.type, event.time, event.description, JSON.stringify(event.data)]
-        );
+    // 선수 정보 가져오기
+    const homePlayers = await pool.query(
+      `SELECT pc.id, pp.name, pp.position FROM player_cards pc
+       JOIN pro_players pp ON pc.pro_player_id = pp.id
+       WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true`,
+      [match.home_team_id]
+    );
+    const awayPlayers = await pool.query(
+      `SELECT pc.id, pp.name, pp.position FROM player_cards pc
+       JOIN pro_players pp ON pc.pro_player_id = pp.id
+       WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true`,
+      [match.away_team_id]
+    );
 
-        // 실시간 이벤트 전송
-        io.to(`match_${match.id}`).emit('match_event', event);
+    if (homePlayers.length === 0 || awayPlayers.length === 0) {
+      console.error('No players found for match', match.id);
+      return;
+    }
 
-        // 점수 및 통계 업데이트
-        if (event.type === 'KILL') {
-          if (event.data.team === 'home') {
-            matchData.home_score++;
-            // 킬 통계 업데이트
-            if (event.data.killer_id) {
-              await pool.query(
-                'UPDATE match_stats SET kills = kills + 1 WHERE match_id = ? AND player_id = ?',
-                [match.id, event.data.killer_id]
-              );
-            }
-            if (event.data.victim_id) {
-              await pool.query(
-                'UPDATE match_stats SET deaths = deaths + 1 WHERE match_id = ? AND player_id = ?',
-                [match.id, event.data.victim_id]
-              );
-            }
-            // 어시스트 업데이트
-            if (event.data.assist_ids) {
-              for (const assistId of event.data.assist_ids) {
-                await pool.query(
-                  'UPDATE match_stats SET assists = assists + 1 WHERE match_id = ? AND player_id = ?',
-                  [match.id, assistId]
-                );
-              }
-            }
-          } else {
-            matchData.away_score++;
-            if (event.data.killer_id) {
-              await pool.query(
-                'UPDATE match_stats SET kills = kills + 1 WHERE match_id = ? AND player_id = ?',
-                [match.id, event.data.killer_id]
-              );
-            }
-            if (event.data.victim_id) {
-              await pool.query(
-                'UPDATE match_stats SET deaths = deaths + 1 WHERE match_id = ? AND player_id = ?',
-                [match.id, event.data.victim_id]
-              );
-            }
-            if (event.data.assist_ids) {
-              for (const assistId of event.data.assist_ids) {
-                await pool.query(
-                  'UPDATE match_stats SET assists = assists + 1 WHERE match_id = ? AND player_id = ?',
-                  [match.id, assistId]
-                );
-              }
-            }
-          }
-        }
+    // 팀 파워 계산
+    const homePower = await calculateTeamOverall(match.home_team_id, gameTime);
+    const awayPower = await calculateTeamOverall(match.away_team_id, gameTime);
+    const homeWinChance = homePower / (homePower + awayPower);
+
+    // === 오브젝트 스폰 체크 ===
+
+    // 드래곤 스폰 (5분)
+    if (gameTime >= matchData.dragon_respawn_at && !matchData.dragon_alive) {
+      matchData.dragon_alive = true;
+      const event = createEvent(gameTime, 'DRAGON_SPAWN', '드래곤이 출현했습니다!', {});
+      matchData.events.push(event);
+      io.to(`match_${match.id}`).emit('match_event', event);
+    }
+
+    // 유충 스폰 (8분)
+    if (gameTime >= GAME_CONSTANTS.RIFT_HERALD_SPAWN && !matchData.herald_alive && !matchData.herald_taken) {
+      matchData.herald_alive = true;
+      const event = createEvent(gameTime, 'HERALD_SPAWN', '협곡의 전령이 출현했습니다!', {});
+      matchData.events.push(event);
+      io.to(`match_${match.id}`).emit('match_event', event);
+    }
+
+    // 바론 스폰 (25분)
+    if (gameTime >= matchData.baron_respawn_at && !matchData.baron_alive) {
+      matchData.baron_alive = true;
+      const event = createEvent(gameTime, 'BARON_SPAWN', '바론 내셔가 출현했습니다!', {});
+      matchData.events.push(event);
+      io.to(`match_${match.id}`).emit('match_event', event);
+    }
+
+    // 장로 용 (4용 획득한 팀 있을 때)
+    if (!matchData.elder_available &&
+        (matchData.home.dragons.length >= 4 || matchData.away.dragons.length >= 4)) {
+      matchData.elder_available = true;
+    }
+
+    // === 이벤트 발생 (매우 빈번하게) ===
+    const events = await generateEvents(match, matchData, homePlayers, awayPlayers, homeWinChance, gameTime, io);
+
+    // === 선수 통계 업데이트 ===
+    await updatePlayerStatsLOL(match.id, homePlayers, awayPlayers, gameTime);
+
+    // === 경기 종료 조건 체크 ===
+    // 1. 넥서스 파괴
+    if (!matchData.home.turrets.nexus.nexus) {
+      matchData.game_over = true;
+      matchData.winner = 'away';
+      matchData.away_score = 1;
+    } else if (!matchData.away.turrets.nexus.nexus) {
+      matchData.game_over = true;
+      matchData.winner = 'home';
+      matchData.home_score = 1;
+    }
+    // 2. 최대 시간 초과 시 킬/골드로 승자 결정
+    else if (gameTime >= matchData.max_game_time) {
+      matchData.game_over = true;
+      if (matchData.home.kills > matchData.away.kills) {
+        matchData.winner = 'home';
+        matchData.home_score = 1;
+      } else if (matchData.away.kills > matchData.home.kills) {
+        matchData.winner = 'away';
+        matchData.away_score = 1;
+      } else if (matchData.home.gold > matchData.away.gold) {
+        matchData.winner = 'home';
+        matchData.home_score = 1;
+      } else {
+        matchData.winner = 'away';
+        matchData.away_score = 1;
       }
     }
 
-    // 경기 데이터 업데이트
+    // 경기 종료 처리
+    if (matchData.game_over) {
+      await finishMatch(match, matchData, io);
+      return;
+    }
+
+    // 경기 데이터 저장
     await pool.query(
       'UPDATE matches SET match_data = ? WHERE id = ?',
       [JSON.stringify(matchData), match.id]
@@ -293,201 +401,290 @@ async function simulateMatchProgress(match: any, io: Server) {
     io.to(`match_${match.id}`).emit('match_update', {
       match_id: match.id,
       game_time: matchData.game_time,
-      home_score: matchData.home_score,
-      away_score: matchData.away_score
+      home: matchData.home,
+      away: matchData.away,
+      dragon_alive: matchData.dragon_alive,
+      baron_alive: matchData.baron_alive,
+      herald_alive: matchData.herald_alive
     });
   } catch (error) {
     console.error('Error simulating match progress:', error);
   }
 }
 
-// 선수 통계 업데이트 (CS, 골드 등)
-async function updatePlayerStats(matchId: number, gameTime: number) {
-  try {
-    // 모든 선수 통계 가져오기
-    const allStats = await pool.query(
-      'SELECT * FROM match_stats WHERE match_id = ?',
-      [matchId]
-    );
-
-    for (const stat of allStats) {
-      // CS 증가 (분당 약 8-12 CS)
-      const csIncrease = Math.floor(8 + Math.random() * 4);
-      await pool.query(
-        'UPDATE match_stats SET cs = cs + ? WHERE id = ?',
-        [csIncrease, stat.id]
-      );
-
-      // 골드 수급 (분당 약 400-600 골드)
-      const goldIncrease = Math.floor(400 + Math.random() * 200);
-      await pool.query(
-        'UPDATE match_stats SET gold_earned = gold_earned + ? WHERE id = ?',
-        [goldIncrease, stat.id]
-      );
-
-      // 딜량 증가 (분당 약 2000-4000)
-      const damageIncrease = Math.floor(2000 + Math.random() * 2000);
-      await pool.query(
-        'UPDATE match_stats SET damage_dealt = damage_dealt + ? WHERE id = ?',
-        [damageIncrease, stat.id]
-      );
-
-      // 받은 딜량 증가
-      const damageTakenIncrease = Math.floor(1500 + Math.random() * 1500);
-      await pool.query(
-        'UPDATE match_stats SET damage_taken = damage_taken + ? WHERE id = ?',
-        [damageTakenIncrease, stat.id]
-      );
-
-      // 와드 설치 (가끔)
-      if (Math.random() < 0.1) {
-        await pool.query(
-          'UPDATE match_stats SET wards_placed = wards_placed + 1 WHERE id = ?',
-          [stat.id]
-        );
-      }
-
-      // 와드 제거 (가끔)
-      if (Math.random() < 0.05) {
-        await pool.query(
-          'UPDATE match_stats SET wards_destroyed = wards_destroyed + 1 WHERE id = ?',
-          [stat.id]
-        );
-      }
-
-      // 비전 점수 증가
-      const visionIncrease = Math.floor(1 + Math.random() * 2);
-      await pool.query(
-        'UPDATE match_stats SET vision_score = vision_score + ? WHERE id = ?',
-        [visionIncrease, stat.id]
-      );
-    }
-  } catch (error) {
-    console.error('Error updating player stats:', error);
-  }
+// 간단한 이벤트 생성 헬퍼
+function createEvent(time: number, type: string, description: string, data: any) {
+  return { type, time, description, data };
 }
 
-async function createRandomEvent(match: any, gameTime: number) {
-  // 팀 전술 조회
-  const homeTactics = await getTeamTactics(match.home_team_id);
-  const awayTactics = await getTeamTactics(match.away_team_id);
+// 이벤트 생성 함수
+async function generateEvents(
+  match: any,
+  matchData: MatchState,
+  homePlayers: any[],
+  awayPlayers: any[],
+  homeWinChance: number,
+  gameTime: number,
+  io: Server
+) {
+  const events: any[] = [];
+  const gameMinutes = Math.floor(gameTime / 60);
 
-  // 전술에 따른 이벤트 타입 가중치
-  let eventTypes = ['KILL', 'ASSIST', 'TOWER', 'DRAGON', 'BARON', 'TEAMFIGHT'];
+  // 이벤트 발생 확률 (매우 빈번하게 - 50% 확률)
+  if (Math.random() > 0.5) return events;
 
-  // 우선순위 오브젝트에 따른 가중치 조정
-  const objectiveWeights: Record<string, string[]> = {
-    'DRAGON': ['DRAGON', 'DRAGON'],
-    'BARON': ['BARON', 'BARON'],
-    'TOWER': ['TOWER', 'TOWER'],
-    'TEAMFIGHT': ['TEAMFIGHT', 'KILL', 'KILL']
-  };
-
-  // 홈팀과 어웨이팀 전술에 따라 이벤트 타입 추가
-  if (homeTactics.priority_objective && objectiveWeights[homeTactics.priority_objective]) {
-    eventTypes = eventTypes.concat(objectiveWeights[homeTactics.priority_objective]);
-  }
-  if (awayTactics.priority_objective && objectiveWeights[awayTactics.priority_objective]) {
-    eventTypes = eventTypes.concat(objectiveWeights[awayTactics.priority_objective]);
-  }
-
-  const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-
-  const descriptions = matchEvents[Math.floor(Math.random() * matchEvents.length)];
-
-  // 팀별 오버롤 계산 (전술 보너스 포함)
-  const homeTeamOverall = await calculateTeamOverall(match.home_team_id, gameTime);
-  const awayTeamOverall = await calculateTeamOverall(match.away_team_id, gameTime);
-
-  // 오버롤에 따른 이벤트 결과 결정
-  const homeWinChance = homeTeamOverall / (homeTeamOverall + awayTeamOverall);
-
-  // 선수 목록 가져오기 (player_cards + pro_players 사용)
-  const homePlayers = await pool.query(
-    `SELECT pc.id, pp.name, pp.position FROM player_cards pc
-     JOIN pro_players pp ON pc.pro_player_id = pp.id
-     WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true`,
-    [match.home_team_id]
-  );
-  const awayPlayers = await pool.query(
-    `SELECT pc.id, pp.name, pp.position FROM player_cards pc
-     JOIN pro_players pp ON pc.pro_player_id = pp.id
-     WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true`,
-    [match.away_team_id]
-  );
-
+  // 승리 팀 결정
   const winningTeam = Math.random() < homeWinChance ? 'home' : 'away';
   const winningPlayers = winningTeam === 'home' ? homePlayers : awayPlayers;
   const losingPlayers = winningTeam === 'home' ? awayPlayers : homePlayers;
+  const winningState = winningTeam === 'home' ? matchData.home : matchData.away;
+  const losingState = winningTeam === 'home' ? matchData.away : matchData.home;
 
-  // 선수가 없으면 이벤트 생성 불가
-  if (winningPlayers.length === 0 || losingPlayers.length === 0) {
-    return null;
-  }
+  if (winningPlayers.length === 0 || losingPlayers.length === 0) return events;
 
-  let eventData: any = {
-    team: winningTeam,
-    description: descriptions
-  };
+  // 이벤트 타입 선택 (가중치 적용)
+  const eventPool: string[] = [];
 
-  if (eventType === 'KILL') {
-    const killer = winningPlayers[Math.floor(Math.random() * winningPlayers.length)];
-    const victim = losingPlayers[Math.floor(Math.random() * losingPlayers.length)];
+  // 기본 이벤트 (항상)
+  eventPool.push('KILL', 'KILL', 'KILL', 'CS', 'CS', 'GOLD');
 
-    if (!killer || !victim) {
-      return null;
-    }
+  // 시간대별 이벤트
+  if (gameMinutes >= 3) eventPool.push('GANK', 'LANE_PUSH');
+  if (gameMinutes >= 5 && matchData.dragon_alive) eventPool.push('DRAGON', 'DRAGON');
+  if (gameMinutes >= 8 && matchData.herald_alive) eventPool.push('HERALD');
+  if (gameMinutes >= 10) eventPool.push('TURRET', 'TURRET', 'TEAMFIGHT');
+  if (gameMinutes >= 15) eventPool.push('INHIBITOR');
+  if (gameMinutes >= 25 && matchData.baron_alive) eventPool.push('BARON', 'BARON');
+  if (matchData.elder_available && matchData.dragon_alive) eventPool.push('ELDER_DRAGON');
 
-    const assistCount = Math.floor(Math.random() * 3); // 0-2명 어시스트
-    const assistIds: number[] = [];
-    for (let i = 0; i < assistCount && i < winningPlayers.length - 1; i++) {
-      const otherPlayers = winningPlayers.filter((p: any) => p.id !== killer.id);
-      if (otherPlayers.length > 0) {
-        const assistPlayer = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
-        if (assistPlayer && !assistIds.includes(assistPlayer.id)) {
-          assistIds.push(assistPlayer.id);
+  const eventType = eventPool[Math.floor(Math.random() * eventPool.length)];
+
+  const killer = winningPlayers[Math.floor(Math.random() * winningPlayers.length)];
+  const victim = losingPlayers[Math.floor(Math.random() * losingPlayers.length)];
+
+  let event: any = null;
+
+  switch (eventType) {
+    case 'KILL':
+      event = createEvent(gameTime, 'KILL', `${killer.name}(이)가 ${victim.name}(을)를 처치했습니다!`, {
+        team: winningTeam,
+        killer_id: killer.id,
+        killer_name: killer.name,
+        victim_id: victim.id,
+        victim_name: victim.name
+      });
+      winningState.kills++;
+      winningState.gold += 300;
+      // DB 업데이트
+      await pool.query('UPDATE match_stats SET kills = kills + 1 WHERE match_id = ? AND player_id = ?', [match.id, killer.id]);
+      await pool.query('UPDATE match_stats SET deaths = deaths + 1 WHERE match_id = ? AND player_id = ?', [match.id, victim.id]);
+      break;
+
+    case 'DRAGON':
+      if (matchData.dragon_alive) {
+        const dragonTypes = ['불', '바다', '바람', '대지', '구름', '화학공학'];
+        const dragonType = dragonTypes[Math.floor(Math.random() * dragonTypes.length)];
+        event = createEvent(gameTime, 'DRAGON', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 ${dragonType} 드래곤을 처치했습니다!`, {
+          team: winningTeam,
+          dragon_type: dragonType
+        });
+        winningState.dragons.push(dragonType);
+        winningState.gold += 200;
+        matchData.dragon_alive = false;
+        matchData.dragon_respawn_at = gameTime + GAME_CONSTANTS.DRAGON_RESPAWN;
+      }
+      break;
+
+    case 'HERALD':
+      if (matchData.herald_alive) {
+        event = createEvent(gameTime, 'HERALD', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 협곡의 전령을 처치했습니다!`, {
+          team: winningTeam
+        });
+        winningState.heralds++;
+        matchData.herald_alive = false;
+        matchData.herald_taken = true;
+      }
+      break;
+
+    case 'BARON':
+      if (matchData.baron_alive) {
+        event = createEvent(gameTime, 'BARON', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 바론 내셔를 처치했습니다!`, {
+          team: winningTeam
+        });
+        winningState.barons++;
+        winningState.gold += 1500;
+        matchData.baron_alive = false;
+        matchData.baron_respawn_at = gameTime + GAME_CONSTANTS.BARON_RESPAWN;
+      }
+      break;
+
+    case 'TURRET':
+      // 포탑 파괴 로직
+      const lanes = ['top', 'mid', 'bot'] as const;
+      const lane = lanes[Math.floor(Math.random() * lanes.length)];
+      const enemyTurrets = losingState.turrets[lane];
+
+      if (enemyTurrets.t1) {
+        enemyTurrets.t1 = false;
+        event = createEvent(gameTime, 'TURRET', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 ${lane} 1차 타워를 파괴했습니다!`, {
+          team: winningTeam, lane, tier: 1
+        });
+        winningState.gold += 250;
+      } else if (enemyTurrets.t2) {
+        enemyTurrets.t2 = false;
+        event = createEvent(gameTime, 'TURRET', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 ${lane} 2차 타워를 파괴했습니다!`, {
+          team: winningTeam, lane, tier: 2
+        });
+        winningState.gold += 250;
+      } else if (enemyTurrets.t3) {
+        enemyTurrets.t3 = false;
+        event = createEvent(gameTime, 'TURRET', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 ${lane} 3차 타워를 파괴했습니다!`, {
+          team: winningTeam, lane, tier: 3
+        });
+        winningState.gold += 250;
+      }
+      break;
+
+    case 'INHIBITOR':
+      // 억제기 파괴 (3차 타워가 파괴된 라인만)
+      for (const lane of ['top', 'mid', 'bot'] as const) {
+        const turrets = losingState.turrets[lane];
+        if (!turrets.t3 && turrets.inhib) {
+          turrets.inhib = false;
+          event = createEvent(gameTime, 'INHIBITOR', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 ${lane} 억제기를 파괴했습니다!`, {
+            team: winningTeam, lane
+          });
+          winningState.gold += 50;
+          break;
         }
       }
-    }
+      break;
 
-    eventData.killer_id = killer.id;
-    eventData.killer_name = killer.name;
-    eventData.victim_id = victim.id;
-    eventData.victim_name = victim.name;
-    eventData.assist_ids = assistIds;
+    case 'TEAMFIGHT':
+      const killCount = 2 + Math.floor(Math.random() * 4); // 2-5킬
+      event = createEvent(gameTime, 'TEAMFIGHT', `한타에서 ${winningTeam === 'home' ? '블루팀' : '레드팀'}이 ${killCount}킬을 올렸습니다!`, {
+        team: winningTeam,
+        kills: killCount
+      });
+      winningState.kills += killCount;
+      winningState.gold += killCount * 300;
+      break;
 
-    // 퍼스트블러드 체크
-    const existingKills = await pool.query(
-      'SELECT SUM(kills) as total FROM match_stats WHERE match_id = ?',
-      [match.id]
-    );
-    if (existingKills[0].total === 0) {
-      eventData.first_blood = true;
-      await pool.query(
-        'UPDATE match_stats SET first_blood = TRUE WHERE match_id = ? AND player_id = ?',
-        [match.id, killer.id]
-      );
-    }
-  } else if (eventType === 'TOWER') {
-    const turretKiller = winningPlayers[Math.floor(Math.random() * winningPlayers.length)];
-    if (!turretKiller) {
-      return null;
-    }
-    eventData.killer_id = turretKiller.id;
-    eventData.killer_name = turretKiller.name;
-    await pool.query(
-      'UPDATE match_stats SET turret_kills = turret_kills + 1 WHERE match_id = ? AND player_id = ?',
-      [match.id, turretKiller.id]
-    );
+    case 'GANK':
+      event = createEvent(gameTime, 'GANK', `${killer.name}(이)가 갱킹에 성공하여 ${victim.name}(을)를 처치했습니다!`, {
+        team: winningTeam,
+        killer_name: killer.name,
+        victim_name: victim.name
+      });
+      winningState.kills++;
+      winningState.gold += 400;
+      break;
+
+    case 'CS':
+      const csGained = 10 + Math.floor(Math.random() * 20);
+      event = createEvent(gameTime, 'CS', `${killer.name}(이)가 CS ${csGained}개를 획득했습니다.`, {
+        team: winningTeam,
+        player_name: killer.name,
+        cs: csGained
+      });
+      break;
+
+    case 'GOLD':
+      const goldGained = 100 + Math.floor(Math.random() * 300);
+      winningState.gold += goldGained;
+      event = createEvent(gameTime, 'GOLD', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 ${goldGained} 골드를 획득했습니다.`, {
+        team: winningTeam,
+        gold: goldGained
+      });
+      break;
   }
 
-  return {
-    type: eventType,
-    time: gameTime,
-    description: descriptions,
-    data: eventData
-  };
+  // 쌍둥이 포탑 및 넥서스 체크
+  const enemyNexusTurrets = losingState.turrets.nexus;
+  const allInhibsDown = !losingState.turrets.top.inhib && !losingState.turrets.mid.inhib && !losingState.turrets.bot.inhib;
+
+  if (allInhibsDown && (enemyNexusTurrets.twin1 || enemyNexusTurrets.twin2)) {
+    if (Math.random() < 0.3) {
+      if (enemyNexusTurrets.twin1) {
+        enemyNexusTurrets.twin1 = false;
+        event = createEvent(gameTime, 'NEXUS_TURRET', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 쌍둥이 타워를 파괴했습니다!`, {
+          team: winningTeam
+        });
+      } else if (enemyNexusTurrets.twin2) {
+        enemyNexusTurrets.twin2 = false;
+        event = createEvent(gameTime, 'NEXUS_TURRET', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 쌍둥이 타워를 파괴했습니다!`, {
+          team: winningTeam
+        });
+      }
+    }
+  }
+
+  // 넥서스 공격 (쌍둥이 타워가 모두 파괴된 경우)
+  if (!enemyNexusTurrets.twin1 && !enemyNexusTurrets.twin2 && enemyNexusTurrets.nexus) {
+    if (Math.random() < 0.4) {
+      enemyNexusTurrets.nexus = false;
+      event = createEvent(gameTime, 'NEXUS_DESTROYED', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 넥서스를 파괴했습니다! 게임 종료!`, {
+        team: winningTeam
+      });
+    }
+  }
+
+  if (event) {
+    matchData.events.push(event);
+    // DB에 이벤트 저장
+    await pool.query(
+      `INSERT INTO match_events (match_id, event_type, event_time, description, event_data)
+       VALUES (?, ?, ?, ?, ?)`,
+      [match.id, event.type, event.time, event.description, JSON.stringify(event.data)]
+    );
+    io.to(`match_${match.id}`).emit('match_event', event);
+    events.push(event);
+  }
+
+  return events;
 }
+
+// 롤 스타일 선수 통계 업데이트
+async function updatePlayerStatsLOL(matchId: number, homePlayers: any[], awayPlayers: any[], gameTime: number) {
+  const allPlayers = [...homePlayers, ...awayPlayers];
+  const gameMinutes = gameTime / 60;
+
+  for (const player of allPlayers) {
+    const isSupport = player.position === 'SUPPORT';
+
+    // CS 증가 (분당)
+    const csPerMin = isSupport ? 1 : (7 + Math.random() * 3);
+    const csIncrease = Math.floor(csPerMin / 6); // 10초당
+
+    // 골드 증가
+    const goldPerMin = isSupport ? 200 : (350 + Math.random() * 100);
+    const goldIncrease = Math.floor(goldPerMin / 6);
+
+    // 딜량 (경기 끝날 때 2만~6만, 서포터는 1만 이하)
+    // 30분 경기 기준 분당 ~1500-2000 딜
+    const damagePerMin = isSupport ? (200 + Math.random() * 100) : (600 + Math.random() * 800);
+    const damageIncrease = Math.floor(damagePerMin / 6);
+
+    // 받은 딜량
+    const damageTakenPerMin = 400 + Math.random() * 400;
+    const damageTakenIncrease = Math.floor(damageTakenPerMin / 6);
+
+    await pool.query(
+      `UPDATE match_stats
+       SET cs = cs + ?, gold_earned = gold_earned + ?,
+           damage_dealt = damage_dealt + ?, damage_taken = damage_taken + ?
+       WHERE match_id = ? AND player_id = ?`,
+      [csIncrease, goldIncrease, damageIncrease, damageTakenIncrease, matchId, player.id]
+    );
+  }
+}
+
+// 기존 updatePlayerStats는 호환성을 위해 빈 함수로 유지
+async function updatePlayerStats(matchId: number, gameTime: number) {
+  // 새 시스템에서는 updatePlayerStatsLOL을 사용
+}
+
+// 기존 createRandomEvent는 generateEvents로 대체됨
 
 // 팀 전술 조회
 async function getTeamTactics(teamId: number) {
