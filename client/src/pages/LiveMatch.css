@@ -111,10 +111,10 @@
 }
 
 .team-objectives .obj {
-  padding: 4px 8px;
+  padding: 6px 10px;
   background: #2a2a3a;
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
 /* 메인 콘텐츠 */
@@ -151,12 +151,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
+  gap: 10px;
+  padding: 8px 10px;
   border-radius: 4px;
   margin-bottom: 4px;
   background: #252535;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   white-space: nowrap;
 }
 
@@ -170,7 +170,7 @@
 }
 
 .player-info .position {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: #888;
 }
 
@@ -276,14 +276,14 @@
 }
 
 .event {
-  padding: 8px;
+  padding: 10px;
   margin-bottom: 5px;
   border-radius: 4px;
   background: #252535;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .event.home {

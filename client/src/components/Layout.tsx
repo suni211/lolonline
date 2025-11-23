@@ -44,6 +44,7 @@ export default function Layout() {
     { path: '/friendly', label: '친선전' },
     { path: '/leagues', label: '리그' },
     { path: '/transfer', label: '이적시장' },
+    { path: '/team-info', label: '팀 정보' },
     { path: '/missions', label: '미션' },
     { path: '/team', label: '팀 관리' },
   ];

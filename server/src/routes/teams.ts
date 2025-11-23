@@ -42,6 +42,108 @@ const uploadLogo = multer({
   }
 });
 
+// 팀 검색
+router.get('/search', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || typeof q !== 'string' || q.length < 1) {
+      return res.status(400).json({ error: '검색어를 입력해주세요' });
+    }
+
+    const teams = await pool.query(
+      `SELECT t.id, t.name, t.league, t.logo_url, t.team_color, t.fan_count, t.gold, t.is_ai,
+              (SELECT COUNT(*) FROM player_cards pc WHERE pc.team_id = t.id AND pc.is_contracted = true) as player_count,
+              (SELECT COUNT(*) FROM player_cards pc WHERE pc.team_id = t.id AND pc.is_starter = true AND pc.is_contracted = true) as starter_count,
+              (SELECT COALESCE(AVG(pc.ovr), 0) FROM player_cards pc WHERE pc.team_id = t.id AND pc.is_starter = true AND pc.is_contracted = true) as avg_overall
+       FROM teams t
+       WHERE t.name LIKE ?
+       ORDER BY t.fan_count DESC
+       LIMIT 20`,
+      [`%${q}%`]
+    );
+
+    res.json(teams);
+  } catch (error: any) {
+    console.error('Search teams error:', error);
+    res.status(500).json({ error: '팀 검색 실패' });
+  }
+});
+
+// 특정 팀 상세 정보
+router.get('/:teamId/info', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { teamId } = req.params;
+
+    const teams = await pool.query(
+      `SELECT t.*,
+              (SELECT COUNT(*) FROM player_cards pc WHERE pc.team_id = t.id AND pc.is_contracted = true) as player_count,
+              (SELECT COUNT(*) FROM player_cards pc WHERE pc.team_id = t.id AND pc.is_starter = true AND pc.is_contracted = true) as starter_count
+       FROM teams t WHERE id = ?`,
+      [teamId]
+    );
+
+    if (teams.length === 0) {
+      return res.status(404).json({ error: '팀을 찾을 수 없습니다' });
+    }
+
+    // 선수 목록
+    const players = await pool.query(
+      `SELECT pc.id, pp.name as player_name, pp.position, pc.ovr, pc.is_starter,
+              pc.laning, pc.teamfight, pc.mentality, pc.consistency, pc.aggression
+       FROM player_cards pc
+       INNER JOIN pro_players pp ON pc.pro_player_id = pp.id
+       WHERE pc.team_id = ? AND pc.is_contracted = true
+       ORDER BY pc.is_starter DESC, pc.ovr DESC`,
+      [teamId]
+    );
+
+    // 최근 경기 결과
+    const matches = await pool.query(
+      `SELECT m.id, m.home_score, m.away_score, m.status,
+              DATE_FORMAT(m.finished_at, '%Y-%m-%d') as match_date,
+              ht.name as home_team_name, at.name as away_team_name
+       FROM matches m
+       INNER JOIN teams ht ON m.home_team_id = ht.id
+       INNER JOIN teams at ON m.away_team_id = at.id
+       WHERE (m.home_team_id = ? OR m.away_team_id = ?) AND m.status = 'FINISHED'
+       ORDER BY m.finished_at DESC
+       LIMIT 10`,
+      [teamId, teamId]
+    );
+
+    // 재무 정보 (스폰서 수입 등)
+    const sponsorIncome = await pool.query(
+      `SELECT COALESCE(SUM(ts.weekly_reward), 0) as weekly_income
+       FROM team_sponsors ts
+       INNER JOIN sponsors s ON ts.sponsor_id = s.id
+       WHERE ts.team_id = ? AND ts.end_date > NOW()`,
+      [teamId]
+    );
+
+    // 리그 순위
+    const leagueStats = await pool.query(
+      `SELECT lp.wins, lp.losses, lp.draws, lp.points, l.name as league_name
+       FROM league_participants lp
+       INNER JOIN leagues l ON lp.league_id = l.id
+       WHERE lp.team_id = ? AND l.status = 'IN_PROGRESS'
+       LIMIT 1`,
+      [teamId]
+    );
+
+    res.json({
+      team: teams[0],
+      players,
+      matches,
+      sponsorIncome: sponsorIncome[0]?.weekly_income || 0,
+      leagueStats: leagueStats[0] || null
+    });
+  } catch (error: any) {
+    console.error('Get team info error:', error);
+    res.status(500).json({ error: '팀 정보 조회 실패' });
+  }
+});
+
 // 팀 정보 가져오기
 router.get('/', authenticateToken, async (req: AuthRequest, res) => {
   try {

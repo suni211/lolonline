@@ -20,6 +20,7 @@ import Cards from './pages/Cards';
 import Transfer from './pages/Transfer';
 import FriendlyMatch from './pages/FriendlyMatch';
 import LiveMatch from './pages/LiveMatch';
+import TeamInfo from './pages/TeamInfo';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -64,6 +65,7 @@ function App() {
             <Route path="cards" element={<Cards />} />
             <Route path="transfer" element={<Transfer />} />
             <Route path="friendly" element={<FriendlyMatch />} />
+            <Route path="team-info" element={<TeamInfo />} />
           </Route>
         </Routes>
       </Router>
