@@ -419,8 +419,8 @@ router.post('/facilities/upgrade', authenticateToken, async (req: AuthRequest, r
     const currentLevel = facilities.length > 0 ? facilities[0].level : 0;
     const nextLevel = currentLevel + 1;
 
-    // 업그레이드 비용 계산 (레벨당 500만 골드)
-    const cost = nextLevel * 5000000;
+    // 업그레이드 비용 계산 (기본 100만 * 2^레벨, 기하급수적 증가)
+    const cost = 1000000 * Math.pow(2, currentLevel);
 
     // 팀 골드 확인
     const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);

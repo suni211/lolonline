@@ -350,8 +350,8 @@ router.post('/:playerId/uniform/upgrade', authenticateToken, async (req: AuthReq
       return res.status(400).json({ error: 'Uniform already at maximum level' });
     }
 
-    // 강화 비용 (레벨당 100만 골드)
-    const cost = (player.uniform_level + 1) * 1000000;
+    // 강화 비용 (기본 50만 * 2^레벨, 기하급수적 증가)
+    const cost = 500000 * Math.pow(2, player.uniform_level);
 
     // 골드 확인
     const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);

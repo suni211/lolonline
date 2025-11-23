@@ -25,7 +25,7 @@ import sponsorRoutes from './routes/sponsors.js';
 import eventRoutes from './routes/events.js';
 import adminRoutes from './routes/admin.js';
 import tacticsRoutes from './routes/tactics.js';
-import packsRoutes from './routes/packs.js';
+// import packsRoutes from './routes/packs.js'; // 카드깡 제거, 스카우트로 대체
 import transferRoutes from './routes/transfer.js';
 import aiRoutes from './routes/ai.js';
 import scoutRoutes from './routes/scout.js';
@@ -75,7 +75,7 @@ app.use('/api/sponsors', sponsorRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/tactics', tacticsRoutes);
-app.use('/api/packs', packsRoutes);
+// app.use('/api/packs', packsRoutes); // 카드깡 제거, 스카우트로 대체
 app.use('/api/transfer', transferRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/scout', scoutRoutes);

@@ -44,8 +44,8 @@ router.post('/:facilityType/upgrade', authenticateToken, async (req: AuthRequest
       return res.status(400).json({ error: 'Facility is already at maximum level' });
     }
 
-    // 업그레이드 비용 계산 (레벨 * 500만)
-    const upgradeCost = (currentLevel + 1) * 5000000;
+    // 업그레이드 비용 계산 (기본 100만 * 2^레벨, 기하급수적 증가)
+    const upgradeCost = 1000000 * Math.pow(2, currentLevel);
 
     // 골드 확인
     const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);
