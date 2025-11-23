@@ -18,12 +18,24 @@ const MAP_POSITIONS = {
       { x: 84, y: 65 }, { x: 86, y: 55 }, { x: 88, y: 45 }, { x: 90, y: 35 }
     ]
   },
-  // 정글 위치
-  jungle: {
-    blueTop: { x: 25, y: 45 },
-    blueBot: { x: 35, y: 75 },
-    redTop: { x: 65, y: 25 },
-    redBot: { x: 75, y: 55 }
+  // 정글 캠프 위치
+  jungleCamps: {
+    blue: {
+      redBuff: { x: 52.1, y: 70.7 },
+      golems: { x: 55.9, y: 79.4 },
+      raptors: { x: 48.3, y: 62.1 },
+      wolves: { x: 29.5, y: 53.9 },
+      blueBuff: { x: 29.3, y: 45.8 },
+      gromp: { x: 20, y: 42.4 }
+    },
+    red: {
+      blueBuff: { x: 71.5, y: 52.2 },
+      gromp: { x: 81.3, y: 55.8 },
+      wolves: { x: 70.9, y: 44 },
+      raptors: { x: 53.5, y: 36.3 },
+      redBuff: { x: 49.5, y: 28.2 },
+      golems: { x: 45.3, y: 19.3 }
+    }
   },
   // 오브젝트 위치
   objectives: {
@@ -33,7 +45,7 @@ const MAP_POSITIONS = {
     blueNexus: { x: 13.9, y: 85.7 },
     redNexus: { x: 85.2, y: 13.7 },
     voidgrub: { x: 36.6, y: 30.2 },
-    atakhan: { x: 50, y: 50 }
+    atakhan: { x: 27, y: 23.5 }
   },
   // 타워 위치
   turrets: {
@@ -69,6 +81,170 @@ const SPAWN_POSITIONS = {
     SUP: { x: 92, y: 7.7 }
   }
 };
+
+// 네비게이션 노드 시스템
+interface NavNode {
+  id: string;
+  x: number;
+  y: number;
+  connections: string[];
+  // 이 노드에 접근하려면 파괴해야 할 적 포탑 (blue 팀 기준)
+  requiresDestroyedTurret?: { team: 'blue' | 'red'; lane: string; index: number };
+}
+
+const NAVIGATION_NODES: NavNode[] = [
+  // 블루팀 베이스
+  { id: 'blue_spawn', x: 8.1, y: 92.7, connections: ['blue_nexus'] },
+  { id: 'blue_nexus', x: 13.9, y: 85.7, connections: ['blue_spawn', 'blue_top_t3', 'blue_mid_t3', 'blue_bot_t3'] },
+
+  // 블루팀 탑 라인
+  { id: 'blue_top_t3', x: 12.6, y: 68, connections: ['blue_nexus', 'blue_top_t2', 'blue_wolves'] },
+  { id: 'blue_top_t2', x: 15.4, y: 53.3, connections: ['blue_top_t3', 'blue_top_t1', 'blue_gromp'] },
+  { id: 'blue_top_t1', x: 13.3, y: 29.6, connections: ['blue_top_t2', 'top_river', 'baron_pit'] },
+
+  // 블루팀 미드 라인
+  { id: 'blue_mid_t3', x: 27.5, y: 71.4, connections: ['blue_nexus', 'blue_mid_t2', 'blue_wolves', 'blue_raptors'] },
+  { id: 'blue_mid_t2', x: 35.9, y: 65.3, connections: ['blue_mid_t3', 'blue_mid_t1', 'blue_raptors'] },
+  { id: 'blue_mid_t1', x: 40.9, y: 55.4, connections: ['blue_mid_t2', 'mid_center'] },
+
+  // 블루팀 봇 라인
+  { id: 'blue_bot_t3', x: 30.6, y: 88.1, connections: ['blue_nexus', 'blue_bot_t2', 'blue_golems'] },
+  { id: 'blue_bot_t2', x: 46.6, y: 86.8, connections: ['blue_bot_t3', 'blue_bot_t1', 'blue_red_buff'] },
+  { id: 'blue_bot_t1', x: 68.7, y: 90.5, connections: ['blue_bot_t2', 'bot_river', 'dragon_pit'] },
+
+  // 블루팀 정글
+  { id: 'blue_gromp', x: 20, y: 42.4, connections: ['blue_top_t2', 'blue_blue_buff', 'top_river'] },
+  { id: 'blue_blue_buff', x: 29.3, y: 45.8, connections: ['blue_gromp', 'blue_wolves'] },
+  { id: 'blue_wolves', x: 29.5, y: 53.9, connections: ['blue_blue_buff', 'blue_top_t3', 'blue_mid_t3'] },
+  { id: 'blue_raptors', x: 48.3, y: 62.1, connections: ['blue_mid_t2', 'blue_red_buff', 'mid_center'] },
+  { id: 'blue_red_buff', x: 52.1, y: 70.7, connections: ['blue_raptors', 'blue_golems', 'dragon_pit'] },
+  { id: 'blue_golems', x: 55.9, y: 79.4, connections: ['blue_red_buff', 'blue_bot_t3', 'bot_river'] },
+
+  // 레드팀 베이스
+  { id: 'red_spawn', x: 92, y: 7.7, connections: ['red_nexus'] },
+  { id: 'red_nexus', x: 85.2, y: 13.7, connections: ['red_spawn', 'red_top_t3', 'red_mid_t3', 'red_bot_t3'] },
+
+  // 레드팀 탑 라인
+  { id: 'red_top_t3', x: 69.2, y: 11.1, connections: ['red_nexus', 'red_top_t2', 'red_golems'] },
+  { id: 'red_top_t2', x: 54.1, y: 12.4, connections: ['red_top_t3', 'red_top_t1', 'red_red_buff'] },
+  { id: 'red_top_t1', x: 32.9, y: 8.9, connections: ['red_top_t2', 'top_river', 'baron_pit'] },
+
+  // 레드팀 미드 라인
+  { id: 'red_mid_t3', x: 72.8, y: 25.9, connections: ['red_nexus', 'red_mid_t2', 'red_wolves', 'red_raptors'] },
+  { id: 'red_mid_t2', x: 64.7, y: 32.3, connections: ['red_mid_t3', 'red_mid_t1', 'red_raptors'] },
+  { id: 'red_mid_t1', x: 59.5, y: 42.3, connections: ['red_mid_t2', 'mid_center'] },
+
+  // 레드팀 봇 라인
+  { id: 'red_bot_t3', x: 87.6, y: 29.9, connections: ['red_nexus', 'red_bot_t2', 'red_gromp'] },
+  { id: 'red_bot_t2', x: 85.7, y: 44.4, connections: ['red_bot_t3', 'red_bot_t1', 'red_blue_buff'] },
+  { id: 'red_bot_t1', x: 89.1, y: 68.4, connections: ['red_bot_t2', 'bot_river', 'dragon_pit'] },
+
+  // 레드팀 정글
+  { id: 'red_gromp', x: 81.3, y: 55.8, connections: ['red_bot_t2', 'red_blue_buff', 'bot_river'] },
+  { id: 'red_blue_buff', x: 71.5, y: 52.2, connections: ['red_gromp', 'red_wolves'] },
+  { id: 'red_wolves', x: 70.9, y: 44, connections: ['red_blue_buff', 'red_mid_t3', 'red_bot_t3'] },
+  { id: 'red_raptors', x: 53.5, y: 36.3, connections: ['red_mid_t2', 'red_red_buff', 'mid_center'] },
+  { id: 'red_red_buff', x: 49.5, y: 28.2, connections: ['red_raptors', 'red_golems', 'baron_pit'] },
+  { id: 'red_golems', x: 45.3, y: 19.3, connections: ['red_red_buff', 'red_top_t3', 'top_river'] },
+
+  // 리버 & 오브젝트
+  { id: 'mid_center', x: 50, y: 50, connections: ['blue_mid_t1', 'red_mid_t1', 'top_river', 'bot_river', 'blue_raptors', 'red_raptors'] },
+  { id: 'top_river', x: 36.6, y: 30.2, connections: ['mid_center', 'blue_top_t1', 'red_top_t1', 'baron_pit', 'blue_gromp', 'red_golems'] },
+  { id: 'bot_river', x: 64.9, y: 68, connections: ['mid_center', 'blue_bot_t1', 'red_bot_t1', 'dragon_pit', 'blue_golems', 'red_gromp'] },
+  { id: 'baron_pit', x: 36.6, y: 30.2, connections: ['top_river', 'blue_top_t1', 'red_top_t1', 'atakhan'] },
+  { id: 'dragon_pit', x: 64.9, y: 68, connections: ['bot_river', 'blue_bot_t1', 'red_bot_t1', 'blue_red_buff'] },
+  { id: 'atakhan', x: 27, y: 23.5, connections: ['baron_pit', 'blue_top_t1'] }
+];
+
+// 포탑 상태에 따른 이동 가능 여부 체크
+function canPassTurret(
+  nodeId: string,
+  team: 'blue' | 'red',
+  blueTurrets: any,
+  redTurrets: any
+): boolean {
+  // 자기 팀 포탑은 항상 통과 가능
+  if (nodeId.startsWith(team)) return true;
+
+  // 적 팀 포탑 노드인 경우
+  const enemyTeam = team === 'blue' ? 'red' : 'blue';
+  if (nodeId.startsWith(enemyTeam)) {
+    const turrets = team === 'blue' ? redTurrets : blueTurrets;
+
+    // 포탑 노드 파싱 (예: red_top_t1)
+    const parts = nodeId.split('_');
+    if (parts.length >= 3 && (parts[2] === 't1' || parts[2] === 't2' || parts[2] === 't3')) {
+      const lane = parts[1] as 'top' | 'mid' | 'bot';
+      const turretIndex = parseInt(parts[2].charAt(1)) - 1;
+
+      // 해당 포탑이 살아있으면 통과 불가
+      const turretState = turrets[lane];
+      if (turretIndex === 0 && turretState.t1) return false;
+      if (turretIndex === 1 && turretState.t2) return false;
+      if (turretIndex === 2 && turretState.t3) return false;
+    }
+  }
+
+  return true;
+}
+
+// 두 노드 사이의 경로 찾기 (BFS)
+function findPath(
+  startId: string,
+  endId: string,
+  team: 'blue' | 'red',
+  blueTurrets: any,
+  redTurrets: any
+): NavNode[] {
+  const nodeMap = new Map(NAVIGATION_NODES.map(n => [n.id, n]));
+  const visited = new Set<string>();
+  const queue: { node: NavNode; path: NavNode[] }[] = [];
+
+  const startNode = nodeMap.get(startId);
+  if (!startNode) return [];
+
+  queue.push({ node: startNode, path: [startNode] });
+  visited.add(startId);
+
+  while (queue.length > 0) {
+    const { node, path } = queue.shift()!;
+
+    if (node.id === endId) {
+      return path;
+    }
+
+    for (const connId of node.connections) {
+      if (visited.has(connId)) continue;
+
+      const connNode = nodeMap.get(connId);
+      if (!connNode) continue;
+
+      // 포탑 통과 가능 여부 체크
+      if (!canPassTurret(connId, team, blueTurrets, redTurrets)) continue;
+
+      visited.add(connId);
+      queue.push({ node: connNode, path: [...path, connNode] });
+    }
+  }
+
+  return []; // 경로 없음
+}
+
+// 가장 가까운 노드 찾기
+function findNearestNode(x: number, y: number): NavNode | null {
+  let nearest: NavNode | null = null;
+  let minDist = Infinity;
+
+  for (const node of NAVIGATION_NODES) {
+    const dist = Math.sqrt(Math.pow(node.x - x, 2) + Math.pow(node.y - y, 2));
+    if (dist < minDist) {
+      minDist = dist;
+      nearest = node;
+    }
+  }
+
+  return nearest;
+}
 
 interface ChampionPosition {
   playerId: number;
@@ -308,5 +484,5 @@ export default function SummonersRiftMap({
   );
 }
 
-export { SPAWN_POSITIONS, MAP_POSITIONS };
-export type { ChampionPosition, ObjectiveState, Highlight };
+export { SPAWN_POSITIONS, MAP_POSITIONS, NAVIGATION_NODES, findPath, findNearestNode, canPassTurret };
+export type { ChampionPosition, ObjectiveState, Highlight, NavNode };
