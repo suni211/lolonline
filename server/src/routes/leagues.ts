@@ -216,9 +216,15 @@ router.get('/matches/:matchId', async (req, res) => {
   }
 });
 
-// 전체 예정된 경기 조회
-router.get('/all-matches/upcoming', async (req, res) => {
+// 내 팀 예정된 경기 조회
+router.get('/all-matches/upcoming', authenticateToken, async (req: AuthRequest, res) => {
   try {
+    const teamId = req.teamId;
+
+    if (!teamId) {
+      return res.status(400).json({ error: '팀이 필요합니다' });
+    }
+
     const matches = await pool.query(
       `SELECT m.*,
               ht.name as home_team_name, ht.logo_url as home_team_logo,
@@ -229,8 +235,10 @@ router.get('/all-matches/upcoming', async (req, res) => {
        JOIN teams at ON m.away_team_id = at.id
        JOIN leagues l ON m.league_id = l.id
        WHERE m.status = 'SCHEDULED'
+         AND (m.home_team_id = ? OR m.away_team_id = ?)
        ORDER BY m.scheduled_at
-       LIMIT 20`
+       LIMIT 10`,
+      [teamId, teamId]
     );
     res.json(matches);
   } catch (error) {

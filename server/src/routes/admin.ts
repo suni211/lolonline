@@ -625,6 +625,72 @@ router.delete('/players/:playerId/face', authenticateToken, adminMiddleware, asy
   }
 });
 
+// AI 팀에 카드 자동 생성
+router.post('/ai-teams/generate-cards', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    // 모든 AI 팀 조회
+    const aiTeams = await pool.query('SELECT id, name FROM teams WHERE is_ai = true');
+
+    if (aiTeams.length === 0) {
+      return res.status(400).json({ error: 'AI 팀이 없습니다' });
+    }
+
+    // 모든 프로 선수 조회
+    const proPlayers = await pool.query(
+      'SELECT * FROM pro_players WHERE is_active = true'
+    );
+
+    if (proPlayers.length === 0) {
+      return res.status(400).json({ error: '프로 선수가 없습니다' });
+    }
+
+    let totalCreated = 0;
+    const positions = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
+
+    for (const aiTeam of aiTeams) {
+      // 이미 카드가 있는지 확인
+      const existingCards = await pool.query(
+        'SELECT COUNT(*) as count FROM player_cards WHERE team_id = ?',
+        [aiTeam.id]
+      );
+
+      if (existingCards[0].count > 0) {
+        continue; // 이미 카드가 있으면 스킵
+      }
+
+      // 각 포지션별로 랜덤 선수 선택
+      for (const position of positions) {
+        const positionPlayers = proPlayers.filter((p: any) => p.position === position);
+        if (positionPlayers.length === 0) continue;
+
+        const randomPlayer = positionPlayers[Math.floor(Math.random() * positionPlayers.length)];
+
+        // 카드 생성
+        await pool.query(
+          `INSERT INTO player_cards (team_id, pro_player_id, name, team, position, league, nationality,
+                                     mental, teamfight, focus, laning, ovr, card_type, is_contracted, is_starter)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'NORMAL', true, true)`,
+          [
+            aiTeam.id, randomPlayer.id, randomPlayer.name, randomPlayer.team,
+            randomPlayer.position, randomPlayer.league, randomPlayer.nationality,
+            randomPlayer.mental, randomPlayer.teamfight, randomPlayer.focus,
+            randomPlayer.laning, randomPlayer.base_ovr
+          ]
+        );
+        totalCreated++;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `AI 팀 ${aiTeams.length}개에 총 ${totalCreated}장의 카드가 생성되었습니다`
+    });
+  } catch (error: any) {
+    console.error('Generate AI cards error:', error);
+    res.status(500).json({ error: 'AI 팀 카드 생성 실패: ' + error.message });
+  }
+});
+
 // LPO 리그 초기화
 router.post('/lpo/initialize', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
   try {
