@@ -157,6 +157,57 @@
   align-items: center;
 }
 
+.map-container.highlight-active {
+  animation: mapFadeIn 0.3s ease-in;
+}
+
+@keyframes mapFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 맵 플레이스홀더 (하이라이트 대기 중) */
+.map-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 12px;
+  padding: 40px;
+  min-height: 300px;
+}
+
+.map-placeholder .placeholder-text {
+  color: #666;
+  font-size: 1rem;
+  margin-bottom: 20px;
+}
+
+.map-placeholder .game-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.map-placeholder .game-progress .time {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.map-placeholder .game-progress .kills {
+  font-size: 1.5rem;
+  color: #e0e0e0;
+}
+
 .recent-event-overlay {
   position: absolute;
   bottom: 10px;

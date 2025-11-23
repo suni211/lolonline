@@ -84,13 +84,14 @@ export default function LiveMatch() {
   // 맵 관련 상태
   const [champions, setChampions] = useState<ChampionPosition[]>([]);
   const [objectives, setObjectives] = useState<ObjectiveState>({
-    dragon: { alive: true, type: 'INFERNAL' },
-    baron: { alive: true },
-    herald: { alive: true, taken: false },
-    voidgrub: { alive: true, count: 6 },
+    dragon: { alive: false, type: 'INFERNAL' },
+    baron: { alive: false },
+    herald: { alive: false, taken: false },
+    voidgrub: { alive: false, count: 6 },
     atakhan: { alive: false }
   });
   const [currentHighlight, setCurrentHighlight] = useState<Highlight | null>(null);
+  const [showMap, setShowMap] = useState(false); // 하이라이트 때만 맵 표시
 
   useEffect(() => {
     fetchMatchData();
@@ -116,6 +117,14 @@ export default function LiveMatch() {
       setHomeState(data.home);
       setAwayState(data.away);
       setIsLive(true);
+
+      // 오브젝트 상태 업데이트
+      setObjectives(prev => ({
+        ...prev,
+        dragon: { ...prev.dragon, alive: data.dragon_alive },
+        baron: { ...prev.baron, alive: data.baron_alive },
+        herald: { ...prev.herald, alive: data.herald_alive }
+      }));
     });
 
     // 이벤트 수신
@@ -355,7 +364,11 @@ export default function LiveMatch() {
 
     if (highlight) {
       setCurrentHighlight(highlight);
-      setTimeout(() => setCurrentHighlight(null), 2000);
+      setShowMap(true); // 하이라이트 시 맵 표시
+      setTimeout(() => {
+        setCurrentHighlight(null);
+        setShowMap(false); // 하이라이트 종료 후 맵 숨김
+      }, 3000);
     }
   };
 
@@ -501,34 +514,37 @@ export default function LiveMatch() {
           ))}
         </div>
 
-        {/* 중앙: 맵 */}
-        <div className="map-container">
-          <SummonersRiftMap
-            champions={champions}
-            objectives={objectives}
-            blueTurrets={homeState?.turrets || {
-              top: { t1: true, t2: true, t3: true, inhib: true },
-              mid: { t1: true, t2: true, t3: true, inhib: true },
-              bot: { t1: true, t2: true, t3: true, inhib: true },
-              nexus: { twin1: true, twin2: true, nexus: true }
-            }}
-            redTurrets={awayState?.turrets || {
-              top: { t1: true, t2: true, t3: true, inhib: true },
-              mid: { t1: true, t2: true, t3: true, inhib: true },
-              bot: { t1: true, t2: true, t3: true, inhib: true },
-              nexus: { twin1: true, twin2: true, nexus: true }
-            }}
-            currentHighlight={currentHighlight}
-            gameTime={gameTime}
-          />
-          {/* 최근 이벤트 오버레이 */}
-          {events.length > 0 && (
-            <div className="recent-event-overlay">
-              <span className="event-icon">{getEventIcon(events[events.length - 1].type)}</span>
-              <span className="event-desc">{events[events.length - 1].description}</span>
+        {/* 중앙: 맵 (하이라이트 때만 표시) */}
+        {showMap ? (
+          <div className="map-container highlight-active">
+            <SummonersRiftMap
+              champions={champions}
+              objectives={objectives}
+              blueTurrets={homeState?.turrets || {
+                top: { t1: true, t2: true, t3: true, inhib: true },
+                mid: { t1: true, t2: true, t3: true, inhib: true },
+                bot: { t1: true, t2: true, t3: true, inhib: true },
+                nexus: { twin1: true, twin2: true, nexus: true }
+              }}
+              redTurrets={awayState?.turrets || {
+                top: { t1: true, t2: true, t3: true, inhib: true },
+                mid: { t1: true, t2: true, t3: true, inhib: true },
+                bot: { t1: true, t2: true, t3: true, inhib: true },
+                nexus: { twin1: true, twin2: true, nexus: true }
+              }}
+              currentHighlight={currentHighlight}
+              gameTime={gameTime}
+            />
+          </div>
+        ) : (
+          <div className="map-placeholder">
+            <div className="placeholder-text">하이라이트 대기중...</div>
+            <div className="game-progress">
+              <span className="time">{formatTime(gameTime)}</span>
+              <span className="kills">{homeState?.kills || 0} - {awayState?.kills || 0}</span>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* 오른쪽: 어웨이팀 선수 통계 */}
         <div className="team-stats away">
