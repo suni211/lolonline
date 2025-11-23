@@ -73,10 +73,31 @@
   50% { opacity: 0.6; }
 }
 
-.scoreboard .game-time {
-  font-size: 1.8rem;
+.scoreboard .set-score {
+  font-size: 2rem;
   font-weight: bold;
-  margin: 8px 0;
+  margin: 5px 0;
+}
+
+.scoreboard .set-wins {
+  color: #ffd700;
+}
+
+.scoreboard .set-divider {
+  margin: 0 10px;
+  color: #888;
+}
+
+.scoreboard .current-set {
+  font-size: 0.85rem;
+  color: #888;
+  margin-bottom: 5px;
+}
+
+.scoreboard .game-time {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 5px 0;
 }
 
 .scoreboard .gold-diff {

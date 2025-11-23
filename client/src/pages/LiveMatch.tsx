@@ -66,6 +66,11 @@ export default function LiveMatch() {
   const [isLive, setIsLive] = useState(false);
   const eventLogRef = useRef<HTMLDivElement>(null);
 
+  // 세트 정보
+  const [currentSet, setCurrentSet] = useState(1);
+  const [homeSetWins, setHomeSetWins] = useState(0);
+  const [awaySetWins, setAwaySetWins] = useState(0);
+
   useEffect(() => {
     fetchMatchData();
 
@@ -109,12 +114,41 @@ export default function LiveMatch() {
       setEvents([]);
     });
 
+    // 세트 종료
+    socket.on('set_finished', (data) => {
+      setHomeSetWins(data.home_set_wins);
+      setAwaySetWins(data.away_set_wins);
+      // 세트 종료 이벤트 추가
+      setEvents(prev => [...prev, {
+        type: 'SET_END',
+        time: gameTime,
+        description: `세트 ${data.set_number} 종료 - ${data.set_winner === 'home' ? '홈팀' : '어웨이팀'} 승리`,
+        data: { team: data.set_winner }
+      }]);
+    });
+
+    // 새 세트 시작
+    socket.on('set_started', (data) => {
+      setCurrentSet(data.set_number);
+      setHomeSetWins(data.home_set_wins);
+      setAwaySetWins(data.away_set_wins);
+      setGameTime(0);
+      setEvents(prev => [...prev, {
+        type: 'SET_START',
+        time: 0,
+        description: `세트 ${data.set_number} 시작`,
+        data: { team: 'neutral' }
+      }]);
+    });
+
     return () => {
       socket.emit('leave_match', matchId);
       socket.off('match_update');
       socket.off('match_event');
       socket.off('match_finished');
       socket.off('match_started');
+      socket.off('set_finished');
+      socket.off('set_started');
     };
   }, [socket, matchId]);
 
@@ -151,6 +185,11 @@ export default function LiveMatch() {
         setGameTime(matchData.game_time || 0);
         setHomeState(matchData.home || null);
         setAwayState(matchData.away || null);
+
+        // 세트 정보
+        setCurrentSet(matchData.current_set || 1);
+        setHomeSetWins(matchData.home_set_wins || 0);
+        setAwaySetWins(matchData.away_set_wins || 0);
       }
 
       setIsLive(res.data.match.status === 'LIVE');
@@ -253,6 +292,12 @@ export default function LiveMatch() {
           <div className={`status ${isLive ? 'live' : ''}`}>
             {isLive ? 'LIVE' : match.status}
           </div>
+          <div className="set-score">
+            <span className="set-wins home-wins">{homeSetWins}</span>
+            <span className="set-divider">-</span>
+            <span className="set-wins away-wins">{awaySetWins}</span>
+          </div>
+          <div className="current-set">세트 {currentSet}</div>
           <div className="game-time">{formatTime(gameTime)}</div>
           <div className="gold-diff">
             {homeState && awayState && (
