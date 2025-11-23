@@ -131,5 +131,3 @@ async function startServer() {
 
 startServer();
 
-export { io };
-
