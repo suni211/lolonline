@@ -1,15 +1,171 @@
 import cron from 'node-cron';
 import pool from '../database/db.js';
 import { generateRegularSeasonMatches } from './leagueService.js';
+import LPOLeagueService from './lpoLeagueService.js';
 
 // 6시간마다 한 달 진행 (1-11월 시즌, 11-12월 스토브리그)
 export async function initializeSeasonSystem() {
-  // 매 6시간마다 실행
+  // 매 6시간마다 실행 (구 시스템)
   cron.schedule('0 */6 * * *', async () => {
     await advanceMonth();
   });
 
+  // 매주 일요일 00:00 KST (토요일 15:00 UTC) - 스토브리그 시작
+  cron.schedule('0 15 * * 6', async () => {
+    await startStoveLeague();
+  });
+
+  // 매주 월요일 00:00 KST (일요일 15:00 UTC) - 새 시즌 시작
+  cron.schedule('0 15 * * 0', async () => {
+    await startNewSeasonAuto();
+  });
+
+  // 매시간 시즌 종료 체크
+  cron.schedule('0 * * * *', async () => {
+    await checkSeasonCompletion();
+  });
+
   console.log('Season system initialized');
+}
+
+// 스토브리그 시작 (일요일)
+async function startStoveLeague() {
+  try {
+    console.log('Starting Stove League...');
+
+    // 모든 LPO 리그를 OFFSEASON 상태로 변경
+    await pool.query(
+      `UPDATE leagues SET status = 'OFFSEASON', is_offseason = true
+       WHERE name LIKE 'LPO%' AND status IN ('REGULAR', 'PLAYOFF')`
+    );
+
+    // 이적시장 활성화 플래그 설정 (game_settings 테이블이 있다면)
+    try {
+      await pool.query(
+        `INSERT INTO game_settings (setting_key, setting_value, updated_at)
+         VALUES ('transfer_market_open', 'true', NOW())
+         ON DUPLICATE KEY UPDATE setting_value = 'true', updated_at = NOW()`
+      );
+    } catch (e) {
+      // game_settings 테이블이 없으면 무시
+    }
+
+    console.log('Stove League started - Transfer market open');
+  } catch (error) {
+    console.error('Error starting stove league:', error);
+  }
+}
+
+// 새 시즌 자동 시작 (월요일)
+async function startNewSeasonAuto() {
+  try {
+    console.log('Starting new season automatically...');
+
+    // 현재 LPO 리그 시즌 조회
+    const currentLeagues = await pool.query(
+      `SELECT DISTINCT season FROM leagues WHERE name LIKE 'LPO%' ORDER BY season DESC LIMIT 1`
+    );
+
+    if (currentLeagues.length === 0) {
+      console.log('No LPO leagues found');
+      return;
+    }
+
+    const currentSeason = currentLeagues[0].season;
+
+    // LPO 리그 시스템으로 새 시즌 시작
+    await LPOLeagueService.startNewSeason(currentSeason);
+
+    // 이적시장 비활성화
+    try {
+      await pool.query(
+        `INSERT INTO game_settings (setting_key, setting_value, updated_at)
+         VALUES ('transfer_market_open', 'false', NOW())
+         ON DUPLICATE KEY UPDATE setting_value = 'false', updated_at = NOW()`
+      );
+    } catch (e) {
+      // game_settings 테이블이 없으면 무시
+    }
+
+    console.log(`Season ${currentSeason + 1} started automatically`);
+  } catch (error) {
+    console.error('Error starting new season:', error);
+  }
+}
+
+// 시즌 종료 체크 (모든 경기 완료 여부)
+async function checkSeasonCompletion() {
+  try {
+    // LPO 리그별로 체크
+    const leagues = await pool.query(
+      `SELECT l.id, l.name, l.season, l.status,
+              (SELECT COUNT(*) FROM matches m WHERE m.league_id = l.id AND m.status = 'SCHEDULED') as remaining_matches
+       FROM leagues l
+       WHERE l.name LIKE 'LPO%' AND l.status = 'REGULAR'`
+    );
+
+    for (const league of leagues) {
+      if (league.remaining_matches === 0) {
+        console.log(`League ${league.name} completed all matches`);
+
+        // 플레이오프가 없으면 바로 OFFSEASON으로
+        // 플레이오프가 있으면 PLAYOFF 상태로 변경
+        const standings = await pool.query(
+          `SELECT lp.team_id, t.name,
+                  (lp.wins * 3 + lp.draws) as points
+           FROM league_participants lp
+           JOIN teams t ON lp.team_id = t.id
+           WHERE lp.league_id = ?
+           ORDER BY points DESC, lp.goal_difference DESC
+           LIMIT 8`,
+          [league.id]
+        );
+
+        if (standings.length >= 4) {
+          // 플레이오프 시작 가능
+          await pool.query(
+            `UPDATE leagues SET status = 'PLAYOFF' WHERE id = ?`,
+            [league.id]
+          );
+          console.log(`League ${league.name} entering playoffs`);
+        } else {
+          // 팀이 부족하면 바로 OFFSEASON
+          await pool.query(
+            `UPDATE leagues SET status = 'OFFSEASON', is_offseason = true WHERE id = ?`,
+            [league.id]
+          );
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error checking season completion:', error);
+  }
+}
+
+// 재계약 기간 확인
+export async function isRecontractPeriod(): Promise<boolean> {
+  try {
+    const result = await pool.query(
+      `SELECT COUNT(*) as count FROM leagues
+       WHERE name LIKE 'LPO%' AND (status = 'OFFSEASON' OR is_offseason = true)`
+    );
+    return result[0].count > 0;
+  } catch (error) {
+    return false;
+  }
+}
+
+// 이적시장 상태 확인
+export async function isTransferMarketOpen(): Promise<boolean> {
+  try {
+    const result = await pool.query(
+      `SELECT setting_value FROM game_settings WHERE setting_key = 'transfer_market_open'`
+    );
+    return result.length > 0 && result[0].setting_value === 'true';
+  } catch (error) {
+    // 테이블이 없으면 스토브리그 여부로 판단
+    return await isRecontractPeriod();
+  }
 }
 
 async function advanceMonth() {

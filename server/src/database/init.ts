@@ -495,6 +495,24 @@ export async function initializeDatabase() {
       }
     }
 
+    // game_settings 테이블 생성 (게임 상태 저장)
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS game_settings (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          setting_key VARCHAR(100) NOT NULL UNIQUE,
+          setting_value TEXT,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_setting_key (setting_key)
+        )
+      `);
+      console.log('Game settings table created/verified');
+    } catch (error: any) {
+      if (error.code !== 'ER_TABLE_EXISTS_ERROR') {
+        console.error('Error creating game_settings table:', error);
+      }
+    }
+
     console.log('Database initialized successfully');
 
     // 초기 리그 생성
