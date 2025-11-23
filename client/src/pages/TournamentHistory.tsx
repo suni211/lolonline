@@ -240,82 +240,81 @@ const TournamentHistory: React.FC = () => {
       )}
 
       {activeTab === 'history' && (
-        <div className="winners-section">
-          <h2>LPO 컵 역대 우승</h2>
-          {cupWinners.length === 0 ? (
-            <div className="no-data">아직 우승 기록이 없습니다</div>
-          ) : (
-            <div className="cup-winners-grid">
-              {cupWinners.map(winner => (
-                <div key={winner.id} className="cup-winner-card">
-                  {winner.trophy_image && (
-                    <div className="trophy-image">
-                      <img src={winner.trophy_image} alt="Trophy" />
-                    </div>
-                  )}
-                  <div className="winner-info">
-                    <div className="season-badge">시즌 {winner.season}</div>
-                    <div className="cup-name">{winner.name}</div>
-                    <div className="team-info">
-                      {winner.team_logo && (
-                        <img src={winner.team_logo} alt={winner.team_name} className="team-logo" />
-                      )}
-                      <span className="team-name" title={winner.team_name}>
-                        {getTeamAbbr(winner.team_name, winner.team_abbr)}
-                      </span>
-                    </div>
-                    <div className="prize">상금: {formatPrize(winner.prize_pool)}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'league' && (
-        <div className="winners-section">
-          <h2>LPO 리그 역대 우승</h2>
-          {leagueWinners.length === 0 ? (
-            <div className="no-data">아직 우승 기록이 없습니다</div>
-          ) : (
-            <div className="league-winners-list">
-              {/* Group by season */}
-              {Array.from(new Set(leagueWinners.map(w => w.season)))
-                .sort((a, b) => b - a)
-                .map(season => (
-                  <div key={season} className="season-group">
-                    <h3>시즌 {season}</h3>
-                    <div className="league-winners-grid">
-                      {leagueWinners
-                        .filter(w => w.season === season)
-                        .sort((a, b) => {
-                          const order = { SUPER: 0, FIRST: 1, SECOND: 2 };
-                          return (order[a.region as keyof typeof order] || 0) - (order[b.region as keyof typeof order] || 0);
-                        })
-                        .map(winner => (
-                          <div key={winner.league_id} className="league-winner-card">
-                            <div className="league-name">{getRegionName(winner.region)}</div>
-                            <div className="team-info">
-                              {winner.team_logo && (
-                                <img src={winner.team_logo} alt={winner.team_name} className="team-logo" />
-                              )}
-                              <span className="team-name" title={winner.team_name}>
-                                {getTeamAbbr(winner.team_name, winner.team_abbr)}
-                              </span>
-                            </div>
-                            <div className="stats">
-                              <span>{winner.wins}승 {winner.draws}무 {winner.losses}패</span>
-                              <span>승점 {winner.points}</span>
-                            </div>
-                          </div>
-                        ))}
+        <>
+          <div className="winners-section">
+            <h2>LPO 컵 역대 우승</h2>
+            {cupWinners.length === 0 ? (
+              <div className="no-data">아직 우승 기록이 없습니다</div>
+            ) : (
+              <div className="cup-winners-grid">
+                {cupWinners.map(winner => (
+                  <div key={winner.id} className="cup-winner-card">
+                    {winner.trophy_image && (
+                      <div className="trophy-image">
+                        <img src={winner.trophy_image} alt="Trophy" />
+                      </div>
+                    )}
+                    <div className="winner-info">
+                      <div className="season-badge">시즌 {winner.season}</div>
+                      <div className="cup-name">{winner.name}</div>
+                      <div className="team-info">
+                        {winner.team_logo && (
+                          <img src={winner.team_logo} alt={winner.team_name} className="team-logo" />
+                        )}
+                        <span className="team-name" title={winner.team_name}>
+                          {getTeamAbbr(winner.team_name, winner.team_abbr)}
+                        </span>
+                      </div>
+                      <div className="prize">상금: {formatPrize(winner.prize_pool)}</div>
                     </div>
                   </div>
                 ))}
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+
+          <div className="winners-section" style={{ marginTop: '2rem' }}>
+            <h2>LPO 리그 역대 우승</h2>
+            {leagueWinners.length === 0 ? (
+              <div className="no-data">아직 우승 기록이 없습니다</div>
+            ) : (
+              <div className="league-winners-list">
+                {Array.from(new Set(leagueWinners.map(w => w.season)))
+                  .sort((a, b) => b - a)
+                  .map(season => (
+                    <div key={season} className="season-group">
+                      <h3>시즌 {season}</h3>
+                      <div className="league-winners-grid">
+                        {leagueWinners
+                          .filter(w => w.season === season)
+                          .sort((a, b) => {
+                            const order = { SUPER: 0, FIRST: 1, SECOND: 2 };
+                            return (order[a.region as keyof typeof order] || 0) - (order[b.region as keyof typeof order] || 0);
+                          })
+                          .map(winner => (
+                            <div key={winner.league_id} className="league-winner-card">
+                              <div className="league-name">{getRegionName(winner.region)}</div>
+                              <div className="team-info">
+                                {winner.team_logo && (
+                                  <img src={winner.team_logo} alt={winner.team_name} className="team-logo" />
+                                )}
+                                <span className="team-name" title={winner.team_name}>
+                                  {getTeamAbbr(winner.team_name, winner.team_abbr)}
+                                </span>
+                              </div>
+                              <div className="stats">
+                                <span>{winner.wins}승 {winner.draws}무 {winner.losses}패</span>
+                                <span>승점 {winner.points}</span>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
