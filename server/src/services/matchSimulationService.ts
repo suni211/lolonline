@@ -901,6 +901,18 @@ async function finishMatch(match: any, matchData: any, io: Server) {
     matchData.herald_taken = false;
     matchData.elder_available = false;
 
+    // 이벤트 초기화 (새 세트)
+    matchData.events = [];
+
+    // match_stats 초기화 (새 세트)
+    await pool.query(
+      `UPDATE match_stats SET kills = 0, deaths = 0, assists = 0, cs = 0,
+       gold_earned = 0, damage_dealt = 0, damage_taken = 0, vision_score = 0,
+       wards_placed = 0, wards_destroyed = 0, turret_kills = 0, first_blood = false
+       WHERE match_id = ?`,
+      [match.id]
+    );
+
     // 경기 데이터 저장
     await pool.query(
       'UPDATE matches SET match_data = ? WHERE id = ?',

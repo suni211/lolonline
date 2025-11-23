@@ -77,10 +77,18 @@ router.get('/:matchId', async (req, res) => {
     }
 
     // 경기 이벤트
-    const events = await pool.query(
+    const rawEvents = await pool.query(
       'SELECT * FROM match_events WHERE match_id = ? ORDER BY event_time ASC',
       [matchId]
     );
+
+    // 프론트엔드 형식으로 변환 (event_time -> time, event_type -> type)
+    const events = rawEvents.map((e: any) => ({
+      type: e.event_type,
+      time: e.event_time,
+      description: e.description,
+      data: e.event_data ? (typeof e.event_data === 'string' ? JSON.parse(e.event_data) : e.event_data) : {}
+    }));
 
     // 경기 통계 (player_cards + pro_players 사용)
     const stats = await pool.query(
