@@ -35,14 +35,41 @@
 
 .matches-container {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.matches-section {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.matches-section h2 {
+  margin-bottom: 1rem;
+  color: var(--primary-blue);
+  font-size: 1.1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--primary-blue);
+}
+
+.matches-list {
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .matches-list h2,
 .match-viewer h2 {
   margin-bottom: 1rem;
   color: var(--white);
+}
+
+.no-matches {
+  text-align: center;
+  padding: 2rem;
+  color: rgba(255, 255, 255, 0.5);
+  grid-column: 1 / -1;
 }
 
 .match-item {

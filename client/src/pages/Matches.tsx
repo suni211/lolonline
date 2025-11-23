@@ -33,6 +33,7 @@ interface Match {
   started_at?: string;
   finished_at?: string;
   match_type: string;
+  league_name?: string;
   source?: string; // 'matches' | 'cup'
 }
 
@@ -116,87 +117,35 @@ export default function Matches() {
     }
   };
 
+  // 상태 필터 적용
   const filteredMatches = matches.filter(m => {
-    // 상태 필터
     if (filter !== 'all' && m.status !== filter.toUpperCase()) return false;
-    // 경기 타입 필터
-    if (matchTypeFilter === 'LEAGUE') {
-      return m.match_type === 'REGULAR' || m.match_type === 'PLAYOFF' || m.match_type === 'LEAGUE';
-    }
-    if (matchTypeFilter === 'CUP') {
-      return m.match_type === 'CUP';
-    }
-    if (matchTypeFilter === 'FRIENDLY') {
-      return m.match_type === 'FRIENDLY';
-    }
     return true;
   });
 
-  return (
-    <div className="matches-page">
-      <h1 className="page-title">경기</h1>
+  // 경기 분류
+  const cupMatches = filteredMatches.filter(m => m.match_type === 'CUP');
+  const superLeagueMatches = filteredMatches.filter(m =>
+    m.league_name?.includes('SUPER') || m.league_name?.includes('슈퍼')
+  );
+  const firstLeagueMatches = filteredMatches.filter(m =>
+    m.league_name?.includes('1') || m.league_name?.includes('FIRST')
+  );
+  const secondLeagueMatches = filteredMatches.filter(m =>
+    m.league_name?.includes('2') || m.league_name?.includes('SECOND')
+  );
+  const friendlyMatches = filteredMatches.filter(m => m.match_type === 'FRIENDLY');
 
-      <div className="match-filters">
-        <div className="filter-group">
-          <button
-            onClick={() => setFilter('all')}
-            className={filter === 'all' ? 'filter-active' : ''}
-          >
-            전체
-          </button>
-          <button
-            onClick={() => setFilter('scheduled')}
-            className={filter === 'scheduled' ? 'filter-active' : ''}
-          >
-            예정
-          </button>
-          <button
-            onClick={() => setFilter('live')}
-            className={filter === 'live' ? 'filter-active' : ''}
-          >
-            진행중
-          </button>
-          <button
-            onClick={() => setFilter('finished')}
-            className={filter === 'finished' ? 'filter-active' : ''}
-          >
-            종료
-          </button>
-        </div>
-        <div className="filter-group">
-          <button
-            onClick={() => setMatchTypeFilter('all')}
-            className={matchTypeFilter === 'all' ? 'filter-active' : ''}
-          >
-            전체
-          </button>
-          <button
-            onClick={() => setMatchTypeFilter('LEAGUE')}
-            className={matchTypeFilter === 'LEAGUE' ? 'filter-active' : ''}
-          >
-            리그전
-          </button>
-          <button
-            onClick={() => setMatchTypeFilter('CUP')}
-            className={matchTypeFilter === 'CUP' ? 'filter-active' : ''}
-          >
-            컵경기
-          </button>
-          <button
-            onClick={() => setMatchTypeFilter('FRIENDLY')}
-            className={matchTypeFilter === 'FRIENDLY' ? 'filter-active' : ''}
-          >
-            친선전
-          </button>
-        </div>
-      </div>
+  const renderMatchList = (matchList: Match[], title: string) => {
+    if (matchList.length === 0) return null;
 
-      <div className="matches-container">
+    return (
+      <div className="matches-section">
+        <h2>{title}</h2>
         <div className="matches-list">
-          <h2>경기 목록</h2>
-          {filteredMatches.map((match) => (
+          {matchList.map((match) => (
             <div
-              key={match.id}
+              key={`${match.source}-${match.id}`}
               className={`match-item ${match.status?.toLowerCase() || ''}`}
               onClick={() => navigate(`/live/${match.id}`)}
             >
@@ -231,6 +180,53 @@ export default function Matches() {
             </div>
           ))}
         </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="matches-page">
+      <h1 className="page-title">경기</h1>
+
+      <div className="match-filters">
+        <div className="filter-group">
+          <button
+            onClick={() => setFilter('all')}
+            className={filter === 'all' ? 'filter-active' : ''}
+          >
+            전체
+          </button>
+          <button
+            onClick={() => setFilter('scheduled')}
+            className={filter === 'scheduled' ? 'filter-active' : ''}
+          >
+            예정
+          </button>
+          <button
+            onClick={() => setFilter('live')}
+            className={filter === 'live' ? 'filter-active' : ''}
+          >
+            진행중
+          </button>
+          <button
+            onClick={() => setFilter('finished')}
+            className={filter === 'finished' ? 'filter-active' : ''}
+          >
+            종료
+          </button>
+        </div>
+      </div>
+
+      <div className="matches-container">
+        {renderMatchList(cupMatches, 'LPO 컵')}
+        {renderMatchList(superLeagueMatches, 'LPO SUPER LEAGUE')}
+        {renderMatchList(firstLeagueMatches, 'LPO 1 LEAGUE')}
+        {renderMatchList(secondLeagueMatches, 'LPO 2 LEAGUE')}
+        {renderMatchList(friendlyMatches, '친선전')}
+
+        {filteredMatches.length === 0 && (
+          <div className="no-matches">경기가 없습니다</div>
+        )}
       </div>
     </div>
   );
