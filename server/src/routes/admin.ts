@@ -243,11 +243,19 @@ router.post('/leagues/:leagueId/start', authenticateToken, adminMiddleware, asyn
   try {
     const leagueId = parseInt(req.params.leagueId);
 
-    // 리그 참가팀 조회
-    const teams = await pool.query(
-      `SELECT team_id FROM league_standings WHERE league_id = ?`,
+    // 리그 참가팀 조회 (league_participants 또는 league_standings)
+    let teams = await pool.query(
+      `SELECT team_id FROM league_participants WHERE league_id = ?`,
       [leagueId]
     );
+
+    // league_participants가 없으면 league_standings에서 조회
+    if (teams.length === 0) {
+      teams = await pool.query(
+        `SELECT team_id FROM league_standings WHERE league_id = ?`,
+        [leagueId]
+      );
+    }
 
     if (teams.length < 2) {
       return res.status(400).json({ error: '최소 2팀이 필요합니다' });
