@@ -380,6 +380,20 @@ export async function initializeDatabase() {
       }
     }
 
+    // scouter_discoveries에 성격 및 스탯 컬럼 추가 (협상용)
+    try {
+      await pool.query(`ALTER TABLE scouter_discoveries ADD COLUMN personality VARCHAR(20)`);
+      await pool.query(`ALTER TABLE scouter_discoveries ADD COLUMN mental INT`);
+      await pool.query(`ALTER TABLE scouter_discoveries ADD COLUMN teamfight INT`);
+      await pool.query(`ALTER TABLE scouter_discoveries ADD COLUMN focus INT`);
+      await pool.query(`ALTER TABLE scouter_discoveries ADD COLUMN laning INT`);
+      console.log('Added personality and stats columns to scouter_discoveries');
+    } catch (error: any) {
+      if (error.code !== 'ER_DUP_FIELDNAME') {
+        // 이미 존재하면 무시
+      }
+    }
+
     // cup_tournaments 테이블 생성
     try {
       await pool.query(`

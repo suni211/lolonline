@@ -4,8 +4,65 @@ import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import {
   generateScoutDialogue,
   generatePersonality,
+  generateContractNegotiationDialogue,
+  personalityTraits,
   PersonalityType
 } from '../services/geminiService.js';
+
+// 성격에 따른 계약금 배수
+const personalityContractModifiers: Record<PersonalityType, number> = {
+  LEADER: 1.2,      // 리더형: +20% (적당히 요구)
+  REBELLIOUS: 1.5,  // 반항적: +50% (까다로움)
+  CALM: 1.0,        // 차분함: 정상
+  EMOTIONAL: 1.3,   // 감정적: +30%
+  COMPETITIVE: 1.25 // 승부욕: +25%
+};
+
+// 협상 결과 계산
+function calculateNegotiationResult(
+  personality: PersonalityType,
+  askingPrice: number,
+  offeredPrice: number
+): { result: 'ACCEPT' | 'REJECT' | 'COUNTER'; counterPrice?: number; message: string } {
+  const ratio = offeredPrice / askingPrice;
+  const traits = personalityTraits[personality];
+
+  // 성격에 따른 수락 기준
+  const acceptThresholds: Record<PersonalityType, number> = {
+    LEADER: 0.85,      // 85% 이상이면 수락
+    REBELLIOUS: 0.95,  // 95% 이상이면 수락 (까다로움)
+    CALM: 0.75,        // 75% 이상이면 수락 (관대함)
+    EMOTIONAL: 0.80,   // 80% 이상이면 수락
+    COMPETITIVE: 0.90  // 90% 이상이면 수락
+  };
+
+  const acceptThreshold = acceptThresholds[personality];
+
+  if (ratio >= acceptThreshold) {
+    return { result: 'ACCEPT', message: '계약 조건을 수락했습니다.' };
+  }
+
+  // 너무 낮은 제안은 거절 (협상 결렬)
+  const rejectThresholds: Record<PersonalityType, number> = {
+    LEADER: 0.5,
+    REBELLIOUS: 0.7,   // 30% 이상 깎으면 바로 거절
+    CALM: 0.4,
+    EMOTIONAL: 0.55,
+    COMPETITIVE: 0.6
+  };
+
+  if (ratio < rejectThresholds[personality]) {
+    return { result: 'REJECT', message: '모욕적인 제안입니다. 협상을 종료합니다.' };
+  }
+
+  // 카운터 오퍼 (중간 지점 제안)
+  const counterPrice = Math.floor(askingPrice * (0.5 + ratio * 0.5));
+  return {
+    result: 'COUNTER',
+    counterPrice,
+    message: `${counterPrice.toLocaleString()} 골드는 되어야 할 것 같습니다.`
+  };
+}
 
 const router = express.Router();
 
@@ -259,14 +316,32 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
 
     const player = players[0];
 
-    // 발굴 기록 저장 (스카우터 정보 직접 저장)
+    // 스탯 및 성격 미리 생성 (협상에 사용)
+    const baseOvr = player.overall;
+    const variance = 5;
+    const generateStat = () => {
+      const baseStat = Math.floor(baseOvr / 4);
+      return Math.max(1, Math.min(200, baseStat + Math.floor(Math.random() * variance * 2) - variance));
+    };
+
+    const mental = generateStat();
+    const teamfight = generateStat();
+    const focus = generateStat();
+    const laning = generateStat();
+    const personality = generatePersonality(mental);
+
+    // 발굴 기록 저장 (스카우터 정보 및 성격/스탯 저장)
     await pool.query(
-      `INSERT INTO scouter_discoveries (scouter_id, team_id, pro_player_id, scouter_name, scouter_star) VALUES (?, ?, ?, ?, ?)`,
-      [scouterId, req.teamId, player.id, scouter.name, scouter.star_rating]
+      `INSERT INTO scouter_discoveries (scouter_id, team_id, pro_player_id, scouter_name, scouter_star, personality, mental, teamfight, focus, laning)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [scouterId, req.teamId, player.id, scouter.name, scouter.star_rating, personality, mental, teamfight, focus, laning]
     );
 
     // 스카우터는 일회용 - 발굴 후 삭제
     await pool.query('DELETE FROM scouters WHERE id = ?', [scouterId]);
+
+    // 성격 정보
+    const traits = personalityTraits[personality as PersonalityType];
 
     res.json({
       success: true,
@@ -277,7 +352,11 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
         position: player.position,
         nationality: player.nationality,
         overall: player.overall,
-        face_image: player.face_image
+        face_image: player.face_image,
+        personality: {
+          type: personality,
+          name: traits.name
+        }
       }
     });
   } catch (error: any) {
@@ -299,17 +378,96 @@ router.get('/discoveries', authenticateToken, async (req: AuthRequest, res) => {
       [req.teamId]
     );
 
-    res.json(discoveries);
+    // 성격 정보 및 요구 금액 추가
+    const enrichedDiscoveries = discoveries.map((d: any) => {
+      const personality = (d.personality || 'CALM') as PersonalityType;
+      const traits = personalityTraits[personality];
+      const baseCost = d.overall * 100000;
+      const modifier = personalityContractModifiers[personality];
+      const askingPrice = Math.floor(baseCost * modifier);
+
+      return {
+        ...d,
+        personality_info: {
+          type: personality,
+          name: traits.name
+        },
+        asking_price: askingPrice
+      };
+    });
+
+    res.json(enrichedDiscoveries);
   } catch (error: any) {
     console.error('Get discoveries error:', error);
     res.status(500).json({ error: '발굴 선수 목록 조회에 실패했습니다' });
   }
 });
 
-// 발굴된 선수 영입 (계약)
+// 협상 정보 조회 (초기 요구 금액 등)
+router.get('/discoveries/:discoveryId/negotiation', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const discoveryId = parseInt(req.params.discoveryId);
+
+    const discoveries = await pool.query(
+      `SELECT sd.*, pp.name, pp.position, pp.nationality, pp.face_image,
+              pp.base_ovr as overall
+       FROM scouter_discoveries sd
+       INNER JOIN pro_players pp ON sd.pro_player_id = pp.id
+       WHERE sd.id = ? AND sd.team_id = ? AND sd.signed = false`,
+      [discoveryId, req.teamId]
+    );
+
+    if (discoveries.length === 0) {
+      return res.status(404).json({ error: '발굴 기록을 찾을 수 없습니다' });
+    }
+
+    const discovery = discoveries[0];
+    const baseOvr = discovery.overall;
+
+    // 저장된 성격 사용 (발굴 시 저장됨)
+    const personality = (discovery.personality || 'CALM') as PersonalityType;
+
+    // 기본 계약금 (OVR * 100000)
+    const baseCost = baseOvr * 100000;
+
+    // 성격에 따른 요구 금액
+    const modifier = personalityContractModifiers[personality];
+    const askingPrice = Math.floor(baseCost * modifier);
+
+    const traits = personalityTraits[personality];
+
+    res.json({
+      discovery_id: discoveryId,
+      player: {
+        name: discovery.name,
+        position: discovery.position,
+        overall: discovery.overall,
+        face_image: discovery.face_image
+      },
+      personality: {
+        type: personality,
+        name: traits.name,
+        description: traits.description
+      },
+      base_cost: baseCost,
+      asking_price: askingPrice,
+      modifier: modifier
+    });
+  } catch (error: any) {
+    console.error('Get negotiation info error:', error);
+    res.status(500).json({ error: '협상 정보 조회에 실패했습니다' });
+  }
+});
+
+// 발굴된 선수 영입 (계약 협상)
 router.post('/discoveries/:discoveryId/sign', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const discoveryId = parseInt(req.params.discoveryId);
+    const { offered_price } = req.body;
+
+    if (!offered_price || offered_price <= 0) {
+      return res.status(400).json({ error: '제안 금액을 입력해주세요' });
+    }
 
     // 발굴 기록 조회
     const discoveries = await pool.query(
@@ -333,40 +491,81 @@ router.post('/discoveries/:discoveryId/sign', authenticateToken, async (req: Aut
     );
 
     if (existingCards.length > 0) {
-      // 발굴 기록 삭제
       await pool.query('DELETE FROM scouter_discoveries WHERE id = ?', [discoveryId]);
       return res.status(400).json({ error: '이 선수는 이미 다른 팀에 소속되었습니다' });
     }
 
-    // 계약금 (오버롤 * 100000) - 58 OVR = 580만
-    const signCost = discovery.overall * 100000;
+    // 저장된 스탯 및 성격 사용 (발굴 시 저장됨)
+    const baseOvr = discovery.overall;
+    const mental = discovery.mental || Math.floor(baseOvr / 4);
+    const teamfight = discovery.teamfight || Math.floor(baseOvr / 4);
+    const focus = discovery.focus || Math.floor(baseOvr / 4);
+    const laning = discovery.laning || Math.floor(baseOvr / 4);
+    const personality = (discovery.personality || 'CALM') as PersonalityType;
+
+    // 요구 금액 계산
+    const baseCost = baseOvr * 100000;
+    const modifier = personalityContractModifiers[personality];
+    const askingPrice = Math.floor(baseCost * modifier);
+
+    // 협상 결과 계산
+    const negotiationResult = calculateNegotiationResult(personality, askingPrice, offered_price);
+
+    // AI 대사 생성
+    const dialogue = await generateContractNegotiationDialogue(
+      discovery.name,
+      personality,
+      offered_price,
+      askingPrice,
+      negotiationResult.result,
+      negotiationResult.counterPrice
+    );
+
+    // 거절된 경우 - 선수가 떠남
+    if (negotiationResult.result === 'REJECT') {
+      await pool.query('DELETE FROM scouter_discoveries WHERE id = ?', [discoveryId]);
+
+      return res.json({
+        success: false,
+        result: 'REJECT',
+        message: '협상이 결렬되어 선수가 떠났습니다.',
+        dialogue,
+        player: {
+          name: discovery.name,
+          personality: personality
+        }
+      });
+    }
+
+    // 카운터 오퍼인 경우 - 추가 협상 필요
+    if (negotiationResult.result === 'COUNTER') {
+      return res.json({
+        success: false,
+        result: 'COUNTER',
+        message: negotiationResult.message,
+        dialogue,
+        counter_price: negotiationResult.counterPrice,
+        player: {
+          name: discovery.name,
+          personality: personality,
+          overall: discovery.overall
+        }
+      });
+    }
+
+    // 수락된 경우 - 계약 체결
+    const finalCost = offered_price;
 
     // 팀 골드 확인
     const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);
-    if (teams[0].gold < signCost) {
+    if (teams[0].gold < finalCost) {
       return res.status(400).json({
-        error: `계약금이 부족합니다. 필요: ${signCost.toLocaleString()} 골드`
+        error: `계약금이 부족합니다. 필요: ${finalCost.toLocaleString()} 골드`
       });
     }
 
     // 골드 차감
-    await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [signCost, req.teamId]);
-
-    // base_ovr을 기반으로 개별 스탯 생성 (랜덤 변동 포함)
-    const baseOvr = discovery.overall;
-    const variance = 5; // 각 스탯의 변동 범위
-    const generateStat = () => {
-      const baseStat = Math.floor(baseOvr / 4);
-      return Math.max(1, Math.min(200, baseStat + Math.floor(Math.random() * variance * 2) - variance));
-    };
-
-    const mental = generateStat();
-    const teamfight = generateStat();
-    const focus = generateStat();
-    const laning = generateStat();
-
-    // 성격 생성
-    const personality = generatePersonality(mental);
+    await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [finalCost, req.teamId]);
 
     // 선수 카드 생성
     const result = await pool.query(
@@ -388,17 +587,9 @@ router.post('/discoveries/:discoveryId/sign', authenticateToken, async (req: Aut
     // 발굴 기록 업데이트
     await pool.query('UPDATE scouter_discoveries SET signed = true WHERE id = ?', [discoveryId]);
 
-    // AI 대사 생성
-    const dialogue = await generateScoutDialogue(
-      discovery.name,
-      discovery.position,
-      personality,
-      discovery.overall,
-      'SUCCESS'
-    );
-
     res.json({
       success: true,
+      result: 'ACCEPT',
       message: `${discovery.name} 선수와 계약을 체결했습니다!`,
       player_card_id: result.insertId,
       player: {
@@ -409,7 +600,8 @@ router.post('/discoveries/:discoveryId/sign', authenticateToken, async (req: Aut
         personality
       },
       dialogue,
-      cost: signCost
+      cost: finalCost,
+      saved: askingPrice - finalCost
     });
   } catch (error: any) {
     console.error('Sign discovered player error:', error);
