@@ -55,6 +55,7 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState<'leagues' | 'users' | 'players'>('leagues');
   const [uploadingPlayerId, setUploadingPlayerId] = useState<number | null>(null);
   const [lpoStatus, setLpoStatus] = useState<LPOStatus | null>(null);
+  const [statAdjustment, setStatAdjustment] = useState<number>(-20);
 
   useEffect(() => {
     fetchData();
@@ -215,6 +216,20 @@ export default function Admin() {
     setMessage('게임 시간이 초기화되었습니다. 페이지를 새로고침하세요.');
   };
 
+  const adjustPlayerStats = async () => {
+    if (!confirm(`모든 선수의 스탯을 ${statAdjustment > 0 ? '+' : ''}${statAdjustment} 조정하시겠습니까?`)) return;
+    try {
+      setLoading(true);
+      const res = await axios.post('/api/admin/players/adjust-stats', { adjustment: statAdjustment });
+      setMessage(res.data.message);
+      fetchData();
+    } catch (error: any) {
+      setMessage(error.response?.data?.error || '스탯 조정 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="admin-page">
       <h1>어드민 관리</h1>
@@ -280,6 +295,23 @@ export default function Admin() {
             <button onClick={resetGameTime} className="secondary">
               게임 시간 초기화
             </button>
+          </div>
+
+          <div className="stat-adjustment-section">
+            <h3>선수 스탯 일괄 조정</h3>
+            <div className="stat-adjustment-controls">
+              <input
+                type="number"
+                value={statAdjustment}
+                onChange={(e) => setStatAdjustment(parseInt(e.target.value) || 0)}
+                min="-50"
+                max="50"
+              />
+              <button onClick={adjustPlayerStats} disabled={loading} className="warning">
+                전체 선수 스탯 조정
+              </button>
+            </div>
+            <p className="hint">음수: 스탯 감소, 양수: 스탯 증가 (모든 pro_players, player_cards, players에 적용)</p>
           </div>
 
           <h2>리그 목록</h2>

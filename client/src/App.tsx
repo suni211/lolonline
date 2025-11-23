@@ -21,6 +21,7 @@ import Transfer from './pages/Transfer';
 import FriendlyMatch from './pages/FriendlyMatch';
 import LiveMatch from './pages/LiveMatch';
 import TeamInfo from './pages/TeamInfo';
+import Scout from './pages/Scout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -66,6 +67,7 @@ function App() {
             <Route path="transfer" element={<Transfer />} />
             <Route path="friendly" element={<FriendlyMatch />} />
             <Route path="team-info" element={<TeamInfo />} />
+            <Route path="scout" element={<Scout />} />
           </Route>
         </Routes>
       </Router>
