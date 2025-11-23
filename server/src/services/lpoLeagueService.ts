@@ -378,13 +378,14 @@ export class LPOLeagueService {
           currentTime = new Date();
         }
 
-        // MySQL 형식으로 변환 (한국 시간 기준)
-        const year = currentTime.getFullYear();
-        const month = String(currentTime.getMonth() + 1).padStart(2, '0');
-        const day = String(currentTime.getDate()).padStart(2, '0');
-        const hours = String(currentTime.getHours()).padStart(2, '0');
-        const minutes = String(currentTime.getMinutes()).padStart(2, '0');
-        const seconds = String(currentTime.getSeconds()).padStart(2, '0');
+        // UTC를 KST로 변환하여 저장 (UTC+9)
+        const kstTime = new Date(currentTime.getTime() + 9 * 60 * 60 * 1000);
+        const year = kstTime.getUTCFullYear();
+        const month = String(kstTime.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(kstTime.getUTCDate()).padStart(2, '0');
+        const hours = String(kstTime.getUTCHours()).padStart(2, '0');
+        const minutes = String(kstTime.getUTCMinutes()).padStart(2, '0');
+        const seconds = String(kstTime.getUTCSeconds()).padStart(2, '0');
         const scheduledAtStr = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 
         // NaN 체크

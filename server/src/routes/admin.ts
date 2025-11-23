@@ -7,6 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import LPOLeagueService from '../services/lpoLeagueService.js';
+import { CupService } from '../services/cupService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -752,6 +753,54 @@ router.get('/lpo/status', authenticateToken, adminMiddleware, async (req: AuthRe
   } catch (error) {
     console.error('Get LPO status error:', error);
     res.status(500).json({ error: 'LPO 현황 조회 실패' });
+  }
+});
+
+// 컵 대회 생성
+router.post('/cup/create', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const { season } = req.body;
+
+    if (!season) {
+      return res.status(400).json({ error: '시즌을 입력해주세요' });
+    }
+
+    // 해당 시즌에 이미 컵 대회가 있는지 확인
+    const existingCup = await pool.query(
+      'SELECT id FROM cup_tournaments WHERE season = ?',
+      [season]
+    );
+
+    if (existingCup.length > 0) {
+      return res.status(400).json({ error: `시즌 ${season} 컵 대회가 이미 존재합니다` });
+    }
+
+    const cupId = await CupService.createCupTournament(season);
+
+    res.json({
+      success: true,
+      message: `시즌 ${season} 컵 대회가 생성되었습니다`,
+      cup_id: cupId
+    });
+  } catch (error: any) {
+    console.error('Create cup error:', error);
+    res.status(500).json({ error: '컵 대회 생성 실패: ' + error.message });
+  }
+});
+
+// 컵 대회 다음 라운드 진행
+router.post('/cup/:cupId/next-round', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const cupId = parseInt(req.params.cupId);
+    await CupService.generateNextRound(cupId);
+
+    res.json({
+      success: true,
+      message: '다음 라운드가 생성되었습니다'
+    });
+  } catch (error: any) {
+    console.error('Next round error:', error);
+    res.status(500).json({ error: '다음 라운드 생성 실패: ' + error.message });
   }
 });
 
