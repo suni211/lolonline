@@ -39,6 +39,7 @@ export default function Layout() {
     { path: '/facilities', label: '구단 경영' },
     { path: '/sponsors', label: '스폰서/재정' },
     { path: '/training', label: '훈련' },
+    { path: '/tactics', label: '전략실' },
     { path: '/matches', label: '경기' },
     { path: '/friendly', label: '친선전' },
     { path: '/leagues', label: '리그' },
