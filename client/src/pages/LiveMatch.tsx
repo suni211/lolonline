@@ -234,8 +234,8 @@ export default function LiveMatch() {
     return <div className="live-match error">경기를 찾을 수 없습니다.</div>;
   }
 
-  const homeStats = playerStats.filter(p => p.team_name === match.home_team_name);
-  const awayStats = playerStats.filter(p => p.team_name === match.away_team_name);
+  const homeStats = playerStats.filter(p => p.team_name && p.team_name === match.home_team_name);
+  const awayStats = playerStats.filter(p => p.team_name && p.team_name === match.away_team_name);
 
   return (
     <div className="live-match">
