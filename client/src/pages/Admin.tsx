@@ -126,6 +126,20 @@ export default function Admin() {
     }
   };
 
+  const generateAICards = async () => {
+    if (!confirm('모든 AI 팀에 선수 카드를 생성하시겠습니까?')) return;
+    try {
+      setLoading(true);
+      const res = await axios.post('/api/admin/ai-teams/generate-cards');
+      setMessage(res.data.message);
+      fetchData();
+    } catch (error: any) {
+      setMessage(error.response?.data?.error || 'AI 팀 카드 생성 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const startNextSeason = async () => {
     if (!confirm('다음 시즌을 시작하시겠습니까? 승강 결과가 반영됩니다.')) return;
     try {
@@ -260,6 +274,9 @@ export default function Admin() {
                 다음 시즌 시작
               </button>
             )}
+            <button onClick={generateAICards} disabled={loading} className="primary">
+              AI 팀 카드 생성
+            </button>
             <button onClick={resetGameTime} className="secondary">
               게임 시간 초기화
             </button>
