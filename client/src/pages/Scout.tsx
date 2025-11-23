@@ -38,6 +38,7 @@ export default function Scout() {
     message: string;
     dialogue?: string;
   } | null>(null);
+  const [offerAmounts, setOfferAmounts] = useState<Record<number, number>>({});
 
   useEffect(() => {
     fetchScouters();
@@ -121,20 +122,63 @@ export default function Scout() {
     }
   };
 
+  const getDefaultOfferAmount = (overall: number) => {
+    return overall * 50000; // 기본 제안금액
+  };
+
+  const getMinOfferAmount = (overall: number) => {
+    return overall * 30000; // 최소 제안금액
+  };
+
+  const getOfferAmount = (discovery: Discovery) => {
+    return offerAmounts[discovery.id] ?? getDefaultOfferAmount(discovery.overall);
+  };
+
+  const handleOfferChange = (discoveryId: number, value: string) => {
+    const numValue = parseInt(value.replace(/,/g, '')) || 0;
+    setOfferAmounts(prev => ({ ...prev, [discoveryId]: numValue }));
+  };
+
   const signPlayer = async (discoveryId: number) => {
     if (loading) return;
 
     setLoading(true);
     setResult(null);
 
+    const discovery = discoveries.find(d => d.id === discoveryId);
+    const offerAmount = discovery ? getOfferAmount(discovery) : 0;
+
     try {
-      const response = await axios.post(`/api/scout/discoveries/${discoveryId}/sign`);
-      setResult({
-        success: true,
-        message: response.data.message,
-        dialogue: response.data.dialogue
+      const response = await axios.post(`/api/scout/discoveries/${discoveryId}/sign`, {
+        offered_price: offerAmount
       });
-      fetchDiscoveries();
+
+      if (response.data.result === 'ACCEPT') {
+        setResult({
+          success: true,
+          message: response.data.message,
+          dialogue: response.data.dialogue
+        });
+        fetchDiscoveries();
+      } else if (response.data.result === 'COUNTER') {
+        // 카운터 오퍼 - 제안 금액 업데이트
+        setOfferAmounts(prev => ({
+          ...prev,
+          [discoveryId]: response.data.counter_price
+        }));
+        setResult({
+          success: false,
+          message: `${response.data.player.name}: "${response.data.dialogue || response.data.message}"`,
+          dialogue: `제안 금액: ${response.data.counter_price.toLocaleString()}원`
+        });
+      } else if (response.data.result === 'REJECT') {
+        setResult({
+          success: false,
+          message: response.data.message,
+          dialogue: response.data.dialogue
+        });
+        fetchDiscoveries();
+      }
     } catch (error: any) {
       setResult({
         success: false,
@@ -326,8 +370,37 @@ export default function Scout() {
                     </span>
                   </div>
 
-                  <div className="sign-cost">
-                    계약금: {formatCost(discovery.overall * 1000)}
+                  <div className="offer-section">
+                    <div className="offer-label">
+                      <span>제안 금액</span>
+                      <span className="min-amount">
+                        (최소 {formatCost(getMinOfferAmount(discovery.overall))})
+                      </span>
+                    </div>
+                    <div className="offer-input-container">
+                      <input
+                        type="text"
+                        className="offer-input"
+                        value={getOfferAmount(discovery).toLocaleString()}
+                        onChange={(e) => handleOfferChange(discovery.id, e.target.value)}
+                        placeholder="제안 금액 입력"
+                      />
+                      <span className="currency">원</span>
+                    </div>
+                    <div className="offer-range">
+                      <input
+                        type="range"
+                        min={getMinOfferAmount(discovery.overall)}
+                        max={getDefaultOfferAmount(discovery.overall) * 3}
+                        step={10000}
+                        value={getOfferAmount(discovery)}
+                        onChange={(e) => handleOfferChange(discovery.id, e.target.value)}
+                        className="offer-slider"
+                      />
+                    </div>
+                    <div className="offer-hint">
+                      높은 금액일수록 계약 성공 확률이 높아집니다
+                    </div>
                   </div>
 
                   <div className="discovery-actions">
@@ -336,7 +409,7 @@ export default function Scout() {
                       onClick={() => signPlayer(discovery.id)}
                       disabled={loading}
                     >
-                      계약
+                      계약 제안
                     </button>
                     <button
                       className="reject-btn"

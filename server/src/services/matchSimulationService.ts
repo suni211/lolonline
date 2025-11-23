@@ -436,6 +436,20 @@ async function simulateMatchProgress(match: any, io: Server) {
       [JSON.stringify(matchData), match.id]
     );
 
+    // 선수 통계 조회
+    const playerStats = await pool.query(
+      `SELECT ms.player_id as id, pp.name as player_name, pp.position, t.name as team_name,
+              ms.kills, ms.deaths, ms.assists, ms.cs, ms.gold_earned,
+              ms.damage_dealt, ms.damage_taken, ms.vision_score,
+              ms.wards_placed, ms.wards_destroyed, ms.turret_kills
+       FROM match_stats ms
+       JOIN player_cards pc ON ms.player_id = pc.id
+       JOIN pro_players pp ON pc.pro_player_id = pp.id
+       JOIN teams t ON ms.team_id = t.id
+       WHERE ms.match_id = ?`,
+      [match.id]
+    );
+
     // 실시간 업데이트 전송
     io.to(`match_${match.id}`).emit('match_update', {
       match_id: match.id,
@@ -444,7 +458,8 @@ async function simulateMatchProgress(match: any, io: Server) {
       away: matchData.away,
       dragon_alive: matchData.dragon_alive,
       baron_alive: matchData.baron_alive,
-      herald_alive: matchData.herald_alive
+      herald_alive: matchData.herald_alive,
+      player_stats: playerStats
     });
   } catch (error) {
     console.error('Error simulating match progress:', error);

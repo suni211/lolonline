@@ -488,6 +488,139 @@
   border-radius: 4px;
 }
 
+/* 실시간 채팅 */
+.live-chat {
+  background: #1e1e2e;
+  border-radius: 8px;
+  padding: 15px;
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  max-height: 300px;
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #333;
+}
+
+.chat-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.viewer-count {
+  font-size: 0.8rem;
+  color: #3498db;
+  background: rgba(52, 152, 219, 0.1);
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 5px;
+  margin-bottom: 10px;
+  min-height: 150px;
+}
+
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: #1a1a2a;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 3px;
+}
+
+.no-messages {
+  text-align: center;
+  color: #666;
+  padding: 30px 0;
+  font-size: 0.9rem;
+}
+
+.chat-message {
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.chat-message.user {
+  background: #252535;
+}
+
+.chat-message.system {
+  background: transparent;
+  text-align: center;
+}
+
+.chat-username {
+  color: #3498db;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.chat-text {
+  color: #e0e0e0;
+}
+
+.chat-system {
+  color: #888;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+.chat-input-container {
+  display: flex;
+  gap: 8px;
+}
+
+.chat-input {
+  flex: 1;
+  background: #252535;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: #e0e0e0;
+  font-size: 0.85rem;
+}
+
+.chat-input:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.chat-input::placeholder {
+  color: #666;
+}
+
+.chat-send-btn {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.chat-send-btn:hover {
+  background: #2980b9;
+}
+
 /* 반응형 */
 @media (max-width: 1024px) {
   .main-content {

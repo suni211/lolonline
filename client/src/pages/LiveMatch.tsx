@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
+import { useAuth } from '../contexts/AuthContext';
 import './LiveMatch.css';
 import SummonersRiftMap, {
   ChampionPosition,
@@ -31,6 +32,13 @@ interface MatchEvent {
   time: number;
   description: string;
   data: any;
+}
+
+interface ChatMessage {
+  type: 'user' | 'system';
+  username: string;
+  message: string;
+  timestamp: number;
 }
 
 interface PlayerStats {
@@ -65,6 +73,7 @@ interface MatchData {
 
 export default function LiveMatch() {
   const { matchId } = useParams<{ matchId: string }>();
+  const { user } = useAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [match, setMatch] = useState<MatchData | null>(null);
   const [gameTime, setGameTime] = useState(0);
@@ -75,6 +84,12 @@ export default function LiveMatch() {
   const [loading, setLoading] = useState(true);
   const [isLive, setIsLive] = useState(false);
   const eventLogRef = useRef<HTMLDivElement>(null);
+
+  // 채팅 관련 상태
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [viewers, setViewers] = useState<string[]>([]);
+  const chatRef = useRef<HTMLDivElement>(null);
 
   // 세트 정보
   const [currentSet, setCurrentSet] = useState(1);
@@ -108,8 +123,19 @@ export default function LiveMatch() {
   useEffect(() => {
     if (!socket || !matchId) return;
 
-    // 경기 룸 참가
-    socket.emit('join_match', matchId);
+    // 경기 룸 참가 (채팅용)
+    const username = user?.team_name || user?.username || `Guest_${socket.id?.slice(0, 4)}`;
+    socket.emit('join_match', { matchId: parseInt(matchId), username });
+
+    // 채팅 메시지 수신
+    socket.on('chat_message', (msg: ChatMessage) => {
+      setChatMessages(prev => [...prev.slice(-100), msg]);
+    });
+
+    // 접속자 목록 수신
+    socket.on('viewers_update', (viewerList: string[]) => {
+      setViewers(viewerList);
+    });
 
     // 실시간 업데이트 수신
     socket.on('match_update', (data) => {
@@ -117,6 +143,11 @@ export default function LiveMatch() {
       setHomeState(data.home);
       setAwayState(data.away);
       setIsLive(true);
+
+      // 선수 통계 실시간 업데이트
+      if (data.player_stats && data.player_stats.length > 0) {
+        setPlayerStats(data.player_stats);
+      }
 
       // 오브젝트 상태 업데이트
       setObjectives(prev => ({
@@ -173,15 +204,38 @@ export default function LiveMatch() {
     });
 
     return () => {
-      socket.emit('leave_match', matchId);
+      socket.emit('leave_match', parseInt(matchId));
       socket.off('match_update');
       socket.off('match_event');
       socket.off('match_finished');
       socket.off('match_started');
       socket.off('set_finished');
       socket.off('set_started');
+      socket.off('chat_message');
+      socket.off('viewers_update');
     };
-  }, [socket, matchId]);
+  }, [socket, matchId, user]);
+
+  // 채팅창 자동 스크롤
+  useEffect(() => {
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
+  // 채팅 전송
+  const sendChat = () => {
+    if (!socket || !matchId || !chatInput.trim()) return;
+    socket.emit('send_chat', { matchId: parseInt(matchId), message: chatInput.trim() });
+    setChatInput('');
+  };
+
+  const handleChatKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendChat();
+    }
+  };
 
   useEffect(() => {
     if (eventLogRef.current) {
@@ -586,6 +640,44 @@ export default function LiveMatch() {
           </div>
         </div>
       )}
+
+      {/* 실시간 채팅 */}
+      <div className="live-chat">
+        <div className="chat-header">
+          <h3>실시간 채팅</h3>
+          <span className="viewer-count">{viewers.length}명 시청 중</span>
+        </div>
+        <div className="chat-messages" ref={chatRef}>
+          {chatMessages.length === 0 ? (
+            <div className="no-messages">채팅이 없습니다.</div>
+          ) : (
+            chatMessages.map((msg, idx) => (
+              <div key={idx} className={`chat-message ${msg.type}`}>
+                {msg.type === 'user' ? (
+                  <>
+                    <span className="chat-username">{msg.username}</span>
+                    <span className="chat-text">{msg.message}</span>
+                  </>
+                ) : (
+                  <span className="chat-system">{msg.message}</span>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+        <div className="chat-input-container">
+          <input
+            type="text"
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyPress={handleChatKeyPress}
+            placeholder="메시지를 입력하세요..."
+            className="chat-input"
+            maxLength={200}
+          />
+          <button onClick={sendChat} className="chat-send-btn">전송</button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -82,6 +82,9 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/scout', scoutRoutes);
 app.use('/api/cup', cupRoutes);
 
+// 경기별 접속자 관리
+const matchViewers: Map<number, Map<string, string>> = new Map();
+
 // Socket.IO 연결
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
@@ -94,8 +97,88 @@ io.on('connection', (socket) => {
     socket.leave(`match_${matchId}`);
   });
 
+  // 경기 참가 (채팅용)
+  socket.on('join_match', (data: { matchId: number; username: string }) => {
+    const { matchId, username } = data;
+    socket.join(`match_${matchId}`);
+
+    // 접속자 추가
+    if (!matchViewers.has(matchId)) {
+      matchViewers.set(matchId, new Map());
+    }
+    matchViewers.get(matchId)!.set(socket.id, username);
+
+    // 접속자 목록 전송
+    const viewers = Array.from(matchViewers.get(matchId)!.values());
+    io.to(`match_${matchId}`).emit('viewers_update', viewers);
+
+    // 입장 메시지
+    io.to(`match_${matchId}`).emit('chat_message', {
+      type: 'system',
+      username: 'System',
+      message: `${username}님이 입장했습니다.`,
+      timestamp: Date.now()
+    });
+  });
+
+  // 경기 퇴장
+  socket.on('leave_match', (matchId: number) => {
+    socket.leave(`match_${matchId}`);
+
+    if (matchViewers.has(matchId)) {
+      const username = matchViewers.get(matchId)!.get(socket.id);
+      matchViewers.get(matchId)!.delete(socket.id);
+
+      if (username) {
+        const viewers = Array.from(matchViewers.get(matchId)!.values());
+        io.to(`match_${matchId}`).emit('viewers_update', viewers);
+        io.to(`match_${matchId}`).emit('chat_message', {
+          type: 'system',
+          username: 'System',
+          message: `${username}님이 퇴장했습니다.`,
+          timestamp: Date.now()
+        });
+      }
+    }
+  });
+
+  // 채팅 메시지
+  socket.on('send_chat', (data: { matchId: number; message: string }) => {
+    const { matchId, message } = data;
+
+    if (!matchViewers.has(matchId)) return;
+    const username = matchViewers.get(matchId)!.get(socket.id);
+    if (!username) return;
+
+    io.to(`match_${matchId}`).emit('chat_message', {
+      type: 'user',
+      username,
+      message,
+      timestamp: Date.now()
+    });
+  });
+
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
+
+    // 모든 경기에서 해당 소켓 제거
+    matchViewers.forEach((viewers, matchId) => {
+      if (viewers.has(socket.id)) {
+        const username = viewers.get(socket.id);
+        viewers.delete(socket.id);
+
+        if (username) {
+          const viewerList = Array.from(viewers.values());
+          io.to(`match_${matchId}`).emit('viewers_update', viewerList);
+          io.to(`match_${matchId}`).emit('chat_message', {
+            type: 'system',
+            username: 'System',
+            message: `${username}님이 퇴장했습니다.`,
+            timestamp: Date.now()
+          });
+        }
+      }
+    });
   });
 });
 

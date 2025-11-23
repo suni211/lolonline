@@ -10,6 +10,32 @@ const formatDate = (dateString: string | null | undefined): string => {
   return date.toLocaleString('ko-KR');
 };
 
+// 팀 이름 요약 함수
+const abbreviateTeamName = (name: string): string => {
+  if (!name) return '';
+
+  // 이미 짧으면 그대로 반환
+  if (name.length <= 6) return name;
+
+  // 공백으로 분리
+  const words = name.trim().split(/\s+/);
+
+  // 3단어 이상이면 이니셜 사용
+  if (words.length >= 3) {
+    return words.map(w => w[0].toUpperCase()).join('');
+  }
+
+  // 2단어면 각 단어 앞 2-3글자
+  if (words.length === 2) {
+    const first = words[0].slice(0, 3);
+    const second = words[1].slice(0, 3);
+    return first + second;
+  }
+
+  // 1단어면 앞 5글자
+  return name.slice(0, 5);
+};
+
 interface League {
   id: number;
   name: string;
@@ -240,14 +266,14 @@ export default function Leagues() {
                 {upcomingMatches.map((match) => (
                   <div key={match.id} className="match-item">
                     <div className="match-teams">
-                      <span className="team-with-logo">
+                      <span className="team-with-logo" title={match.home_team_name}>
                         {match.home_team_logo && <img src={match.home_team_logo} alt="" className="team-logo-small" />}
-                        {match.home_team_name}
+                        {abbreviateTeamName(match.home_team_name)}
                       </span>
                       <span className="vs">vs</span>
-                      <span className="team-with-logo">
+                      <span className="team-with-logo" title={match.away_team_name}>
                         {match.away_team_logo && <img src={match.away_team_logo} alt="" className="team-logo-small" />}
-                        {match.away_team_name}
+                        {abbreviateTeamName(match.away_team_name)}
                       </span>
                     </div>
                     <div className="match-time">
