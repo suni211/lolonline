@@ -35,7 +35,6 @@ export default function Layout() {
     { path: '/dashboard', label: '대시보드' },
     { path: '/players', label: '선수 관리' },
     { path: '/cards', label: '선수 카드' },
-    { path: '/coaches', label: '감독/코치' },
     { path: '/facilities', label: '구단 경영' },
     { path: '/sponsors', label: '스폰서/재정' },
     { path: '/training', label: '훈련' },

@@ -180,17 +180,6 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
 
     const scouter = scouters[0];
 
-    // 발굴 비용 (스카우터 등급 * 50만)
-    const discoverCost = scouter.star_rating * 500000;
-
-    // 팀 골드 확인
-    const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);
-    if (teams[0].gold < discoverCost) {
-      return res.status(400).json({
-        error: `발굴 비용이 부족합니다. 필요: ${discoverCost.toLocaleString()} 골드`
-      });
-    }
-
     // 스카우터 등급에 따른 오버롤 범위
     const overallRange = getOverallRangeByStarRating(scouter.star_rating);
 
@@ -226,18 +215,18 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
 
     const player = players[0];
 
-    // 골드 차감
-    await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [discoverCost, req.teamId]);
-
     // 발굴 기록 저장
     await pool.query(
       `INSERT INTO scouter_discoveries (scouter_id, team_id, pro_player_id) VALUES (?, ?, ?)`,
       [scouterId, req.teamId, player.id]
     );
 
+    // 스카우터는 일회용 - 발굴 후 삭제
+    await pool.query('DELETE FROM scouters WHERE id = ?', [scouterId]);
+
     res.json({
       success: true,
-      message: `${scouter.name} 스카우터가 ${player.name} 선수를 발굴했습니다!`,
+      message: `${scouter.name} 스카우터가 ${player.name} 선수를 발굴하고 떠났습니다!`,
       player: {
         id: player.id,
         name: player.name,
@@ -249,8 +238,7 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
         laning: player.laning,
         overall: player.overall,
         face_image: player.face_image
-      },
-      cost: discoverCost
+      }
     });
   } catch (error: any) {
     console.error('Discover player error:', error);

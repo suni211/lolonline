@@ -33,6 +33,16 @@ const facilityTypes = {
   'ANALYTICS_CENTER': { name: '분석 센터', icon: '📊', description: '경기 분석 능력 증가' },
 };
 
+// 큰 숫자 포맷 (억, 만 단위)
+const formatCost = (cost: number): string => {
+  if (cost >= 100000000) {
+    return `${(cost / 100000000).toFixed(1)}억`;
+  } else if (cost >= 10000) {
+    return `${(cost / 10000).toFixed(0)}만`;
+  }
+  return cost.toLocaleString();
+};
+
 export default function Facilities() {
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [loading, setLoading] = useState(false);
@@ -190,7 +200,8 @@ export default function Facilities() {
           const facility = facilities.find(f => f.facility_type === type);
           const info = getFacilityInfo(type);
           const level = facility?.level || 0;
-          const upgradeCost = (level + 1) * 10000;
+          // 기하급수적 비용: 100만 * 2^레벨
+          const upgradeCost = 1000000 * Math.pow(2, level);
           const netRevenue = (facility?.revenue_per_hour || 0) - (facility?.maintenance_cost || 0);
 
           return (
@@ -235,7 +246,7 @@ export default function Facilities() {
                     disabled={loading}
                     className="btn-primary"
                   >
-                    {level === 0 ? '건설' : '업그레이드'} ({upgradeCost.toLocaleString()} 골드)
+                    {level === 0 ? '건설' : '업그레이드'} ({formatCost(upgradeCost)} 골드)
                   </button>
                 ) : (
                   <button disabled className="btn-secondary">

@@ -249,9 +249,6 @@ export default function Scout() {
                       <span className="pending-badge">{scouter.pending_discoveries}명 발굴</span>
                     )}
                   </div>
-                  <div className="scouter-cost">
-                    발굴 비용: {formatCost(scouter.star_rating * 500000)}
-                  </div>
                   <div className="scouter-actions">
                     <button
                       className="discover-btn"

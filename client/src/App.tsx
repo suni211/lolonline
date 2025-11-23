@@ -4,7 +4,7 @@ import Login from './pages/Login';
 import CreateTeam from './pages/CreateTeam';
 import Dashboard from './pages/Dashboard';
 import Players from './pages/Players';
-import Coaches from './pages/Coaches';
+// import Coaches from './pages/Coaches'; // 감독/코치 기능 제거
 import Facilities from './pages/Facilities';
 import Sponsors from './pages/Sponsors';
 import Matches from './pages/Matches';
@@ -50,7 +50,6 @@ function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="players" element={<Players />} />
-            <Route path="coaches" element={<Coaches />} />
             <Route path="facilities" element={<Facilities />} />
             <Route path="matches" element={<Matches />} />
             <Route path="leagues" element={<Leagues />} />
