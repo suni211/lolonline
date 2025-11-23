@@ -90,6 +90,27 @@ export async function initializeMatchSimulation(io: Server) {
   console.log('Match simulation system initialized (1초=10초 진행)');
 }
 
+// 특정 경기를 즉시 시작 (테스트용)
+export async function startMatchById(matchId: number, io: Server) {
+  try {
+    const matches = await pool.query(
+      'SELECT * FROM matches WHERE id = ?',
+      [matchId]
+    );
+
+    if (matches.length === 0) {
+      console.error(`Match ${matchId} not found`);
+      return false;
+    }
+
+    await startMatch(matches[0], io);
+    return true;
+  } catch (error) {
+    console.error(`Error starting match ${matchId}:`, error);
+    return false;
+  }
+}
+
 async function processScheduledMatches(io: Server) {
   try {
     // 예정된 경기 중 시작 시간이 된 경기 찾기

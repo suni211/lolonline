@@ -42,7 +42,7 @@ dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer, {
+export const io = new Server(httpServer, {
   cors: {
     origin: process.env.CLIENT_URL || '*', // 개발 환경에서는 모든 origin 허용
     methods: ['GET', 'POST']

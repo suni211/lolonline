@@ -45,6 +45,10 @@ interface PlayerStats {
   gold_earned: number;
   damage_dealt: number;
   damage_taken: number;
+  vision_score: number;
+  wards_placed: number;
+  wards_destroyed: number;
+  turret_kills: number;
 }
 
 interface MatchData {
@@ -479,10 +483,20 @@ export default function LiveMatch() {
                 <span className="position">{player.position}</span>
                 <span className="name">{player.player_name}</span>
               </div>
-              <div className="kda">
-                {player.kills}/{player.deaths}/{player.assists}
+              <div className="player-details">
+                <div className="stat-line">
+                  <span className="kda">{player.kills}/{player.deaths}/{player.assists}</span>
+                  <span className="cs">{player.cs} CS</span>
+                </div>
+                <div className="stat-line">
+                  <span className="gold">{(player.gold_earned / 1000).toFixed(1)}k</span>
+                  <span className="damage">{(player.damage_dealt / 1000).toFixed(1)}k</span>
+                </div>
+                <div className="stat-line">
+                  <span className="vision">VS {player.vision_score || 0}</span>
+                  <span className="wards">{player.wards_placed || 0}/{player.wards_destroyed || 0}</span>
+                </div>
               </div>
-              <div className="cs">{player.cs} CS</div>
             </div>
           ))}
         </div>
@@ -525,10 +539,20 @@ export default function LiveMatch() {
                 <span className="position">{player.position}</span>
                 <span className="name">{player.player_name}</span>
               </div>
-              <div className="kda">
-                {player.kills}/{player.deaths}/{player.assists}
+              <div className="player-details">
+                <div className="stat-line">
+                  <span className="kda">{player.kills}/{player.deaths}/{player.assists}</span>
+                  <span className="cs">{player.cs} CS</span>
+                </div>
+                <div className="stat-line">
+                  <span className="gold">{(player.gold_earned / 1000).toFixed(1)}k</span>
+                  <span className="damage">{(player.damage_dealt / 1000).toFixed(1)}k</span>
+                </div>
+                <div className="stat-line">
+                  <span className="vision">VS {player.vision_score || 0}</span>
+                  <span className="wards">{player.wards_placed || 0}/{player.wards_destroyed || 0}</span>
+                </div>
               </div>
-              <div className="cs">{player.cs} CS</div>
             </div>
           ))}
         </div>

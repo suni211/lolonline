@@ -8,6 +8,8 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import LPOLeagueService from '../services/lpoLeagueService.js';
 import { CupService } from '../services/cupService.js';
+import { startMatchById } from '../services/matchSimulationService.js';
+import { io } from '../index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1145,10 +1147,13 @@ router.post('/test-match', authenticateToken, adminMiddleware, async (req: AuthR
       );
     }
 
+    // 경기 즉시 시작
+    await startMatchById(matchId, io);
+
     res.json({
       success: true,
       matchId,
-      message: '테스트 경기가 생성되었습니다'
+      message: '테스트 경기가 시작되었습니다'
     });
   } catch (error: any) {
     console.error('Create test match error:', error);

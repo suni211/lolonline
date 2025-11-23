@@ -219,15 +219,13 @@
 
 .player-stat-row {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 4px;
   padding: 8px 10px;
   border-radius: 4px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   background: #252535;
-  font-size: 0.9rem;
-  white-space: nowrap;
+  font-size: 0.85rem;
 }
 
 .player-stat-row:hover {
@@ -236,16 +234,35 @@
 
 .player-info {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
 .player-info .position {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: #888;
+  background: #333;
+  padding: 2px 6px;
+  border-radius: 3px;
 }
 
 .player-info .name {
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.player-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.stat-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
 }
 
 .kda {
@@ -257,8 +274,21 @@
   color: #9b59b6;
 }
 
+.gold {
+  color: #f59e0b;
+}
+
 .damage {
   color: #e74c3c;
+}
+
+.vision {
+  color: #3b82f6;
+}
+
+.wards {
+  color: #10b981;
+  font-size: 0.75rem;
 }
 
 /* 포탑 현황 */
