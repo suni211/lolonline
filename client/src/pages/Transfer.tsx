@@ -27,7 +27,7 @@ interface TransferListing {
 interface MyCard {
   id: number;
   ovr: number;
-  player_name: string;
+  name: string;
   pro_team: string;
   position: string;
   is_starter: boolean;
@@ -352,7 +352,7 @@ export default function Transfer() {
                 <option value="">카드를 선택하세요</option>
                 {myCards.map((card) => (
                   <option key={card.id} value={card.id}>
-                    {card.player_name} ({card.position}) - OVR {card.ovr}
+                    {card.name} ({card.position}) - OVR {card.ovr}
                   </option>
                 ))}
               </select>
