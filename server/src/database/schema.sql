@@ -485,6 +485,7 @@ CREATE TABLE IF NOT EXISTS pro_players (
     base_ovr INT NOT NULL CHECK (base_ovr >= 1 AND base_ovr <= 100),
     card_type ENUM('NORMAL', 'SEASON') DEFAULT 'NORMAL',
     is_active BOOLEAN DEFAULT TRUE,
+    face_image VARCHAR(255),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_pro_team (team),
     INDEX idx_pro_league (league),

@@ -62,6 +62,7 @@ export default function Dashboard() {
 
       // 예정된 경기
       const upcomingRes = await axios.get('/api/leagues/all-matches/upcoming');
+      console.log('Upcoming matches:', upcomingRes.data);
       setUpcomingMatches(upcomingRes.data);
 
       // 리그 정보
