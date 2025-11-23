@@ -63,7 +63,6 @@ export default function Matches() {
   const { token } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [filter, setFilter] = useState<'all' | 'scheduled' | 'live' | 'finished'>('all');
-  const [matchTypeFilter, setMatchTypeFilter] = useState<'all' | 'LEAGUE' | 'CUP' | 'FRIENDLY'>('all');
 
   useEffect(() => {
     fetchAllMatches();
