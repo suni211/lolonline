@@ -341,9 +341,12 @@ async function simulateMatchProgress(match: any, io: Server) {
 
     // === 오브젝트 스폰 체크 ===
 
-    // 드래곤 스폰 (5분) - 양 팀 합쳐서 4마리까지만
-    const totalDragons = matchData.home.dragons.length + matchData.away.dragons.length;
-    if (gameTime >= matchData.dragon_respawn_at && !matchData.dragon_alive && totalDragons < 4) {
+    // 드래곤 스폰 (5분) - 한 팀이 4마리 먹으면 소울 획득, 이후 장로만
+    const homeDragons = matchData.home.dragons.length;
+    const awayDragons = matchData.away.dragons.length;
+    const soulAcquired = homeDragons >= 4 || awayDragons >= 4;
+
+    if (gameTime >= matchData.dragon_respawn_at && !matchData.dragon_alive && !soulAcquired) {
       matchData.dragon_alive = true;
       const event = createEvent(gameTime, 'DRAGON_SPAWN', '드래곤이 출현했습니다!', {});
       matchData.events.push(event);
@@ -434,8 +437,10 @@ async function generateEvents(
   const events: any[] = [];
   const gameMinutes = Math.floor(gameTime / 60);
 
-  // 이벤트 발생 확률 (매우 빈번하게 - 50% 확률)
-  if (Math.random() > 0.5) return events;
+  // 현실적인 이벤트 발생 확률
+  // 30분 = 180번 호출, 목표: 킬 20-25개, 타워 8-10개
+  // 킬: 180 * 확률 * 킬비중 = 25 -> 확률 약 15-20%
+  if (Math.random() > 0.15) return events;
 
   // 승리 팀 결정
   const winningTeam = Math.random() < homeWinChance ? 'home' : 'away';
@@ -446,19 +451,27 @@ async function generateEvents(
 
   if (winningPlayers.length === 0 || losingPlayers.length === 0) return events;
 
-  // 이벤트 타입 선택 (가중치 적용)
+  // 이벤트 타입 선택 (현실적 가중치)
   const eventPool: string[] = [];
 
-  // 기본 이벤트 (항상)
-  eventPool.push('KILL', 'KILL', 'GOLD');
+  // 시간대별 이벤트 (킬은 시간에 따라 증가)
+  if (gameMinutes < 10) {
+    // 초반: 킬 적음
+    eventPool.push('KILL', 'NOTHING', 'NOTHING');
+  } else if (gameMinutes < 20) {
+    // 중반: 킬 증가, 팀파이트 시작
+    eventPool.push('KILL', 'KILL', 'TEAMFIGHT', 'NOTHING');
+  } else {
+    // 후반: 킬 빈번, 팀파이트 다수
+    eventPool.push('KILL', 'KILL', 'KILL', 'TEAMFIGHT', 'TEAMFIGHT');
+  }
 
-  // 시간대별 이벤트
-  if (gameMinutes >= 3) eventPool.push('GANK', 'LANE_PUSH');
-  if (gameMinutes >= 5 && matchData.dragon_alive) eventPool.push('DRAGON', 'DRAGON');
+  // 오브젝트 이벤트
+  if (gameMinutes >= 5 && matchData.dragon_alive) eventPool.push('DRAGON');
   if (gameMinutes >= 8 && matchData.herald_alive) eventPool.push('HERALD');
-  if (gameMinutes >= 10) eventPool.push('TURRET', 'TURRET', 'TEAMFIGHT');
+  if (gameMinutes >= 10) eventPool.push('TURRET');
   if (gameMinutes >= 15) eventPool.push('INHIBITOR');
-  if (gameMinutes >= 25 && matchData.baron_alive) eventPool.push('BARON', 'BARON');
+  if (gameMinutes >= 25 && matchData.baron_alive) eventPool.push('BARON');
   if (matchData.elder_available && matchData.dragon_alive) eventPool.push('ELDER_DRAGON');
 
   const eventType = eventPool[Math.floor(Math.random() * eventPool.length)];
@@ -488,14 +501,24 @@ async function generateEvents(
       if (matchData.dragon_alive) {
         const dragonTypes = ['불', '바다', '바람', '대지', '구름', '화학공학'];
         const dragonType = dragonTypes[Math.floor(Math.random() * dragonTypes.length)];
-        event = createEvent(gameTime, 'DRAGON', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 ${dragonType} 드래곤을 처치했습니다!`, {
-          team: winningTeam,
-          dragon_type: dragonType
-        });
         winningState.dragons.push(dragonType);
         winningState.gold += 200;
         matchData.dragon_alive = false;
         matchData.dragon_respawn_at = gameTime + GAME_CONSTANTS.DRAGON_RESPAWN;
+
+        // 4번째 드래곤이면 소울 획득
+        if (winningState.dragons.length === 4) {
+          event = createEvent(gameTime, 'DRAGON_SOUL', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 ${dragonType} 드래곤 소울을 획득했습니다!`, {
+            team: winningTeam,
+            dragon_type: dragonType
+          });
+          matchData.elder_available = true;
+        } else {
+          event = createEvent(gameTime, 'DRAGON', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 ${dragonType} 드래곤을 처치했습니다!`, {
+            team: winningTeam,
+            dragon_type: dragonType
+          });
+        }
       }
       break;
 
@@ -595,6 +618,10 @@ async function generateEvents(
         team: winningTeam,
         gold: goldGained
       });
+      break;
+
+    case 'NOTHING':
+      // 아무 일도 일어나지 않음
       break;
   }
 
