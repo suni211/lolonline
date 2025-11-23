@@ -106,8 +106,8 @@ export default function Matches() {
 
       // 모든 경기 병합 및 시간순 정렬
       const allMatches = [...regularMatches, ...cupMatches].sort((a, b) => {
-        const dateA = new Date(a.scheduled_at.replace(' ', 'T'));
-        const dateB = new Date(b.scheduled_at.replace(' ', 'T'));
+        const dateA = a.scheduled_at ? new Date(a.scheduled_at.replace(' ', 'T')) : new Date(0);
+        const dateB = b.scheduled_at ? new Date(b.scheduled_at.replace(' ', 'T')) : new Date(0);
         return dateA.getTime() - dateB.getTime();
       });
 
