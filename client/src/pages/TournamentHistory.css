@@ -183,6 +183,89 @@
   color: #888;
 }
 
+/* Schedule Section */
+.schedule-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.schedule-section {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.schedule-section h3 {
+  margin-bottom: 1rem;
+  color: #3b82f6;
+  font-size: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #3b82f6;
+}
+
+.schedule-matches {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.schedule-match {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.schedule-match.live {
+  border-left: 3px solid #ef4444;
+}
+
+.schedule-match.finished {
+  border-left: 3px solid #10b981;
+}
+
+.schedule-match.scheduled {
+  border-left: 3px solid #f59e0b;
+}
+
+.schedule-match .match-teams {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #f0f0f0;
+}
+
+.schedule-match .vs {
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.schedule-match .match-info .score {
+  font-weight: bold;
+  color: #10b981;
+}
+
+.schedule-match .match-info .live {
+  color: #ef4444;
+  font-weight: bold;
+  animation: pulse 2s infinite;
+}
+
+.schedule-match .match-info .time {
+  color: #888;
+  font-size: 0.85rem;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 .loading, .error {
   text-align: center;
   padding: 3rem;

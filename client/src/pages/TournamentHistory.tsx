@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
 import './TournamentHistory.css';
 
 interface CupWinner {
@@ -30,19 +31,50 @@ interface LeagueWinner {
   goal_difference: number;
 }
 
+interface Match {
+  id: number;
+  home_team_name: string;
+  home_team_abbr: string | null;
+  away_team_name: string;
+  away_team_abbr: string | null;
+  home_score: number;
+  away_score: number;
+  status: string;
+  scheduled_at: string;
+  match_type: string;
+  league_name?: string;
+  source?: string;
+}
+
 // 팀 약자 표시 (약자가 없으면 팀 이름 앞 3글자)
 const getTeamAbbr = (name: string, abbr: string | null) => {
   if (abbr) return abbr;
   return name.replace(/[^A-Za-z0-9가-힣]/g, '').substring(0, 3).toUpperCase();
 };
 
+// 날짜 포맷
+const formatDate = (dateString: string | null | undefined): string => {
+  if (!dateString) return '-';
+  const normalized = dateString.replace(' ', 'T');
+  const date = new Date(normalized);
+  if (isNaN(date.getTime())) return '-';
+  return date.toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
 const TournamentHistory: React.FC = () => {
   const { token } = useAuth();
   const [cupWinners, setCupWinners] = useState<CupWinner[]>([]);
   const [leagueWinners, setLeagueWinners] = useState<LeagueWinner[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'cup' | 'league'>('cup');
+  const [activeTab, setActiveTab] = useState<'schedule' | 'history'>('schedule');
 
   useEffect(() => {
     fetchHistory();
@@ -51,7 +83,38 @@ const TournamentHistory: React.FC = () => {
   const fetchHistory = async () => {
     try {
       setLoading(true);
-      const [cupRes, leagueRes] = await Promise.all([
+
+      // 경기 목록 조회
+      const matchesRes = await axios.get('/api/matches');
+      let allMatches = matchesRes.data.map((m: Match) => ({ ...m, source: 'matches' }));
+
+      // 컵 경기 조회
+      try {
+        const cupRes = await axios.get('/api/cup/current?season=1', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (cupRes.data && cupRes.data.matches) {
+          const cupMatches = cupRes.data.matches.map((cm: any) => ({
+            id: cm.id,
+            home_team_name: cm.home_team_name,
+            home_team_abbr: cm.home_team_abbr,
+            away_team_name: cm.away_team_name,
+            away_team_abbr: cm.away_team_abbr,
+            home_score: cm.home_score,
+            away_score: cm.away_score,
+            status: cm.status === 'COMPLETED' ? 'FINISHED' : cm.status === 'IN_PROGRESS' ? 'LIVE' : 'SCHEDULED',
+            scheduled_at: cm.scheduled_at,
+            match_type: 'CUP',
+            source: 'cup'
+          }));
+          allMatches = [...allMatches, ...cupMatches];
+        }
+      } catch (e) {}
+
+      setMatches(allMatches);
+
+      // 역대 우승 기록
+      const [cupWinnersRes, leagueWinnersRes] = await Promise.all([
         fetch('/api/cup/history/winners', {
           headers: { Authorization: `Bearer ${token}` }
         }),
@@ -60,13 +123,13 @@ const TournamentHistory: React.FC = () => {
         })
       ]);
 
-      if (cupRes.ok) {
-        const cupData = await cupRes.json();
+      if (cupWinnersRes.ok) {
+        const cupData = await cupWinnersRes.json();
         setCupWinners(cupData);
       }
 
-      if (leagueRes.ok) {
-        const leagueData = await leagueRes.json();
+      if (leagueWinnersRes.ok) {
+        const leagueData = await leagueWinnersRes.json();
         setLeagueWinners(leagueData);
       }
     } catch (err) {
@@ -75,6 +138,18 @@ const TournamentHistory: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // 경기 분류
+  const cupMatches = matches.filter(m => m.match_type === 'CUP');
+  const superLeagueMatches = matches.filter(m =>
+    m.league_name && (m.league_name.includes('SUPER') || m.league_name.includes('슈퍼'))
+  );
+  const firstLeagueMatches = matches.filter(m =>
+    m.league_name && (m.league_name.includes('1 ') || m.league_name.includes('FIRST') || m.league_name === 'LPO 1')
+  );
+  const secondLeagueMatches = matches.filter(m =>
+    m.league_name && (m.league_name.includes('2 ') || m.league_name.includes('SECOND') || m.league_name === 'LPO 2')
+  );
 
   const getRegionName = (region: string) => {
     switch (region) {
@@ -102,26 +177,69 @@ const TournamentHistory: React.FC = () => {
     return <div className="tournament-history-page"><div className="error">{error}</div></div>;
   }
 
+  const renderMatchSection = (matchList: Match[], title: string) => {
+    if (matchList.length === 0) return null;
+    return (
+      <div className="schedule-section">
+        <h3>{title}</h3>
+        <div className="schedule-matches">
+          {matchList.slice(0, 10).map((match) => (
+            <div key={`${match.source}-${match.id}`} className={`schedule-match ${match.status?.toLowerCase()}`}>
+              <div className="match-teams">
+                <span title={match.home_team_name}>
+                  {getTeamAbbr(match.home_team_name, match.home_team_abbr)}
+                </span>
+                <span className="vs">vs</span>
+                <span title={match.away_team_name}>
+                  {getTeamAbbr(match.away_team_name, match.away_team_abbr)}
+                </span>
+              </div>
+              <div className="match-info">
+                {match.status === 'FINISHED' && (
+                  <span className="score">{match.home_score} - {match.away_score}</span>
+                )}
+                {match.status === 'LIVE' && <span className="live">LIVE</span>}
+                {match.status === 'SCHEDULED' && (
+                  <span className="time">{formatDate(match.scheduled_at)}</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="tournament-history-page">
-      <h1>역대 우승 기록</h1>
+      <h1>대회 정보</h1>
 
       <div className="history-tabs">
         <button
-          className={activeTab === 'cup' ? 'active' : ''}
-          onClick={() => setActiveTab('cup')}
+          className={activeTab === 'schedule' ? 'active' : ''}
+          onClick={() => setActiveTab('schedule')}
         >
-          컵 대회
+          경기 일정
         </button>
         <button
-          className={activeTab === 'league' ? 'active' : ''}
-          onClick={() => setActiveTab('league')}
+          className={activeTab === 'history' ? 'active' : ''}
+          onClick={() => setActiveTab('history')}
         >
-          리그
+          역대 기록
         </button>
       </div>
 
-      {activeTab === 'cup' && (
+      {activeTab === 'schedule' && (
+        <div className="schedule-container">
+          {renderMatchSection(cupMatches, 'LPO 컵')}
+          {renderMatchSection(superLeagueMatches, 'LPO SUPER LEAGUE')}
+          {renderMatchSection(firstLeagueMatches, 'LPO 1 LEAGUE')}
+          {renderMatchSection(secondLeagueMatches, 'LPO 2 LEAGUE')}
+          {matches.length === 0 && <div className="no-data">경기가 없습니다</div>}
+        </div>
+      )}
+
+      {activeTab === 'history' && (
         <div className="winners-section">
           <h2>LPO 컵 역대 우승</h2>
           {cupWinners.length === 0 ? (

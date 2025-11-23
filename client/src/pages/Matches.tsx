@@ -125,15 +125,25 @@ export default function Matches() {
   // 경기 분류
   const cupMatches = filteredMatches.filter(m => m.match_type === 'CUP');
   const superLeagueMatches = filteredMatches.filter(m =>
-    m.league_name?.includes('SUPER') || m.league_name?.includes('슈퍼')
+    m.league_name && (m.league_name.includes('SUPER') || m.league_name.includes('슈퍼'))
   );
   const firstLeagueMatches = filteredMatches.filter(m =>
-    m.league_name?.includes('1') || m.league_name?.includes('FIRST')
+    m.league_name && (m.league_name.includes('1 ') || m.league_name.includes('FIRST') || m.league_name === 'LPO 1')
   );
   const secondLeagueMatches = filteredMatches.filter(m =>
-    m.league_name?.includes('2') || m.league_name?.includes('SECOND')
+    m.league_name && (m.league_name.includes('2 ') || m.league_name.includes('SECOND') || m.league_name === 'LPO 2')
   );
   const friendlyMatches = filteredMatches.filter(m => m.match_type === 'FRIENDLY');
+
+  // 분류되지 않은 리그 경기
+  const otherLeagueMatches = filteredMatches.filter(m =>
+    m.match_type !== 'CUP' &&
+    m.match_type !== 'FRIENDLY' &&
+    m.league_name &&
+    !superLeagueMatches.includes(m) &&
+    !firstLeagueMatches.includes(m) &&
+    !secondLeagueMatches.includes(m)
+  );
 
   const renderMatchList = (matchList: Match[], title: string) => {
     if (matchList.length === 0) return null;
@@ -221,6 +231,7 @@ export default function Matches() {
         {renderMatchList(superLeagueMatches, 'LPO SUPER LEAGUE')}
         {renderMatchList(firstLeagueMatches, 'LPO 1 LEAGUE')}
         {renderMatchList(secondLeagueMatches, 'LPO 2 LEAGUE')}
+        {renderMatchList(otherLeagueMatches, '기타 리그')}
         {renderMatchList(friendlyMatches, '친선전')}
 
         {filteredMatches.length === 0 && (
