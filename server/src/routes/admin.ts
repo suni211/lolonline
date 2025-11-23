@@ -13,11 +13,11 @@ const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
-// 이미지 업로드 설정
+// 이미지 업로드 설정 - server/uploads/players에 영구 저장
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // client/dist/players 폴더에 저장
-    const uploadPath = path.join(__dirname, '..', '..', '..', 'client', 'dist', 'players');
+    // server/uploads/players 폴더에 영구 저장
+    const uploadPath = path.join(__dirname, '..', '..', 'uploads', 'players');
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
@@ -577,8 +577,8 @@ router.post('/players/:playerId/face', authenticateToken, adminMiddleware, uploa
       return res.status(404).json({ error: '선수를 찾을 수 없습니다' });
     }
 
-    // 이미지 경로 저장 (public/players/id.ext 형식)
-    const imagePath = `/players/${req.file.filename}`;
+    // 이미지 경로 저장 (/uploads/players/id.ext 형식)
+    const imagePath = `/uploads/players/${req.file.filename}`;
 
     await pool.query(
       'UPDATE pro_players SET face_image = ? WHERE id = ?',
@@ -608,8 +608,8 @@ router.delete('/players/:playerId/face', authenticateToken, adminMiddleware, asy
     }
 
     if (players[0].face_image) {
-      // 파일 삭제
-      const filePath = path.join(__dirname, '..', '..', '..', 'client', 'dist', players[0].face_image);
+      // 파일 삭제 (/uploads/players/... 형식)
+      const filePath = path.join(__dirname, '..', '..', players[0].face_image);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }

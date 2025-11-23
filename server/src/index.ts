@@ -1,6 +1,11 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { Server } from 'socket.io';
 import { createServer } from 'http';
 import authRoutes from './routes/auth.js';
@@ -43,6 +48,9 @@ const io = new Server(httpServer, {
 
 app.use(cors());
 app.use(express.json());
+
+// uploads 폴더 정적 파일 서빙 (선수 이미지 등)
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // IP 주소 추출을 위한 미들웨어
 app.set('trust proxy', true);
