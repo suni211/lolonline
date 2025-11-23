@@ -336,7 +336,9 @@ export class CupService {
 
       // 경기 목록 조회
       const matches = await pool.query(
-        `SELECT cm.*,
+        `SELECT cm.id, cm.cup_id, cm.round, cm.match_number, cm.home_team_id, cm.away_team_id,
+                cm.home_score, cm.away_score, cm.winner_team_id, cm.status,
+                DATE_FORMAT(cm.scheduled_at, '%Y-%m-%d %H:%i:%s') as scheduled_at,
                 ht.name as home_team_name, ht.abbreviation as home_team_abbr,
                 at.name as away_team_name, at.abbreviation as away_team_abbr,
                 wt.name as winner_name

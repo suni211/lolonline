@@ -82,7 +82,10 @@ router.get('/:leagueId', async (req, res) => {
 
     // 다음 경기 일정
     const upcomingMatches = await pool.query(
-      `SELECT m.*, ht.name as home_team_name, ht.logo_url as home_team_logo,
+      `SELECT m.id, m.league_id, m.home_team_id, m.away_team_id, m.match_type, m.round,
+              m.status, m.home_score, m.away_score,
+              DATE_FORMAT(m.scheduled_at, '%Y-%m-%d %H:%i:%s') as scheduled_at,
+              ht.name as home_team_name, ht.logo_url as home_team_logo,
               at.name as away_team_name, at.logo_url as away_team_logo
        FROM matches m
        INNER JOIN teams ht ON m.home_team_id = ht.id
@@ -226,7 +229,9 @@ router.get('/all-matches/upcoming', authenticateToken, async (req: AuthRequest, 
     }
 
     const matches = await pool.query(
-      `SELECT m.*,
+      `SELECT m.id, m.league_id, m.home_team_id, m.away_team_id, m.match_type, m.round,
+              m.status, m.home_score, m.away_score,
+              DATE_FORMAT(m.scheduled_at, '%Y-%m-%d %H:%i:%s') as scheduled_at,
               ht.name as home_team_name, ht.logo_url as home_team_logo,
               at.name as away_team_name, at.logo_url as away_team_logo,
               l.name as league_name
@@ -251,7 +256,10 @@ router.get('/all-matches/upcoming', authenticateToken, async (req: AuthRequest, 
 router.get('/all-matches/recent', async (req, res) => {
   try {
     const matches = await pool.query(
-      `SELECT m.*,
+      `SELECT m.id, m.league_id, m.home_team_id, m.away_team_id, m.match_type, m.round,
+              m.status, m.home_score, m.away_score,
+              DATE_FORMAT(m.scheduled_at, '%Y-%m-%d %H:%i:%s') as scheduled_at,
+              DATE_FORMAT(m.finished_at, '%Y-%m-%d %H:%i:%s') as finished_at,
               ht.name as home_team_name, ht.logo_url as home_team_logo,
               at.name as away_team_name, at.logo_url as away_team_logo,
               l.name as league_name
