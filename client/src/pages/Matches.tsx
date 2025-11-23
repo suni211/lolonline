@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
 import './Matches.css';
@@ -59,6 +60,7 @@ interface MatchStat {
 }
 
 export default function Matches() {
+  const navigate = useNavigate();
   const [matches, setMatches] = useState<Match[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
   const [matchEvents, setMatchEvents] = useState<MatchEvent[]>([]);
@@ -261,7 +263,7 @@ export default function Matches() {
             <div
               key={match.id}
               className={`match-item ${match.status?.toLowerCase() || ''} ${selectedMatch?.id === match.id ? 'selected' : ''}`}
-              onClick={() => watchMatch(match.id)}
+              onClick={() => navigate(`/live/${match.id}`)}
             >
               <div className="match-teams">
                 <span className={match.home_score > match.away_score ? 'winner' : ''}>
