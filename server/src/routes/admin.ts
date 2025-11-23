@@ -759,9 +759,9 @@ router.get('/lpo/status', authenticateToken, adminMiddleware, async (req: AuthRe
 // 컵 대회 생성
 router.post('/cup/create', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
   try {
-    const { season } = req.body;
+    const season = parseInt(req.body.season);
 
-    if (!season) {
+    if (!season || isNaN(season)) {
       return res.status(400).json({ error: '시즌을 입력해주세요' });
     }
 
@@ -773,6 +773,18 @@ router.post('/cup/create', authenticateToken, adminMiddleware, async (req: AuthR
 
     if (existingCup.length > 0) {
       return res.status(400).json({ error: `시즌 ${season} 컵 대회가 이미 존재합니다` });
+    }
+
+    // 해당 시즌에 리그가 존재하는지 확인
+    const leagues = await pool.query(
+      'SELECT id, region FROM leagues WHERE season = ?',
+      [season]
+    );
+
+    if (leagues.length < 3) {
+      return res.status(400).json({
+        error: `시즌 ${season} 리그가 충분하지 않습니다. LPO 리그를 먼저 초기화해주세요.`
+      });
     }
 
     const cupId = await CupService.createCupTournament(season);

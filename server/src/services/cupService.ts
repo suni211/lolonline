@@ -40,6 +40,12 @@ export class CupService {
         [season]
       );
 
+      console.log(`Teams found - SUPER: ${superTeams.length}, FIRST: ${firstTeams.length}, SECOND: ${secondTeams.length}`);
+
+      if (superTeams.length === 0 || firstTeams.length === 0 || secondTeams.length === 0) {
+        throw new Error(`팀이 부족합니다. SUPER: ${superTeams.length}, FIRST: ${firstTeams.length}, SECOND: ${secondTeams.length}`);
+      }
+
       // 32강 대진표 생성
       // 1부(SUPER) 10팀 vs 3부(SECOND) 10팀
       // 2부(FIRST) 10팀 vs 3부(SECOND) 나머지 2팀
