@@ -81,7 +81,7 @@ export async function chatWithPlayer(
   userMessage: string
 ): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
     const traits = personalityTraits[personality];
 
@@ -131,7 +131,7 @@ export async function generatePlayerEvent(
   if (Math.random() < traits.conflictChance * (recentLosses * 0.3 + 1)) {
     if (teamMorale < 50 || recentLosses >= 3) {
       try {
-        const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
         const prompt = `LoL 이스포츠 게임에서 선수 이벤트를 생성해주세요.
 선수: ${playerName}
@@ -210,7 +210,7 @@ export async function generateTeamMeeting(
   topic: string
 ): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
     const playerList = players.map(p =>
       `${p.name} (${personalityTraits[p.personality].name})`
@@ -242,7 +242,7 @@ export async function generateContractNegotiationDialogue(
   counterSalary?: number
 ): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
     const traits = personalityTraits[personality];
     const salaryRatio = (proposedSalary / baseSalary * 100).toFixed(0);
@@ -296,7 +296,7 @@ export async function generateScoutDialogue(
   scoutResult: 'SUCCESS' | 'PARTIAL' | 'FAILED'
 ): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
     const traits = personalityTraits[personality];
 
@@ -345,7 +345,7 @@ export async function generateTrainingComment(
   newValue: number
 ): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
     const traits = personalityTraits[personality];
     const isGoodResult = statChange >= 3;
@@ -381,7 +381,7 @@ export async function generatePostMatchInterview(
   assists: number
 ): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
     const traits = personalityTraits[personality];
     const kda = ((kills + assists) / Math.max(1, deaths)).toFixed(2);

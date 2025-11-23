@@ -570,12 +570,15 @@ router.post('/discoveries/:discoveryId/sign', authenticateToken, async (req: Aut
     // 골드 차감
     await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [finalCost, req.teamId]);
 
+    // OVR 계산
+    const ovr = Math.round((mental + teamfight + focus + laning) / 4);
+
     // 선수 카드 생성
     const result = await pool.query(
       `INSERT INTO player_cards (
         pro_player_id, team_id, mental, teamfight, focus, laning,
-        condition_value, form, personality, is_starter
-      ) VALUES (?, ?, ?, ?, ?, ?, 100, 'NORMAL', ?, false)`,
+        ovr, card_type, personality, is_starter, is_contracted
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'NORMAL', ?, false, true)`,
       [
         discovery.pro_player_id,
         req.teamId,
@@ -583,6 +586,7 @@ router.post('/discoveries/:discoveryId/sign', authenticateToken, async (req: Aut
         teamfight,
         focus,
         laning,
+        ovr,
         personality
       ]
     );
