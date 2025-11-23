@@ -31,8 +31,8 @@ export class SponsorService {
   // 스페셜 스폰서 확률 체크 (0.001% = 1/100000)
   static readonly SPECIAL_SPONSOR_CHANCE = 0.00001; // 0.001%
 
-  // 팀의 스페셜 스폰서 체크 (1부 전용, 1시간마다 호출)
-  static async checkSpecialSponsor(teamId: number): Promise<boolean> {
+  // 팀의 스페셜 스폰서 체크 (1부 전용, 3시즌 유지)
+  static async checkSpecialSponsor(teamId: number, currentSeason: number = 1): Promise<boolean> {
     try {
       // 팀 리그 확인 (1부만 스페셜 스폰서 가능)
       const teams = await pool.query(
@@ -53,8 +53,8 @@ export class SponsorService {
       // 이미 활성화된 스페셜 스폰서가 있는지 확인
       const existing = await pool.query(
         `SELECT * FROM special_sponsors
-         WHERE team_id = ? AND expires_at > NOW() AND claimed = false`,
-        [teamId]
+         WHERE team_id = ? AND end_season >= ? AND claimed = false`,
+        [teamId, currentSeason]
       );
 
       if (existing.length > 0) {
@@ -64,23 +64,17 @@ export class SponsorService {
       // 랜덤 스폰서 선택
       const sponsor = SPECIAL_SPONSORS[Math.floor(Math.random() * SPECIAL_SPONSORS.length)];
 
-      // 1시간 후 만료
-      const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-      const year = expiresAt.getFullYear();
-      const month = String(expiresAt.getMonth() + 1).padStart(2, '0');
-      const day = String(expiresAt.getDate()).padStart(2, '0');
-      const hours = String(expiresAt.getHours()).padStart(2, '0');
-      const minutes = String(expiresAt.getMinutes()).padStart(2, '0');
-      const seconds = String(expiresAt.getSeconds()).padStart(2, '0');
-      const expiresAtStr = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      // 3시즌 유지
+      const startSeason = currentSeason;
+      const endSeason = currentSeason + 2;
 
       await pool.query(
-        `INSERT INTO special_sponsors (team_id, sponsor_name, bonus_gold, bonus_diamond, expires_at)
-         VALUES (?, ?, ?, ?, ?)`,
-        [teamId, sponsor.name, sponsor.gold, sponsor.diamond, expiresAtStr]
+        `INSERT INTO special_sponsors (team_id, sponsor_name, bonus_gold, bonus_diamond, start_season, end_season)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [teamId, sponsor.name, sponsor.gold, sponsor.diamond, startSeason, endSeason]
       );
 
-      console.log(`Special sponsor ${sponsor.name} appeared for team ${teamId}!`);
+      console.log(`Special sponsor ${sponsor.name} appeared for team ${teamId}! (Season ${startSeason}-${endSeason})`);
       return true;
 
     } catch (error) {
@@ -110,14 +104,14 @@ export class SponsorService {
   }
 
   // 팀의 활성 스페셜 스폰서 조회
-  static async getActiveSpecialSponsor(teamId: number) {
+  static async getActiveSpecialSponsor(teamId: number, currentSeason: number = 1) {
     try {
       const sponsors = await pool.query(
         `SELECT * FROM special_sponsors
-         WHERE team_id = ? AND expires_at > NOW() AND claimed = false
+         WHERE team_id = ? AND start_season <= ? AND end_season >= ? AND claimed = false
          ORDER BY created_at DESC
          LIMIT 1`,
-        [teamId]
+        [teamId, currentSeason, currentSeason]
       );
 
       if (sponsors.length === 0) {
@@ -133,13 +127,13 @@ export class SponsorService {
   }
 
   // 스페셜 스폰서 보상 수령
-  static async claimSpecialSponsor(teamId: number, sponsorId: number) {
+  static async claimSpecialSponsor(teamId: number, sponsorId: number, currentSeason: number = 1) {
     try {
       // 스폰서 확인
       const sponsors = await pool.query(
         `SELECT * FROM special_sponsors
-         WHERE id = ? AND team_id = ? AND expires_at > NOW() AND claimed = false`,
-        [sponsorId, teamId]
+         WHERE id = ? AND team_id = ? AND start_season <= ? AND end_season >= ? AND claimed = false`,
+        [sponsorId, teamId, currentSeason, currentSeason]
       );
 
       if (sponsors.length === 0) {
@@ -198,11 +192,12 @@ export class SponsorService {
     }
   }
 
-  // 만료된 스페셜 스폰서 정리
-  static async cleanupExpiredSponsors() {
+  // 만료된 스페셜 스폰서 정리 (시즌 종료 후)
+  static async cleanupExpiredSponsors(currentSeason: number) {
     try {
       const result = await pool.query(
-        'DELETE FROM special_sponsors WHERE expires_at < NOW()'
+        'DELETE FROM special_sponsors WHERE end_season < ?',
+        [currentSeason]
       );
 
       if (result.affectedRows > 0) {
