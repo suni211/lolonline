@@ -35,6 +35,13 @@ interface MatchState {
   away_score: number;
   events: any[];
 
+  // 세트 정보
+  current_set: number;
+  home_set_wins: number;
+  away_set_wins: number;
+  max_sets: number;  // 리그전: 3, 플레이오프: 5
+  sets_to_win: number;  // 리그전: 2, 플레이오프: 3
+
   // 팀별 상태
   home: {
     kills: number;
@@ -66,6 +73,7 @@ interface MatchState {
   game_over: boolean;
   winner: string | null;
   max_game_time: number;  // 15~90분 랜덤
+  match_finished: boolean;  // 전체 매치 종료 여부
 }
 
 export async function initializeMatchSimulation(io: Server) {
@@ -182,12 +190,24 @@ async function startMatch(match: any, io: Server) {
     // 경기 시간 15~90분 랜덤 (초 단위)
     const maxGameTime = (15 + Math.floor(Math.random() * 76)) * 60;
 
+    // 세트 설정: 플레이오프는 5판3선, 그 외는 3판2선
+    const isPlayoff = match.match_type === 'PLAYOFF';
+    const maxSets = isPlayoff ? 5 : 3;
+    const setsToWin = isPlayoff ? 3 : 2;
+
     // 경기 데이터 초기화 (롤 시스템)
     const matchData: MatchState = {
       game_time: 0,
       home_score: 0,
       away_score: 0,
       events: [],
+
+      // 세트 정보
+      current_set: 1,
+      home_set_wins: 0,
+      away_set_wins: 0,
+      max_sets: maxSets,
+      sets_to_win: setsToWin,
 
       home: {
         kills: 0,
@@ -216,7 +236,8 @@ async function startMatch(match: any, io: Server) {
 
       game_over: false,
       winner: null,
-      max_game_time: maxGameTime
+      max_game_time: maxGameTime,
+      match_finished: false
     };
 
     await pool.query(
@@ -776,14 +797,109 @@ async function calculateTeamOverall(teamId: number, gameTime: number = 0): Promi
 
 async function finishMatch(match: any, matchData: any, io: Server) {
   try {
-    const homeScore = matchData.home_score;
-    const awayScore = matchData.away_score;
+    // 현재 세트 승자 결정
+    if (matchData.winner === 'home') {
+      matchData.home_set_wins++;
+    } else if (matchData.winner === 'away') {
+      matchData.away_set_wins++;
+    }
 
-    // 경기 종료
+    // 세트 종료 이벤트
+    io.to(`match_${match.id}`).emit('set_finished', {
+      match_id: match.id,
+      set_number: matchData.current_set,
+      set_winner: matchData.winner,
+      home_set_wins: matchData.home_set_wins,
+      away_set_wins: matchData.away_set_wins
+    });
+
+    // 전체 매치 승패 확인
+    const homeWon = matchData.home_set_wins >= matchData.sets_to_win;
+    const awayWon = matchData.away_set_wins >= matchData.sets_to_win;
+
+    if (homeWon || awayWon) {
+      // 매치 종료
+      matchData.match_finished = true;
+      const homeScore = matchData.home_set_wins;
+      const awayScore = matchData.away_set_wins;
+
+      // 경기 종료
+      await pool.query(
+        'UPDATE matches SET status = "FINISHED", finished_at = NOW(), home_score = ?, away_score = ?, match_data = ? WHERE id = ?',
+        [homeScore, awayScore, JSON.stringify(matchData), match.id]
+      );
+
+      // 이후 리그 점수 업데이트 등 처리
+      await processMatchEnd(match, matchData, homeScore, awayScore, io);
+      return;
+    }
+
+    // 다음 세트 시작
+    matchData.current_set++;
+    matchData.game_time = 0;
+    matchData.game_over = false;
+    matchData.winner = null;
+    matchData.max_game_time = (15 + Math.floor(Math.random() * 76)) * 60;
+
+    // 포탑 초기화
+    const initialTurrets: TurretState = {
+      top: { t1: true, t2: true, t3: true, inhib: true },
+      mid: { t1: true, t2: true, t3: true, inhib: true },
+      bot: { t1: true, t2: true, t3: true, inhib: true },
+      nexus: { twin1: true, twin2: true, nexus: true }
+    };
+
+    // 팀 상태 초기화
+    matchData.home = {
+      kills: 0,
+      gold: 500 * 5,
+      dragons: [],
+      barons: 0,
+      heralds: 0,
+      turrets: JSON.parse(JSON.stringify(initialTurrets))
+    };
+    matchData.away = {
+      kills: 0,
+      gold: 500 * 5,
+      dragons: [],
+      barons: 0,
+      heralds: 0,
+      turrets: JSON.parse(JSON.stringify(initialTurrets))
+    };
+
+    // 오브젝트 상태 초기화
+    matchData.dragon_alive = false;
+    matchData.dragon_respawn_at = GAME_CONSTANTS.DRAGON_SPAWN;
+    matchData.baron_alive = false;
+    matchData.baron_respawn_at = GAME_CONSTANTS.BARON_SPAWN;
+    matchData.herald_alive = false;
+    matchData.herald_taken = false;
+    matchData.elder_available = false;
+
+    // 경기 데이터 저장
     await pool.query(
-      'UPDATE matches SET status = "FINISHED", finished_at = NOW(), home_score = ?, away_score = ? WHERE id = ?',
-      [homeScore, awayScore, match.id]
+      'UPDATE matches SET match_data = ? WHERE id = ?',
+      [JSON.stringify(matchData), match.id]
     );
+
+    // 새 세트 시작 이벤트
+    io.to(`match_${match.id}`).emit('set_started', {
+      match_id: match.id,
+      set_number: matchData.current_set,
+      home_set_wins: matchData.home_set_wins,
+      away_set_wins: matchData.away_set_wins
+    });
+
+    console.log(`Match ${match.id}: Set ${matchData.current_set} started`);
+    return;
+  } catch (error) {
+    console.error('Error finishing match:', error);
+  }
+}
+
+// 매치 종료 후 처리 (리그 점수, 보상 등)
+async function processMatchEnd(match: any, matchData: any, homeScore: number, awayScore: number, io: Server) {
+  try {
 
     // 리그 점수 업데이트 (친선전은 제외)
     if (match.match_type === 'REGULAR' && match.league_id) {
