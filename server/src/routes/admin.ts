@@ -695,17 +695,17 @@ router.delete('/players/:playerId/face', authenticateToken, adminMiddleware, asy
   }
 });
 
-// 가상 선수 이름 생성
+// 가상 선수 닉네임 생성 (영어)
 function generateAIPlayerName(): string {
-  const firstNames = ['김', '이', '박', '최', '정', '강', '조', '윤', '장', '임', '한', '오', '서', '신', '권', '황', '안', '송', '류', '홍'];
-  const middleNames = ['민', '서', '지', '현', '수', '영', '준', '우', '진', '성', '재', '동', '태', '승', '호', '정', '선', '예', '유', '하'];
-  const lastNames = ['준', '현', '우', '호', '석', '진', '혁', '민', '성', '수', '철', '훈', '기', '욱', '찬', '빈', '원', '규', '환', '용'];
+  const prefixes = ['Dark', 'Fire', 'Ice', 'Storm', 'Shadow', 'Thunder', 'Sky', 'Star', 'Night', 'Sun', 'Moon', 'Red', 'Blue', 'Black', 'White', 'Gold', 'Silver', 'Iron', 'Steel', 'Frost'];
+  const cores = ['Wolf', 'Lion', 'Dragon', 'Phoenix', 'Tiger', 'Bear', 'Hawk', 'Viper', 'Falcon', 'Raven', 'Knight', 'King', 'Lord', 'Master', 'Hunter', 'Slayer', 'Blade', 'Arrow', 'Ace', 'Pro'];
+  const suffixes = ['X', 'Z', '1', '7', '99', 'Jr', 'II', 'KR', 'GG', ''];
 
-  const first = firstNames[Math.floor(Math.random() * firstNames.length)];
-  const middle = middleNames[Math.floor(Math.random() * middleNames.length)];
-  const last = lastNames[Math.floor(Math.random() * lastNames.length)];
+  const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+  const core = cores[Math.floor(Math.random() * cores.length)];
+  const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
 
-  return first + middle + last;
+  return prefix + core + suffix;
 }
 
 // AI 팀 기존 카드 삭제 (실제 선수 FA화)
