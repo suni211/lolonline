@@ -440,15 +440,14 @@ export default function SummonersRiftMap({
         </div>
       )}
 
-      {/* 챔피언 */}
-      {champions.map(champ => (
+      {/* 챔피언 - 죽은 챔피언은 표시 안함 */}
+      {champions.filter(champ => champ.isAlive).map(champ => (
         <div
           key={champ.playerId}
-          className={`map-champion ${champ.team} ${!champ.isAlive ? 'dead' : ''}`}
+          className={`map-champion ${champ.team}`}
           style={{
             left: `${champ.x}%`,
-            top: `${champ.y}%`,
-            opacity: champ.isAlive ? 1 : 0.3
+            top: `${champ.y}%`
           }}
         >
           {champ.imageUrl ? (
