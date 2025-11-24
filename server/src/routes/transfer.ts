@@ -679,6 +679,11 @@ router.post('/list', authenticateToken, async (req: AuthRequest, res) => {
 
     const card = cards[0];
 
+    // AI 가상 선수는 등록 불가
+    if (!card.pro_player_id) {
+      return res.status(400).json({ error: 'AI 선수는 판매할 수 없습니다' });
+    }
+
     // 스타터는 등록 불가
     if (card.is_starter) {
       return res.status(400).json({ error: '스타터 카드는 판매할 수 없습니다' });

@@ -499,7 +499,7 @@ CREATE TABLE IF NOT EXISTS pro_players (
 -- 선수 카드 테이블 (뽑은 카드)
 CREATE TABLE IF NOT EXISTS player_cards (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    pro_player_id INT NOT NULL,
+    pro_player_id INT NULL,  -- NULL이면 AI 가상 선수
     team_id INT,
     card_type ENUM('NORMAL', 'SEASON') DEFAULT 'NORMAL',
     -- 스탯 (1~200)
@@ -521,12 +521,21 @@ CREATE TABLE IF NOT EXISTS player_cards (
     -- 성장
     level INT DEFAULT 1,
     exp INT DEFAULT 0,
+    -- AI 가상 선수용
+    ai_player_name VARCHAR(100) NULL,
+    position VARCHAR(20) NULL,
+    personality VARCHAR(50) NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (pro_player_id) REFERENCES pro_players(id) ON DELETE CASCADE,
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL,
     INDEX idx_card_team (team_id),
     INDEX idx_card_ovr (ovr)
 );
+
+-- 기존 테이블 마이그레이션 (AI 가상 선수 지원)
+-- ALTER TABLE player_cards MODIFY pro_player_id INT NULL;
+-- ALTER TABLE player_cards ADD COLUMN ai_player_name VARCHAR(100) NULL;
+-- ALTER TABLE player_cards ADD COLUMN position VARCHAR(20) NULL;
 
 -- 선수팩 테이블
 CREATE TABLE IF NOT EXISTS player_packs (

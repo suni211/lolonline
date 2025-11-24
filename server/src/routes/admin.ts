@@ -695,7 +695,20 @@ router.delete('/players/:playerId/face', authenticateToken, adminMiddleware, asy
   }
 });
 
-// AI 팀에 카드 자동 생성
+// 가상 선수 이름 생성
+function generateAIPlayerName(): string {
+  const firstNames = ['김', '이', '박', '최', '정', '강', '조', '윤', '장', '임', '한', '오', '서', '신', '권', '황', '안', '송', '류', '홍'];
+  const middleNames = ['민', '서', '지', '현', '수', '영', '준', '우', '진', '성', '재', '동', '태', '승', '호', '정', '선', '예', '유', '하'];
+  const lastNames = ['준', '현', '우', '호', '석', '진', '혁', '민', '성', '수', '철', '훈', '기', '욱', '찬', '빈', '원', '규', '환', '용'];
+
+  const first = firstNames[Math.floor(Math.random() * firstNames.length)];
+  const middle = middleNames[Math.floor(Math.random() * middleNames.length)];
+  const last = lastNames[Math.floor(Math.random() * lastNames.length)];
+
+  return first + middle + last;
+}
+
+// AI 팀에 가상 선수 카드 생성
 router.post('/ai-teams/generate-cards', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
   try {
     // 모든 AI 팀 조회
@@ -705,45 +718,33 @@ router.post('/ai-teams/generate-cards', authenticateToken, adminMiddleware, asyn
       return res.status(400).json({ error: 'AI 팀이 없습니다' });
     }
 
-    // 모든 프로 선수 조회
-    const proPlayers = await pool.query(
-      'SELECT * FROM pro_players WHERE is_active = true'
+    // 기존 AI 팀 카드 삭제 (pro_player_id가 NULL인 가상 선수 또는 AI 팀 소속)
+    await pool.query(
+      `DELETE FROM player_cards WHERE team_id IN (SELECT id FROM teams WHERE is_ai = true)`
     );
-
-    if (proPlayers.length === 0) {
-      return res.status(400).json({ error: '프로 선수가 없습니다' });
-    }
 
     let totalCreated = 0;
     const positions = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
 
     for (const aiTeam of aiTeams) {
-      // 이미 카드가 있는지 확인
-      const existingCards = await pool.query(
-        'SELECT COUNT(*) as count FROM player_cards WHERE team_id = ?',
-        [aiTeam.id]
-      );
-
-      if (existingCards[0].count > 0) {
-        continue; // 이미 카드가 있으면 스킵
-      }
-
-      // 각 포지션별로 랜덤 선수 선택
+      // 각 포지션별로 가상 선수 생성
       for (const position of positions) {
-        const positionPlayers = proPlayers.filter((p: any) => p.position === position);
-        if (positionPlayers.length === 0) continue;
+        // 랜덤 OVR (50-85 범위)
+        const ovr = Math.floor(Math.random() * 36) + 50;
+        const variance = 5;
 
-        const randomPlayer = positionPlayers[Math.floor(Math.random() * positionPlayers.length)];
+        const mental = Math.max(1, Math.min(100, ovr + Math.floor(Math.random() * variance * 2) - variance));
+        const teamfight = Math.max(1, Math.min(100, ovr + Math.floor(Math.random() * variance * 2) - variance));
+        const focus = Math.max(1, Math.min(100, ovr + Math.floor(Math.random() * variance * 2) - variance));
+        const laning = Math.max(1, Math.min(100, ovr + Math.floor(Math.random() * variance * 2) - variance));
 
-        // 카드 생성
+        const aiPlayerName = generateAIPlayerName();
+
+        // 가상 선수 카드 생성 (pro_player_id = NULL)
         await pool.query(
-          `INSERT INTO player_cards (team_id, pro_player_id, mental, teamfight, focus, laning, ovr, card_type, is_contracted, is_starter)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 'NORMAL', true, true)`,
-          [
-            aiTeam.id, randomPlayer.id,
-            randomPlayer.mental, randomPlayer.teamfight, randomPlayer.focus,
-            randomPlayer.laning, randomPlayer.base_ovr
-          ]
+          `INSERT INTO player_cards (team_id, pro_player_id, mental, teamfight, focus, laning, ovr, card_type, is_contracted, is_starter, ai_player_name, position)
+           VALUES (?, NULL, ?, ?, ?, ?, ?, 'NORMAL', true, true, ?, ?)`,
+          [aiTeam.id, mental, teamfight, focus, laning, ovr, aiPlayerName, position]
         );
         totalCreated++;
       }
@@ -751,7 +752,7 @@ router.post('/ai-teams/generate-cards', authenticateToken, adminMiddleware, asyn
 
     res.json({
       success: true,
-      message: `AI 팀 ${aiTeams.length}개에 총 ${totalCreated}장의 카드가 생성되었습니다`
+      message: `AI 팀 ${aiTeams.length}개에 총 ${totalCreated}명의 가상 선수가 생성되었습니다`
     });
   } catch (error: any) {
     console.error('Generate AI cards error:', error);
