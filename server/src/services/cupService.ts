@@ -192,7 +192,9 @@ export class CupService {
         }
       }
 
-      // 32강 경기 일정을 기준으로 같은 수요일/토요일에 스케줄
+      // 32강 경기 일정을 기준으로 2주간 스케줄
+      // 1주차 수요일: 32강 / 1주차 토요일: 16강
+      // 2주차 수요일: 8강 / 2주차 토요일: 4강, 결승
       const firstMatch = await pool.query(
         `SELECT scheduled_at FROM cup_matches WHERE cup_id = ? AND round = 'ROUND_32' ORDER BY match_number LIMIT 1`,
         [cupId]
@@ -205,26 +207,27 @@ export class CupService {
         baseWednesday = this.getNextWednesday(new Date());
       }
 
-      // 수요일: 32강, 16강, 8강 / 토요일: 4강, 결승
       let matchTime: Date;
-      if (nextRound === 'ROUND_16' || nextRound === 'QUARTER') {
-        // 같은 수요일, 시간대만 다르게
+      if (nextRound === 'ROUND_16') {
+        // 1주차 토요일: 16강
         matchTime = new Date(baseWednesday);
-        if (nextRound === 'ROUND_16') {
-          matchTime.setUTCHours(10, 0, 0, 0); // 19:00 KST (16강)
-        } else {
-          matchTime.setUTCHours(12, 0, 0, 0); // 21:00 KST (8강)
-        }
+        matchTime.setDate(matchTime.getDate() + 3); // 수요일 -> 토요일
+        matchTime.setUTCHours(8, 0, 0, 0); // 17:00 KST
+      } else if (nextRound === 'QUARTER') {
+        // 2주차 수요일: 8강
+        matchTime = new Date(baseWednesday);
+        matchTime.setDate(matchTime.getDate() + 7); // 다음 주 수요일
+        matchTime.setUTCHours(8, 0, 0, 0); // 17:00 KST
+      } else if (nextRound === 'SEMI') {
+        // 2주차 토요일: 4강
+        matchTime = new Date(baseWednesday);
+        matchTime.setDate(matchTime.getDate() + 10); // 다음 주 토요일
+        matchTime.setUTCHours(8, 0, 0, 0); // 17:00 KST
       } else {
-        // 4강, 결승은 그 주 토요일
+        // 2주차 토요일: 결승 (4강 후)
         matchTime = new Date(baseWednesday);
-        // 수요일 -> 토요일 (3일 후)
-        matchTime.setDate(matchTime.getDate() + 3);
-        if (nextRound === 'SEMI') {
-          matchTime.setUTCHours(8, 0, 0, 0); // 17:00 KST (4강)
-        } else {
-          matchTime.setUTCHours(10, 0, 0, 0); // 19:00 KST (결승)
-        }
+        matchTime.setDate(matchTime.getDate() + 10); // 다음 주 토요일
+        matchTime.setUTCHours(10, 0, 0, 0); // 19:00 KST
       }
 
       for (let i = 0; i < matches.length; i++) {
