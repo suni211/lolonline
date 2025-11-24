@@ -328,6 +328,9 @@ async function startMatch(match: any, io: Server) {
     const availableHomePlayers = homePlayers;
     const availableAwayPlayers = awayPlayers;
 
+    // 기존 match_stats 삭제 후 새로 생성 (중복 방지)
+    await pool.query('DELETE FROM match_stats WHERE match_id = ?', [match.id]);
+
     // 경기 통계 초기화
     for (const player of availableHomePlayers) {
       await pool.query(
