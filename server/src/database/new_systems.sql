@@ -279,14 +279,46 @@ ON DUPLICATE KEY UPDATE upgrade_cost = VALUES(upgrade_cost), maintenance_cost = 
 
 -- 기본 코치 데이터
 INSERT INTO coaches (name, nationality, coach_type, skill_level, salary, experience_years, specialty) VALUES
-('김정훈', 'KR', 'HEAD', 70, 15000000, 5, '전체 팀 운영'),
-('이승현', 'KR', 'STRATEGY', 65, 10000000, 3, '밴픽 전략'),
-('박민수', 'KR', 'MENTAL', 60, 8000000, 2, '멘탈 케어'),
-('최진우', 'KR', 'PHYSICAL', 55, 7000000, 2, '체력 관리'),
-('정대현', 'KR', 'ANALYST', 70, 9000000, 4, '상대 분석'),
-('한의진', 'KR', 'DOCTOR', 75, 12000000, 6, '부상 치료'),
-('Tom Wilson', 'US', 'HEAD', 80, 25000000, 8, '국제 경험'),
-('Wang Lei', 'CN', 'STRATEGY', 75, 18000000, 6, 'LPL 스타일'),
-('Yamamoto Ken', 'JP', 'ANALYST', 65, 11000000, 4, '데이터 분석'),
-('Sarah Kim', 'US', 'MENTAL', 70, 14000000, 5, '스포츠 심리학')
+-- HEAD 코치들
+('03261592630', 'KR', 'HEAD', 70, 15000000, 5, '전체 팀 운영'),
+('Paronoa', 'US', 'HEAD', 80, 25000000, 8, '국제 경험'),
+('MasterMind', 'KR', 'HEAD', 85, 30000000, 10, '챔피언십 경험'),
+('StormLeader', 'CN', 'HEAD', 75, 20000000, 6, '공격적 운영'),
+('CalmGeneral', 'KR', 'HEAD', 65, 12000000, 4, '안정적 운영'),
+
+-- STRATEGY 코치들
+('Vilrain', 'KR', 'STRATEGY', 65, 10000000, 3, '밴픽 전략'),
+('CGG', 'CN', 'STRATEGY', 75, 18000000, 6, 'LPL 스타일'),
+('DraftKing', 'KR', 'STRATEGY', 80, 22000000, 7, '메타 분석'),
+('BluePrint', 'EU', 'STRATEGY', 70, 15000000, 5, '전략 설계'),
+('ChessPlayer', 'KR', 'STRATEGY', 60, 8000000, 2, '초반 전략'),
+
+-- MENTAL 코치들
+('LeadingSquash68', 'KR', 'MENTAL', 60, 8000000, 2, '멘탈 케어'),
+('ZenMaster', 'JP', 'MENTAL', 75, 16000000, 6, '명상 지도'),
+('MindHealer', 'KR', 'MENTAL', 70, 12000000, 4, '스트레스 관리'),
+('PeaceKeeper', 'US', 'MENTAL', 65, 10000000, 3, '팀 화합'),
+('SoulDoctor', 'KR', 'MENTAL', 55, 6000000, 1, '신인 멘탈 관리'),
+
+-- PHYSICAL 코치들
+('Valaon', 'KR', 'PHYSICAL', 55, 7000000, 2, '체력 관리'),
+('IronBody', 'KR', 'PHYSICAL', 70, 12000000, 5, '피지컬 트레이닝'),
+('FlexMaster', 'US', 'PHYSICAL', 65, 9000000, 3, '유연성 훈련'),
+('EnduranceX', 'CN', 'PHYSICAL', 60, 8000000, 2, '지구력 강화'),
+('QuickReflex', 'KR', 'PHYSICAL', 75, 14000000, 6, '반응속도 훈련'),
+
+-- ANALYST 코치들
+('Delpinium', 'KR', 'ANALYST', 70, 9000000, 4, '상대 분석'),
+('GaeNald', 'JP', 'ANALYST', 65, 11000000, 4, '데이터 분석'),
+('StatGuru', 'KR', 'ANALYST', 80, 18000000, 7, '통계 전문가'),
+('VODHunter', 'EU', 'ANALYST', 75, 15000000, 5, 'VOD 분석'),
+('MetaReader', 'KR', 'ANALYST', 60, 7000000, 2, '메타 리딩'),
+('PatternSeeker', 'CN', 'ANALYST', 70, 12000000, 4, '패턴 분석'),
+
+-- DOCTOR 코치들
+('Asharosa', 'KR', 'DOCTOR', 75, 12000000, 6, '부상 치료'),
+('HandDoctor', 'KR', 'DOCTOR', 80, 20000000, 8, '손목 전문'),
+('EyeCare', 'JP', 'DOCTOR', 70, 14000000, 5, '시력 관리'),
+('BackHealer', 'US', 'DOCTOR', 65, 10000000, 3, '척추 관리'),
+('SleepExpert', 'KR', 'DOCTOR', 60, 8000000, 2, '수면 관리')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
