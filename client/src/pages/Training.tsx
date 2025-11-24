@@ -43,7 +43,7 @@ export default function Training() {
 
   const fetchCards = async () => {
     try {
-      const response = await axios.get('/api/packs/my-cards');
+      const response = await axios.get('/api/players/my');
       setCards(response.data);
     } catch (error) {
       console.error('Failed to fetch cards:', error);

@@ -69,7 +69,7 @@ export default function FansStreaming() {
         axios.get('/api/fans/status'),
         axios.get('/api/streaming/history'),
         axios.get('/api/streaming/stats'),
-        axios.get('/api/players/my-cards')
+        axios.get('/api/players/my')
       ]);
       setFanStatus(fanRes.data);
       setStreamHistory(historyRes.data);
