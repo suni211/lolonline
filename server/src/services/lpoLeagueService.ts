@@ -445,8 +445,8 @@ export class LPOLeagueService {
 
     const range = statRanges[tier] || statRanges['SECOND'];
 
-    // 성격 목록
-    const personalities = ['LEADER', 'REBELLIOUS', 'CALM', 'EMOTIONAL', 'COMPETITIVE', 'TIMID', 'GREEDY', 'LOYAL', 'PERFECTIONIST', 'LAZY'];
+    // 성격 목록 (players 테이블 ENUM과 동일)
+    const personalities = ['LEADER', 'LONER', 'TEAMPLAYER', 'HOTHEAD', 'CALM', 'GREEDY', 'HUMBLE', 'PRANKSTER'];
 
     for (const position of positions) {
       const name = this.generatePlayerName();
