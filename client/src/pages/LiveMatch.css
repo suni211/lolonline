@@ -146,7 +146,14 @@
 }
 
 .main-content.with-map {
-  grid-template-columns: 180px 1fr 180px;
+  grid-template-columns: 200px 1fr 200px;
+  align-items: start;
+}
+
+/* 팀 스탯 공통 */
+.team-stats {
+  min-width: 180px;
+  max-width: 220px;
 }
 
 /* 중앙 콘텐츠 (로그 + 맵) */

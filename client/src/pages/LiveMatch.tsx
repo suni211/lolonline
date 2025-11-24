@@ -917,37 +917,27 @@ export default function LiveMatch() {
             </div>
           </div>
 
-          {/* 맵 */}
-          {showMap ? (
-            <div className="map-container highlight-active">
-              <SummonersRiftMap
-                champions={champions}
-                objectives={objectives}
-                blueTurrets={homeState?.turrets || {
-                  top: { t1: true, t2: true, t3: true, inhib: true },
-                  mid: { t1: true, t2: true, t3: true, inhib: true },
-                  bot: { t1: true, t2: true, t3: true, inhib: true },
-                  nexus: { twin1: true, twin2: true, nexus: true }
-                }}
-                redTurrets={awayState?.turrets || {
-                  top: { t1: true, t2: true, t3: true, inhib: true },
-                  mid: { t1: true, t2: true, t3: true, inhib: true },
-                  bot: { t1: true, t2: true, t3: true, inhib: true },
-                  nexus: { twin1: true, twin2: true, nexus: true }
-                }}
-                currentHighlight={currentHighlight}
-                gameTime={gameTime}
-              />
-            </div>
-          ) : (
-            <div className="map-placeholder">
-              <div className="placeholder-text">하이라이트 대기중...</div>
-              <div className="game-progress">
-                <span className="time">{formatTime(gameTime)}</span>
-                <span className="kills">{homeState?.kills || 0} - {awayState?.kills || 0}</span>
-              </div>
-            </div>
-          )}
+          {/* 맵 - 항상 표시 */}
+          <div className={`map-container ${currentHighlight ? 'highlight-active' : ''}`}>
+            <SummonersRiftMap
+              champions={champions}
+              objectives={objectives}
+              blueTurrets={homeState?.turrets || {
+                top: { t1: true, t2: true, t3: true, inhib: true },
+                mid: { t1: true, t2: true, t3: true, inhib: true },
+                bot: { t1: true, t2: true, t3: true, inhib: true },
+                nexus: { twin1: true, twin2: true, nexus: true }
+              }}
+              redTurrets={awayState?.turrets || {
+                top: { t1: true, t2: true, t3: true, inhib: true },
+                mid: { t1: true, t2: true, t3: true, inhib: true },
+                bot: { t1: true, t2: true, t3: true, inhib: true },
+                nexus: { twin1: true, twin2: true, nexus: true }
+              }}
+              currentHighlight={currentHighlight}
+              gameTime={gameTime}
+            />
+          </div>
 
           {/* 드래곤 현황 */}
           {homeState && awayState && (homeState.dragons.length > 0 || awayState.dragons.length > 0) && (
