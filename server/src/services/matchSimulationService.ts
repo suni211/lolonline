@@ -105,7 +105,7 @@ export async function initializeMatchSimulation(io: Server) {
     await updateLiveMatches(io);
   });
 
-  console.log('Match simulation system initialized (1초=10초 진행)');
+  console.log('Match simulation system initialized (1초=6초 진행)');
 }
 
 // 특정 경기를 즉시 시작 (테스트용)
@@ -438,8 +438,8 @@ async function simulateMatchProgress(match: any, io: Server) {
       return;
     }
 
-    // 시간 진행 (1초 = 10초)
-    matchData.game_time += 10;
+    // 시간 진행 (1초 = 6초) - 30분 게임 = 5분 실시간
+    matchData.game_time += 6;
     const gameTime = matchData.game_time;
     const gameMinutes = Math.floor(gameTime / 60);
 
@@ -756,23 +756,23 @@ async function generateEvents(
   // 이벤트 타입 선택 (포탑 파괴 중심으로 빠른 진행)
   const eventPool: string[] = [];
 
-  // 시간대별 이벤트 (더 빠르게)
-  if (gameMinutes < 10) {
-    // 초반 (0~10분): 킬과 1차 타워
-    eventPool.push('KILL', 'TURRET', 'NOTHING');
-  } else if (gameMinutes < 18) {
-    // 중반 (10~18분): 포탑 집중
-    eventPool.push('KILL', 'TURRET', 'TURRET', 'TURRET');
+  // 시간대별 이벤트
+  if (gameMinutes < 15) {
+    // 초반 (0~15분): 킬 위주
+    eventPool.push('KILL', 'KILL', 'NOTHING');
+  } else if (gameMinutes < 25) {
+    // 중반 (15~25분): 포탑 파괴 시작
+    eventPool.push('KILL', 'TURRET', 'TURRET');
   } else {
-    // 후반 (18분+): 억제기/넥서스 집중
-    eventPool.push('TURRET', 'INHIBITOR', 'INHIBITOR', 'TEAMFIGHT');
+    // 후반 (25분+): 억제기/넥서스 집중
+    eventPool.push('TURRET', 'TURRET', 'INHIBITOR', 'TEAMFIGHT');
   }
 
   // 오브젝트 이벤트
   if (gameMinutes >= 5 && matchData.dragon_alive) eventPool.push('DRAGON');
   if (gameMinutes >= 8 && matchData.herald_alive) eventPool.push('HERALD');
-  if (gameMinutes >= 8) eventPool.push('TURRET'); // 포탑은 8분부터
-  if (gameMinutes >= 15) eventPool.push('INHIBITOR'); // 억제기는 15분부터
+  if (gameMinutes >= 15) eventPool.push('TURRET'); // 포탑은 15분부터
+  if (gameMinutes >= 20) eventPool.push('INHIBITOR'); // 억제기는 20분부터
   if (gameMinutes >= 20 && matchData.baron_alive) eventPool.push('BARON');
   if (matchData.elder_available && matchData.dragon_alive) eventPool.push('ELDER_DRAGON');
 
