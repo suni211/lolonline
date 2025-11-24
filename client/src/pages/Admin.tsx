@@ -173,6 +173,20 @@ export default function Admin() {
     }
   };
 
+  const clearAllCards = async () => {
+    if (!confirm('모든 선수 카드를 삭제하시겠습니까? 유저 팀 선수도 모두 FA가 됩니다!')) return;
+    try {
+      setLoading(true);
+      const res = await axios.post('/api/admin/fa-market/clear-all');
+      setMessage(res.data.message);
+      fetchData();
+    } catch (error: any) {
+      setMessage(error.response?.data?.error || '전체 카드 삭제 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const generateAICards = async () => {
     if (!confirm('모든 AI 팀에 가상 선수를 생성하시겠습니까?')) return;
     try {
@@ -463,7 +477,10 @@ export default function Admin() {
               </button>
             )}
             <button onClick={resetFAMarket} disabled={loading} className="danger">
-              FA 시장 완전 초기화
+              FA 시장 초기화 (AI만)
+            </button>
+            <button onClick={clearAllCards} disabled={loading} className="danger">
+              전체 카드 삭제
             </button>
             <button onClick={clearAICards} disabled={loading} className="warning">
               AI 팀 카드 삭제

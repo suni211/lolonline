@@ -719,11 +719,6 @@ router.post('/fa-market/reset', authenticateToken, adminMiddleware, async (req: 
       `DELETE FROM player_cards WHERE team_id IN (SELECT id FROM teams WHERE is_ai = true)`
     );
 
-    // 3. 모든 유저 팀 카드도 삭제하여 완전 FA 상태로 (선택적)
-    // const userDeleteResult = await pool.query(
-    //   `DELETE FROM player_cards WHERE team_id IN (SELECT id FROM teams WHERE is_ai = false)`
-    // );
-
     res.json({
       success: true,
       message: `DB 스키마 수정 완료. AI 팀 카드 ${deleteResult.affectedRows}개 삭제됨. 모든 실제 선수가 FA 상태입니다.`
@@ -731,6 +726,22 @@ router.post('/fa-market/reset', authenticateToken, adminMiddleware, async (req: 
   } catch (error: any) {
     console.error('Reset FA market error:', error);
     res.status(500).json({ error: 'FA 시장 초기화 실패: ' + error.message });
+  }
+});
+
+// 모든 선수 카드 삭제 (완전 초기화)
+router.post('/fa-market/clear-all', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    // 모든 player_cards 삭제
+    const deleteResult = await pool.query(`DELETE FROM player_cards`);
+
+    res.json({
+      success: true,
+      message: `모든 선수 카드 ${deleteResult.affectedRows}개가 삭제되었습니다. 264명 전체가 FA 상태입니다.`
+    });
+  } catch (error: any) {
+    console.error('Clear all cards error:', error);
+    res.status(500).json({ error: '전체 카드 삭제 실패: ' + error.message });
   }
 });
 
