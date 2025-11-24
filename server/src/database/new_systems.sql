@@ -1,5 +1,22 @@
 -- 새로운 시스템 테이블들
 
+-- 0. 기존 테이블 삭제 (의존성 순서대로)
+DROP TABLE IF EXISTS team_coaches;
+DROP TABLE IF EXISTS coaches;
+DROP TABLE IF EXISTS youth_players;
+DROP TABLE IF EXISTS youth_academy;
+DROP TABLE IF EXISTS player_mental_states;
+DROP TABLE IF EXISTS player_relationships;
+DROP TABLE IF EXISTS team_tactics;
+DROP TABLE IF EXISTS player_loans;
+DROP TABLE IF EXISTS season_awards;
+DROP TABLE IF EXISTS player_streams;
+DROP TABLE IF EXISTS worlds_matches;
+DROP TABLE IF EXISTS worlds_participants;
+DROP TABLE IF EXISTS worlds_tournaments;
+DROP TABLE IF EXISTS promotion_matches;
+DROP TABLE IF EXISTS facility_costs;
+
 -- 1. 스트리밍/콘텐츠 시스템
 CREATE TABLE IF NOT EXISTS player_streams (
     id INT PRIMARY KEY AUTO_INCREMENT,
