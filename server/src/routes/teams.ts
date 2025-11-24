@@ -205,10 +205,10 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
     const matchRevenue = await pool.query(
       `SELECT 
         DATE(m.finished_at) as date,
-        SUM(CASE WHEN m.home_team_id = ? THEN 
-          CASE WHEN m.home_score > m.away_score THEN 5000 ELSE 2000 END
-          ELSE 
-          CASE WHEN m.away_score > m.home_score THEN 5000 ELSE 2000 END
+        SUM(CASE WHEN m.home_team_id = ? THEN
+          CASE WHEN m.home_score > m.away_score THEN 5000000 ELSE 1000000 END
+          ELSE
+          CASE WHEN m.away_score > m.home_score THEN 5000000 ELSE 1000000 END
         END) as revenue
        FROM matches m
        WHERE (m.home_team_id = ? OR m.away_team_id = ?) 

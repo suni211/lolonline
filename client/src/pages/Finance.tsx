@@ -246,7 +246,9 @@ export default function Finance() {
                   <Tooltip
                     formatter={(value: number) => formatGold(value)}
                     labelFormatter={(label) => new Date(label).toLocaleDateString('ko-KR')}
-                    contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #333' }}
+                    contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #333', color: '#fff' }}
+                    labelStyle={{ color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
                   />
                   <Legend />
                   <Line
@@ -295,7 +297,9 @@ export default function Finance() {
                   </Pie>
                   <Tooltip
                     formatter={(value: number) => formatGold(value)}
-                    contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #333' }}
+                    contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #333', color: '#fff' }}
+                    labelStyle={{ color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -327,7 +331,9 @@ export default function Finance() {
                   </Pie>
                   <Tooltip
                     formatter={(value: number) => formatGold(value)}
-                    contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #333' }}
+                    contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #333', color: '#fff' }}
+                    labelStyle={{ color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -353,7 +359,9 @@ export default function Finance() {
                   <Tooltip
                     formatter={(value: number) => formatGold(value)}
                     labelFormatter={(label) => new Date(label).toLocaleDateString('ko-KR')}
-                    contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #333' }}
+                    contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #333', color: '#fff' }}
+                    labelStyle={{ color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
                   />
                   <Bar dataKey="net" name="순이익">
                     {dailyStats.map((entry, index) => (

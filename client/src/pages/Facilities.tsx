@@ -36,11 +36,11 @@ const facilityTypes = {
 // 큰 숫자 포맷 (억, 만 단위)
 const formatCost = (cost: number): string => {
   if (cost >= 100000000) {
-    return `${(cost / 100000000).toFixed(1)}억`;
+    return `${(cost / 100000000).toFixed(1)}억 원`;
   } else if (cost >= 10000) {
-    return `${(cost / 10000).toFixed(0)}만`;
+    return `${(cost / 10000).toFixed(0)}만 원`;
   }
-  return cost.toLocaleString();
+  return `${cost.toLocaleString()} 원`;
 };
 
 export default function Facilities() {
@@ -200,9 +200,8 @@ export default function Facilities() {
           const facility = facilities.find(f => f.facility_type === type);
           const info = getFacilityInfo(type);
           const level = facility?.level || 0;
-          // 기하급수적 비용: 100만 * 2^레벨
-          const upgradeCost = 1000000 * Math.pow(2, level);
-          const netRevenue = (facility?.revenue_per_hour || 0) - (facility?.maintenance_cost || 0);
+          // 기하급수적 비용: 500만 * 2^레벨
+          const upgradeCost = 5000000 * Math.pow(2, level);
 
           return (
             <div key={type} className="facility-card">
@@ -217,18 +216,12 @@ export default function Facilities() {
               {level > 0 && (
                 <div className="facility-stats">
                   <div className="stat-row">
-                    <span>시간당 수익</span>
-                    <span className="revenue">+{facility?.revenue_per_hour.toLocaleString()} 원</span>
+                    <span>시설 레벨</span>
+                    <span className="revenue">Lv.{level}</span>
                   </div>
                   <div className="stat-row">
-                    <span>유지비</span>
-                    <span className="cost">-{facility?.maintenance_cost.toLocaleString()} 원</span>
-                  </div>
-                  <div className="stat-row net-revenue">
-                    <span>순수익 (시간당)</span>
-                    <span className={netRevenue >= 0 ? 'positive' : 'negative'}>
-                      {netRevenue >= 0 ? '+' : ''}{netRevenue.toLocaleString()} 원
-                    </span>
+                    <span>시즌 유지비</span>
+                    <span className="cost">{formatCost(facility?.maintenance_cost ? facility.maintenance_cost * 100 : 0)}</span>
                   </div>
                 </div>
               )}
@@ -246,7 +239,7 @@ export default function Facilities() {
                     disabled={loading}
                     className="btn-primary"
                   >
-                    {level === 0 ? '건설' : '업그레이드'} ({formatCost(upgradeCost)} 원)
+                    {level === 0 ? '건설' : '업그레이드'} ({formatCost(upgradeCost)})
                   </button>
                 ) : (
                   <button disabled className="btn-secondary">

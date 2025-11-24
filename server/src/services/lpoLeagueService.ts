@@ -4,9 +4,8 @@ import { CupService } from './cupService.js';
 // AI 선수 카운터
 let aiPlayerCounter = 0;
 
-// AI 팀 이름 목록 (32팀)
-const AI_TEAM_NAMES = [
-  // Esports가 들어가는 팀 (10팀)
+// AI 팀 이름 목록 - LPL용 (20팀)
+const AI_TEAM_NAMES_LPL = [
   'Dragon Esports',
   'Phoenix Esports',
   'Thunder Esports',
@@ -17,7 +16,6 @@ const AI_TEAM_NAMES = [
   'Frost Esports',
   'Nova Esports',
   'Apex Esports',
-  // 나머지 팀 (22팀)
   'Golden Lions',
   'Silver Knights',
   'Dark Ravens',
@@ -27,19 +25,31 @@ const AI_TEAM_NAMES = [
   'Green Vipers',
   'Black Panthers',
   'Sky Hawks',
-  'Ocean Sharks',
-  'Mountain Bears',
-  'Desert Foxes',
-  'Iron Giants',
-  'Crystal Dragons',
-  'Neon Ninjas',
-  'Cyber Samurai',
-  'Royal Guard',
-  'Elite Force',
-  'Prime Legion',
-  'Victory Squad',
-  'Glory Hunters',
-  'Rising Stars'
+  'Ocean Sharks'
+];
+
+// AI 팀 이름 목록 - Amateur용 (20팀)
+const AI_TEAM_NAMES_AMATEUR = [
+  'Rising Phoenix',
+  'Shadow Wolves',
+  'Iron Bears',
+  'Crystal Tigers',
+  'Neon Hawks',
+  'Cyber Lions',
+  'Storm Ravens',
+  'Blaze Vipers',
+  'Frost Sharks',
+  'Thunder Panthers',
+  'Elite Foxes',
+  'Prime Eagles',
+  'Victory Cobras',
+  'Glory Lynx',
+  'Royal Falcons',
+  'Apex Jaguars',
+  'Nova Serpents',
+  'Dragon Knights',
+  'Phoenix Guard',
+  'Titan Force'
 ];
 
 export class LPOLeagueService {
@@ -108,96 +118,117 @@ export class LPOLeagueService {
         "INSERT INTO leagues (name, region, season, current_month, status) VALUES ('LPO NORTH', 'NORTH', 1, 1, 'REGULAR')"
       );
 
-      // AI 팀 생성 및 리그 배정
-      // SOUTH: 10팀, NORTH: 10팀
-      const tiers = [
-        { leagueId: southLeague.insertId, tier: 'SOUTH', count: 10, startIdx: 0 },
-        { leagueId: northLeague.insertId, tier: 'NORTH', count: 10, startIdx: 10 }
-      ];
+      // 유저 팀을 SOUTH/NORTH에 골고루 분배 (각 최대 10팀)
+      const shuffledPlayers = [...playerTeams].sort(() => Math.random() - 0.5);
+      const southPlayerTeams: any[] = [];
+      const northPlayerTeams: any[] = [];
 
-      for (const tierInfo of tiers) {
-        for (let i = 0; i < tierInfo.count; i++) {
-          const teamName = AI_TEAM_NAMES[tierInfo.startIdx + i];
-
-          // AI 팀 생성 (user_id는 NULL)
-          const teamResult = await pool.query(
-            `INSERT INTO teams (user_id, name, league, is_ai, gold, diamond, fan_count)
-             VALUES (NULL, ?, ?, true, 1000, 100, 1000)`,
-            [teamName, tierInfo.tier]
-          );
-
-          const teamId = teamResult.insertId;
-
-          // AI 선수 5명 생성 (스타터)
-          await this.createAIPlayers(teamId, tierInfo.tier);
-
-          // 리그 참가
-          await pool.query(
-            `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
-             VALUES (?, ?, 0, 0, 0, 0, 0)`,
-            [tierInfo.leagueId, teamId]
-          );
+      for (let i = 0; i < shuffledPlayers.length; i++) {
+        if (i % 2 === 0 && southPlayerTeams.length < 10) {
+          southPlayerTeams.push(shuffledPlayers[i]);
+        } else if (northPlayerTeams.length < 10) {
+          northPlayerTeams.push(shuffledPlayers[i]);
+        } else if (southPlayerTeams.length < 10) {
+          southPlayerTeams.push(shuffledPlayers[i]);
         }
+        // 20팀 초과는 아마추어로
       }
 
-      // 기존 플레이어 팀을 LPO SOUTH에 등록
-      if (playerTeams.length > 0) {
-        console.log(`Registering ${playerTeams.length} player teams to LPO SOUTH...`);
+      // SOUTH 리그 구성
+      const southAICount = 10 - southPlayerTeams.length;
+      for (let i = 0; i < southAICount; i++) {
+        const teamName = AI_TEAM_NAMES_LPL[i];
+        const teamResult = await pool.query(
+          `INSERT INTO teams (user_id, name, league, is_ai, gold, diamond, fan_count)
+           VALUES (NULL, ?, 'SOUTH', true, 1000, 100, 1000)`,
+          [teamName]
+        );
+        await this.createAIPlayers(teamResult.insertId, 'SOUTH');
+        await pool.query(
+          `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
+           VALUES (?, ?, 0, 0, 0, 0, 0)`,
+          [southLeague.insertId, teamResult.insertId]
+        );
+      }
 
-        for (const team of playerTeams) {
-          // 팀의 리그를 SOUTH로 업데이트
-          await pool.query(
-            `UPDATE teams SET league = 'SOUTH' WHERE id = ?`,
-            [team.id]
-          );
+      for (const team of southPlayerTeams) {
+        await pool.query(`UPDATE teams SET league = 'SOUTH' WHERE id = ?`, [team.id]);
+        await pool.query(
+          `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
+           VALUES (?, ?, 0, 0, 0, 0, 0)`,
+          [southLeague.insertId, team.id]
+        );
+      }
 
-          // 리그 참가 등록
-          await pool.query(
-            `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
-             VALUES (?, ?, 0, 0, 0, 0, 0)`,
-            [southLeague.insertId, team.id]
-          );
+      // NORTH 리그 구성
+      const northAICount = 10 - northPlayerTeams.length;
+      for (let i = 0; i < northAICount; i++) {
+        const teamName = AI_TEAM_NAMES_LPL[10 + i];
+        const teamResult = await pool.query(
+          `INSERT INTO teams (user_id, name, league, is_ai, gold, diamond, fan_count)
+           VALUES (NULL, ?, 'NORTH', true, 1000, 100, 1000)`,
+          [teamName]
+        );
+        await this.createAIPlayers(teamResult.insertId, 'NORTH');
+        await pool.query(
+          `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
+           VALUES (?, ?, 0, 0, 0, 0, 0)`,
+          [northLeague.insertId, teamResult.insertId]
+        );
+      }
 
-          // AI 팀 하나 제거 (플레이어 팀이 대체)
-          const aiTeamToRemove = await pool.query(
-            `SELECT lp.team_id FROM league_participants lp
-             JOIN teams t ON lp.team_id = t.id
-             WHERE lp.league_id = ? AND t.is_ai = true
-             LIMIT 1`,
-            [southLeague.insertId]
-          );
+      for (const team of northPlayerTeams) {
+        await pool.query(`UPDATE teams SET league = 'NORTH' WHERE id = ?`, [team.id]);
+        await pool.query(
+          `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
+           VALUES (?, ?, 0, 0, 0, 0, 0)`,
+          [northLeague.insertId, team.id]
+        );
+      }
 
-          if (aiTeamToRemove.length > 0) {
-            const aiTeamId = aiTeamToRemove[0].team_id;
+      // 아마추어 리그 생성 (20팀)
+      const amateurLeague = await pool.query(
+        "INSERT INTO leagues (name, region, season, current_month, status) VALUES ('LPO AMATEUR', 'AMATEUR', 1, 1, 'REGULAR')"
+      );
 
-            // AI 팀의 선수 삭제
-            await pool.query(
-              `DELETE FROM players WHERE id IN (
-                SELECT player_id FROM player_ownership WHERE team_id = ?
-              )`,
-              [aiTeamId]
-            );
+      // 20팀 초과 유저는 아마추어로
+      const amateurPlayerTeams = shuffledPlayers.slice(20);
+      const amateurAICount = 20 - amateurPlayerTeams.length;
 
-            // AI 팀 리그 참가 삭제
-            await pool.query(
-              `DELETE FROM league_participants WHERE team_id = ?`,
-              [aiTeamId]
-            );
+      for (let i = 0; i < amateurAICount; i++) {
+        const teamName = AI_TEAM_NAMES_AMATEUR[i];
+        const teamResult = await pool.query(
+          `INSERT INTO teams (user_id, name, league, is_ai, gold, diamond, fan_count)
+           VALUES (NULL, ?, 'AMATEUR', true, 500, 50, 500)`,
+          [teamName]
+        );
+        await this.createAIPlayers(teamResult.insertId, 'AMATEUR');
+        await pool.query(
+          `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
+           VALUES (?, ?, 0, 0, 0, 0, 0)`,
+          [amateurLeague.insertId, teamResult.insertId]
+        );
+      }
 
-            // AI 팀 삭제
-            await pool.query(`DELETE FROM teams WHERE id = ?`, [aiTeamId]);
-          }
-        }
+      for (const team of amateurPlayerTeams) {
+        await pool.query(`UPDATE teams SET league = 'AMATEUR' WHERE id = ?`, [team.id]);
+        await pool.query(
+          `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
+           VALUES (?, ?, 0, 0, 0, 0, 0)`,
+          [amateurLeague.insertId, team.id]
+        );
       }
 
       // 각 리그 스케줄 생성
       console.log('Generating match schedules...');
       await this.generateLeagueSchedule(southLeague.insertId);
       await this.generateLeagueSchedule(northLeague.insertId);
+      await this.generateLeagueSchedule(amateurLeague.insertId);
 
       console.log('LPO League system initialized successfully!');
-      console.log(`- LPO SOUTH: ${10 - playerTeams.length} AI teams + ${playerTeams.length} player teams`);
-      console.log('- LPO NORTH: 10 AI teams');
+      console.log(`- LPO SOUTH: ${southAICount} AI teams + ${southPlayerTeams.length} player teams`);
+      console.log(`- LPO NORTH: ${northAICount} AI teams + ${northPlayerTeams.length} player teams`);
+      console.log(`- LPO AMATEUR: ${amateurAICount} AI teams + ${amateurPlayerTeams.length} player teams`);
 
     } catch (error) {
       console.error('Failed to initialize LPO leagues:', error);
@@ -428,7 +459,8 @@ export class LPOLeagueService {
     // 티어별 스탯 범위 (각 스탯 기준)
     const statRanges: { [key: string]: { min: number; max: number } } = {
       'SOUTH': { min: 35, max: 70 },
-      'NORTH': { min: 35, max: 70 }
+      'NORTH': { min: 35, max: 70 },
+      'AMATEUR': { min: 25, max: 55 }
     };
 
     const range = statRanges[tier] || statRanges['SOUTH'];
@@ -500,6 +532,24 @@ export class LPOLeagueService {
         if (aiTeam.length > 0) {
           actualRegion = otherRegion;
           console.log(`${region} is full, redirecting team to ${otherRegion}`);
+        }
+      }
+
+      // 1부 모두 꽉 찼으면 Amateur로
+      if (aiTeam.length === 0) {
+        aiTeam = await pool.query(
+          `SELECT t.id, t.name, lp.league_id, lp.wins, lp.losses, lp.draws, lp.points, lp.goal_difference
+           FROM teams t
+           JOIN league_participants lp ON t.id = lp.team_id
+           JOIN leagues l ON lp.league_id = l.id
+           WHERE t.is_ai = true AND l.region = 'AMATEUR'
+           ORDER BY lp.points ASC, lp.goal_difference ASC
+           LIMIT 1`
+        );
+
+        if (aiTeam.length > 0) {
+          actualRegion = 'AMATEUR';
+          console.log(`LPL is full, redirecting team to AMATEUR`);
         }
       }
 
@@ -656,54 +706,174 @@ export class LPOLeagueService {
     }
   }
 
-  // 다음 시즌 시작
+  // 다음 시즌 시작 (승격/강등 포함)
   static async startNewSeason(currentSeason: number) {
     try {
       const newSeason = currentSeason + 1;
+      console.log(`Starting season ${newSeason} with promotion/relegation...`);
 
-      // WORLDS 진출팀 처리
-      await this.processWorldsQualification(currentSeason);
-
-      // 기존 리그 종료
-      await pool.query(
-        "UPDATE leagues SET status = 'OFFSEASON' WHERE season = ?",
+      // 1. 현재 시즌 리그들의 최종 순위 조회
+      const currentLeagues = await pool.query(
+        `SELECT id, region FROM leagues WHERE season = ? AND region IN ('SOUTH', 'NORTH', 'AMATEUR')`,
         [currentSeason]
       );
 
-      // 새 리그 생성 (SOUTH/NORTH)
-      const tiers = [
-        { name: 'LPO SOUTH', region: 'SOUTH' },
-        { name: 'LPO NORTH', region: 'NORTH' }
-      ];
+      // 강등될 팀 (SOUTH/NORTH 각 하위 1팀)
+      const relegatedTeams: number[] = [];
+      // 승격할 팀 (AMATEUR 상위 2팀)
+      const promotedTeams: number[] = [];
 
-      for (const tier of tiers) {
-        const leagueResult = await pool.query(
-          "INSERT INTO leagues (name, region, season, current_month, status) VALUES (?, ?, ?, 1, 'REGULAR')",
-          [tier.name, tier.region, newSeason]
+      for (const league of currentLeagues) {
+        const standings = await pool.query(
+          `SELECT lp.team_id, t.name, t.is_ai
+           FROM league_participants lp
+           JOIN teams t ON lp.team_id = t.id
+           WHERE lp.league_id = ?
+           ORDER BY lp.points DESC, lp.goal_difference DESC`,
+          [league.id]
         );
 
-        // 해당 티어 팀들을 새 리그에 등록
-        const teams = await pool.query(
-          'SELECT id FROM teams WHERE league = ?',
-          [tier.region]
-        );
-
-        for (const team of teams) {
-          await pool.query(
-            `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
-             VALUES (?, ?, 0, 0, 0, 0, 0)`,
-            [leagueResult.insertId, team.id]
-          );
+        if (league.region === 'SOUTH' || league.region === 'NORTH') {
+          // 하위 1팀 강등
+          if (standings.length > 0) {
+            const lastTeam = standings[standings.length - 1];
+            relegatedTeams.push(lastTeam.team_id);
+            console.log(`Team ${lastTeam.name} relegated from ${league.region}`);
+          }
+        } else if (league.region === 'AMATEUR') {
+          // 상위 2팀 승격
+          for (let i = 0; i < Math.min(2, standings.length); i++) {
+            promotedTeams.push(standings[i].team_id);
+            console.log(`Team ${standings[i].name} promoted from AMATEUR`);
+          }
         }
-
-        // 새 시즌 경기 일정 생성 (현재 시간 이후로)
-        await this.generateLeagueSchedule(leagueResult.insertId);
       }
 
-      // 아마추어 리그 생성 (리그 없는 팀이 4팀 이상일 때)
-      await this.createAmateurLeague(newSeason);
+      // 2. 팀 리그 재배정
+      // 강등팀 -> AMATEUR
+      for (const teamId of relegatedTeams) {
+        await pool.query(`UPDATE teams SET league = 'AMATEUR' WHERE id = ?`, [teamId]);
+      }
+
+      // 승격팀 -> SOUTH/NORTH (번갈아 배정)
+      for (let i = 0; i < promotedTeams.length; i++) {
+        const targetLeague = i === 0 ? 'SOUTH' : 'NORTH';
+        await pool.query(`UPDATE teams SET league = ? WHERE id = ?`, [targetLeague, promotedTeams[i]]);
+      }
+
+      // 3. 기존 리그 종료
+      await pool.query(
+        "UPDATE leagues SET status = 'FINISHED' WHERE season = ?",
+        [currentSeason]
+      );
+
+      // 4. 새 시즌 리그 생성
+      // SOUTH 리그
+      const southLeague = await pool.query(
+        "INSERT INTO leagues (name, region, season, current_month, status) VALUES ('LPO SOUTH', 'SOUTH', ?, 1, 'REGULAR')",
+        [newSeason]
+      );
+
+      // NORTH 리그
+      const northLeague = await pool.query(
+        "INSERT INTO leagues (name, region, season, current_month, status) VALUES ('LPO NORTH', 'NORTH', ?, 1, 'REGULAR')",
+        [newSeason]
+      );
+
+      // AMATEUR 리그
+      const amateurLeague = await pool.query(
+        "INSERT INTO leagues (name, region, season, current_month, status) VALUES ('LPO AMATEUR', 'AMATEUR', ?, 1, 'REGULAR')",
+        [newSeason]
+      );
+
+      // 5. SOUTH 팀 등록 (최대 10팀, 부족하면 AI 추가)
+      const southTeams = await pool.query(`SELECT id FROM teams WHERE league = 'SOUTH'`);
+      for (const team of southTeams) {
+        await pool.query(
+          `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
+           VALUES (?, ?, 0, 0, 0, 0, 0)`,
+          [southLeague.insertId, team.id]
+        );
+      }
+      // AI 팀으로 10팀 채우기
+      const southAINeeded = 10 - southTeams.length;
+      for (let i = 0; i < southAINeeded; i++) {
+        const teamName = AI_TEAM_NAMES_LPL[i] + ` S${newSeason}`;
+        const teamResult = await pool.query(
+          `INSERT INTO teams (user_id, name, league, is_ai, gold, diamond, fan_count)
+           VALUES (NULL, ?, 'SOUTH', true, 1000, 100, 1000)`,
+          [teamName]
+        );
+        await this.createAIPlayers(teamResult.insertId, 'SOUTH');
+        await pool.query(
+          `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
+           VALUES (?, ?, 0, 0, 0, 0, 0)`,
+          [southLeague.insertId, teamResult.insertId]
+        );
+      }
+
+      // 6. NORTH 팀 등록
+      const northTeams = await pool.query(`SELECT id FROM teams WHERE league = 'NORTH'`);
+      for (const team of northTeams) {
+        await pool.query(
+          `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
+           VALUES (?, ?, 0, 0, 0, 0, 0)`,
+          [northLeague.insertId, team.id]
+        );
+      }
+      const northAINeeded = 10 - northTeams.length;
+      for (let i = 0; i < northAINeeded; i++) {
+        const teamName = AI_TEAM_NAMES_LPL[10 + i] + ` S${newSeason}`;
+        const teamResult = await pool.query(
+          `INSERT INTO teams (user_id, name, league, is_ai, gold, diamond, fan_count)
+           VALUES (NULL, ?, 'NORTH', true, 1000, 100, 1000)`,
+          [teamName]
+        );
+        await this.createAIPlayers(teamResult.insertId, 'NORTH');
+        await pool.query(
+          `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
+           VALUES (?, ?, 0, 0, 0, 0, 0)`,
+          [northLeague.insertId, teamResult.insertId]
+        );
+      }
+
+      // 7. AMATEUR 팀 등록 (20팀)
+      const amateurTeams = await pool.query(`SELECT id FROM teams WHERE league = 'AMATEUR'`);
+      for (const team of amateurTeams) {
+        await pool.query(
+          `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
+           VALUES (?, ?, 0, 0, 0, 0, 0)`,
+          [amateurLeague.insertId, team.id]
+        );
+      }
+      const amateurAINeeded = 20 - amateurTeams.length;
+      for (let i = 0; i < amateurAINeeded; i++) {
+        const teamName = AI_TEAM_NAMES_AMATEUR[i % 20] + ` S${newSeason}`;
+        const teamResult = await pool.query(
+          `INSERT INTO teams (user_id, name, league, is_ai, gold, diamond, fan_count)
+           VALUES (NULL, ?, 'AMATEUR', true, 500, 50, 500)`,
+          [teamName]
+        );
+        await this.createAIPlayers(teamResult.insertId, 'AMATEUR');
+        await pool.query(
+          `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
+           VALUES (?, ?, 0, 0, 0, 0, 0)`,
+          [amateurLeague.insertId, teamResult.insertId]
+        );
+      }
+
+      // 8. 경기 일정 생성
+      console.log('Generating match schedules...');
+      await this.generateLeagueSchedule(southLeague.insertId);
+      await this.generateLeagueSchedule(northLeague.insertId);
+      await this.generateLeagueSchedule(amateurLeague.insertId);
 
       console.log(`Season ${newSeason} started!`);
+      console.log(`- LPO SOUTH: ${southTeams.length} teams + ${southAINeeded} AI`);
+      console.log(`- LPO NORTH: ${northTeams.length} teams + ${northAINeeded} AI`);
+      console.log(`- LPO AMATEUR: ${amateurTeams.length} teams + ${amateurAINeeded} AI`);
+      console.log(`- Relegated: ${relegatedTeams.length} teams`);
+      console.log(`- Promoted: ${promotedTeams.length} teams`);
 
     } catch (error) {
       console.error('Failed to start new season:', error);

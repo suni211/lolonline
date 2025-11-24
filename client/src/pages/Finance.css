@@ -370,7 +370,28 @@
   color: #fff !important;
 }
 
-/* 파이 차트 라벨 색상 */
+/* 모든 차트 텍스트 흰색 - 강화 */
+.recharts-wrapper text,
+.recharts-wrapper tspan,
+.recharts-surface text,
+.recharts-surface tspan {
+  fill: #fff !important;
+}
+
+.recharts-text {
+  fill: #fff !important;
+}
+
+.recharts-cartesian-axis-tick text,
+.recharts-cartesian-axis-tick-value {
+  fill: #fff !important;
+}
+
+.recharts-legend-item-text {
+  color: #fff !important;
+}
+
+/* 파이 차트 라벨 */
 .recharts-pie-label-text {
   fill: #fff !important;
   font-size: 11px;
@@ -380,26 +401,35 @@
   stroke: #fff !important;
 }
 
-/* 모든 차트 텍스트 흰색 */
-.recharts-text {
-  fill: #fff !important;
-}
-
-.recharts-cartesian-axis-tick-value {
-  fill: #fff !important;
-}
-
-.recharts-legend-item-text {
-  color: #fff !important;
-}
-
-/* 바 차트 라벨 색상 */
+/* 바 차트 라벨 */
 .recharts-bar-rectangle text {
   fill: #fff !important;
 }
 
 /* 차트 라벨 전체 */
 .chart-card text,
-.chart-card tspan {
+.chart-card tspan,
+.charts-section text,
+.charts-section tspan {
   fill: #fff !important;
+}
+
+/* Legend 텍스트 */
+.recharts-legend-wrapper text,
+.recharts-legend-item text {
+  fill: #fff !important;
+  color: #fff !important;
+}
+
+/* 축 라벨 */
+.recharts-xAxis text,
+.recharts-yAxis text {
+  fill: #fff !important;
+}
+
+/* 툴팁 내부 텍스트 */
+.recharts-tooltip-item,
+.recharts-tooltip-item-name,
+.recharts-tooltip-item-value {
+  color: #fff !important;
 }

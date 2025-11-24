@@ -39,9 +39,9 @@ router.get('/summary', authenticateToken, async (req: AuthRequest, res) => {
     const matchIncome = await pool.query(
       `SELECT COUNT(*) as match_count,
               SUM(CASE WHEN m.home_team_id = ? THEN
-                CASE WHEN m.home_score > m.away_score THEN 5000 ELSE 2000 END
+                CASE WHEN m.home_score > m.away_score THEN 5000000 ELSE 1000000 END
                 ELSE
-                CASE WHEN m.away_score > m.home_score THEN 5000 ELSE 2000 END
+                CASE WHEN m.away_score > m.home_score THEN 5000000 ELSE 1000000 END
               END) as total_income
        FROM matches m
        WHERE (m.home_team_id = ? OR m.away_team_id = ?)
@@ -160,8 +160,8 @@ router.get('/transactions', authenticateToken, async (req: AuthRequest, res) => 
           ) as description,
           CASE
             WHEN (m.home_team_id = ? AND m.home_score > m.away_score) OR
-                 (m.away_team_id = ? AND m.away_score > m.home_score) THEN 5000
-            ELSE 2000
+                 (m.away_team_id = ? AND m.away_score > m.home_score) THEN 5000000
+            ELSE 1000000
           END as amount,
           m.finished_at as date
          FROM matches m
@@ -259,8 +259,8 @@ router.get('/daily-stats', authenticateToken, async (req: AuthRequest, res) => {
           DATE(m.finished_at) as date,
           SUM(CASE
             WHEN (m.home_team_id = ? AND m.home_score > m.away_score) OR
-                 (m.away_team_id = ? AND m.away_score > m.home_score) THEN 5000
-            ELSE 2000
+                 (m.away_team_id = ? AND m.away_score > m.home_score) THEN 5000000
+            ELSE 1000000
           END) as income
          FROM matches m
          WHERE (m.home_team_id = ? OR m.away_team_id = ?)
@@ -359,8 +359,8 @@ router.get('/income-breakdown', authenticateToken, async (req: AuthRequest, res)
       const matchIncome = await pool.query(
         `SELECT SUM(CASE
             WHEN (m.home_team_id = ? AND m.home_score > m.away_score) OR
-                 (m.away_team_id = ? AND m.away_score > m.home_score) THEN 5000
-            ELSE 2000
+                 (m.away_team_id = ? AND m.away_score > m.home_score) THEN 5000000
+            ELSE 1000000
           END) as total
          FROM matches m
          WHERE (m.home_team_id = ? OR m.away_team_id = ?)
