@@ -529,7 +529,7 @@ export class NewsService {
 
         // 30% 확률로 이적 루머 생성
         if (Math.random() < 0.3) {
-          await this.generateRandomTransferRumor();
+          await this.generateRandomRumor();
         }
 
         // 20% 확률로 선수 불화 뉴스 생성
