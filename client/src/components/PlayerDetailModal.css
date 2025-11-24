@@ -17,8 +17,7 @@
   background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
   border-radius: 12px;
   padding: 1rem;
-  max-width: 380px;
-  width: 90%;
+  width: 320px;
   max-height: 85vh;
   overflow-y: auto;
   color: var(--white);
