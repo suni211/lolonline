@@ -759,10 +759,12 @@ router.post('/ai-teams/generate-cards', authenticateToken, adminMiddleware, asyn
         const aiPlayerName = generateAIPlayerName();
 
         // 가상 선수 카드 생성 (pro_player_id = NULL)
+        // personality 컬럼에 이름과 포지션 저장 (임시)
+        const playerInfo = `${aiPlayerName}|${position}`;
         await pool.query(
-          `INSERT INTO player_cards (team_id, pro_player_id, mental, teamfight, focus, laning, ovr, card_type, is_contracted, is_starter, ai_player_name, position)
-           VALUES (?, NULL, ?, ?, ?, ?, ?, 'NORMAL', true, true, ?, ?)`,
-          [aiTeam.id, mental, teamfight, focus, laning, ovr, aiPlayerName, position]
+          `INSERT INTO player_cards (team_id, pro_player_id, mental, teamfight, focus, laning, ovr, card_type, is_contracted, is_starter, personality)
+           VALUES (?, NULL, ?, ?, ?, ?, ?, 'NORMAL', true, true, ?)`,
+          [aiTeam.id, mental, teamfight, focus, laning, ovr, playerInfo]
         );
         totalCreated++;
       }
