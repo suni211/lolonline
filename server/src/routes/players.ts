@@ -332,78 +332,67 @@ router.post('/:playerId/stats', authenticateToken, async (req: AuthRequest, res)
   }
 });
 
-// 선수 유니폼 강화
+// 선수 유니폼 강화 (player_cards 기반)
 router.post('/:playerId/uniform/upgrade', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const playerId = parseInt(req.params.playerId);
+    const cardId = parseInt(req.params.playerId);
 
-    // 선수 소유 확인
-    const ownership = await pool.query(
-      'SELECT * FROM player_ownership WHERE player_id = ? AND team_id = ?',
-      [playerId, req.teamId]
+    // 카드 소유 확인
+    const cards = await pool.query(
+      'SELECT * FROM player_cards WHERE id = ? AND team_id = ?',
+      [cardId, req.teamId]
     );
 
-    if (ownership.length === 0) {
-      return res.status(404).json({ error: 'Player not found or not owned' });
+    if (cards.length === 0) {
+      return res.status(404).json({ error: 'Card not found or not owned' });
     }
 
-    const players = await pool.query('SELECT * FROM players WHERE id = ?', [playerId]);
-    if (players.length === 0) {
-      return res.status(404).json({ error: 'Player not found' });
+    const card = cards[0];
+    const currentLevel = card.level || 1;
+
+    if (currentLevel >= 10) {
+      return res.status(400).json({ error: '이미 최대 레벨입니다' });
     }
 
-    const player = players[0];
-
-    if (player.uniform_level >= 10) {
-      return res.status(400).json({ error: 'Uniform already at maximum level' });
-    }
-
-    // 강화 비용 (기본 50만 * 2^레벨, 기하급수적 증가)
-    const cost = 500000 * Math.pow(2, player.uniform_level);
+    // 강화 비용 (기본 50만 * 2^레벨)
+    const cost = 500000 * Math.pow(2, currentLevel - 1);
 
     // 골드 확인
     const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);
     if (teams.length === 0 || teams[0].gold < cost) {
-      return res.status(400).json({ error: 'Insufficient gold' });
+      return res.status(400).json({ error: '골드가 부족합니다' });
     }
 
     // 강화 성공 확률 (레벨이 높을수록 낮아짐)
-    const successRate = Math.max(10, 100 - (player.uniform_level * 10));
+    const successRate = Math.max(10, 100 - (currentLevel * 10));
     const success = Math.random() * 100 < successRate;
 
     // 골드 차감
     await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [cost, req.teamId]);
 
     if (success) {
-      // 강화 성공
-      const newLevel = player.uniform_level + 1;
-      const expiresAt = new Date();
-      expiresAt.setMonth(expiresAt.getMonth() + 1); // 1개월 유지
-
+      // 강화 성공 - 레벨업
+      const newLevel = currentLevel + 1;
       await pool.query(
-        `UPDATE players 
-         SET uniform_level = ?,
-             uniform_expires_at = ?,
-             contract_fee = 0,
-             player_condition = LEAST(player_condition + 10, 100)
-         WHERE id = ?`,
-        [newLevel, expiresAt, playerId]
+        'UPDATE player_cards SET level = ? WHERE id = ?',
+        [newLevel, cardId]
       );
 
-      res.json({ 
-        success: true, 
-        level: newLevel, 
-        message: 'Uniform upgrade successful! Contract fee waived and condition improved.' 
+      res.json({
+        success: true,
+        level: newLevel,
+        message: `강화 성공! 레벨 ${newLevel}`
       });
     } else {
-      res.json({ 
-        success: false, 
-        message: 'Uniform upgrade failed. Try again!' 
+      res.json({
+        success: false,
+        level: currentLevel,
+        message: '강화 실패. 다시 시도하세요!'
       });
     }
   } catch (error: any) {
     console.error('Uniform upgrade error:', error);
-    res.status(500).json({ error: 'Failed to upgrade uniform' });
+    res.status(500).json({ error: '강화에 실패했습니다' });
   }
 });
 
