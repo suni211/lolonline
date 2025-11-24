@@ -593,7 +593,8 @@ async function simulateMatchProgress(match: any, io: Server) {
     // === 선수 통계 업데이트 ===
     await updatePlayerStatsLOL(match.id, homePlayers, awayPlayers, gameTime);
 
-    // === 경기 종료 조건 체크 (넥서스 파괴만) ===
+    // === 경기 종료 조건 체크 ===
+    // 1. 넥서스 파괴
     if (!matchData.home.turrets.nexus.nexus) {
       matchData.game_over = true;
       matchData.winner = 'away';
@@ -602,6 +603,27 @@ async function simulateMatchProgress(match: any, io: Server) {
       matchData.game_over = true;
       matchData.winner = 'home';
       matchData.home_score = 1;
+    }
+    // 2. 60분 시간제한 (킬 수로 승자 결정)
+    else if (gameTime >= 3600) {
+      matchData.game_over = true;
+      if (matchData.home.kills > matchData.away.kills) {
+        matchData.winner = 'home';
+        matchData.home_score = 1;
+      } else if (matchData.away.kills > matchData.home.kills) {
+        matchData.winner = 'away';
+        matchData.away_score = 1;
+      } else {
+        // 킬 동점이면 골드로
+        matchData.winner = matchData.home.gold >= matchData.away.gold ? 'home' : 'away';
+        if (matchData.winner === 'home') matchData.home_score = 1;
+        else matchData.away_score = 1;
+      }
+      matchData.events.push({
+        type: 'GAME_END',
+        time: gameTime,
+        description: '60분 시간제한으로 경기 종료'
+      });
     }
 
     // 경기 종료 처리
@@ -675,9 +697,9 @@ async function generateEvents(
   };
 
   // 현실적인 이벤트 발생 확률
-  // 30분 = 180번 호출, 목표: 킬 5-20개, 포탑 빠르게 파괴
-  // 이벤트 확률 20%로 증가
-  if (Math.random() > 0.20) return events;
+  // 25분 = 150번 호출, 목표: 킬 10-25개, 포탑 빠르게 파괴
+  // 이벤트 확률 35%로 증가 (게임 빠르게 진행)
+  if (Math.random() > 0.35) return events;
 
   // 승리 팀 결정
   const winningTeam = Math.random() < homeWinChance ? 'home' : 'away';
@@ -688,27 +710,27 @@ async function generateEvents(
 
   if (winningPlayers.length === 0 || losingPlayers.length === 0) return events;
 
-  // 이벤트 타입 선택 (킬 줄이고 포탑/오브젝트 중심)
+  // 이벤트 타입 선택 (포탑 파괴 중심으로 빠른 진행)
   const eventPool: string[] = [];
 
-  // 시간대별 이벤트
-  if (gameMinutes < 15) {
-    // 초반 (0~15분): 킬과 오브젝트 위주, 포탑은 거의 안터짐
-    eventPool.push('KILL', 'NOTHING', 'NOTHING');
-  } else if (gameMinutes < 25) {
-    // 중반 (15~25분): 포탑 집중, 킬 적당
-    eventPool.push('KILL', 'TURRET', 'TURRET', 'NOTHING');
+  // 시간대별 이벤트 (더 빠르게)
+  if (gameMinutes < 10) {
+    // 초반 (0~10분): 킬과 1차 타워
+    eventPool.push('KILL', 'TURRET', 'NOTHING');
+  } else if (gameMinutes < 18) {
+    // 중반 (10~18분): 포탑 집중
+    eventPool.push('KILL', 'TURRET', 'TURRET', 'TURRET');
   } else {
-    // 후반 (25분+): 억제기/넥서스 집중, 한타
-    eventPool.push('KILL', 'TURRET', 'INHIBITOR', 'INHIBITOR', 'TEAMFIGHT');
+    // 후반 (18분+): 억제기/넥서스 집중
+    eventPool.push('TURRET', 'INHIBITOR', 'INHIBITOR', 'TEAMFIGHT');
   }
 
   // 오브젝트 이벤트
   if (gameMinutes >= 5 && matchData.dragon_alive) eventPool.push('DRAGON');
   if (gameMinutes >= 8 && matchData.herald_alive) eventPool.push('HERALD');
-  if (gameMinutes >= 15) eventPool.push('TURRET'); // 포탑은 15분부터
-  if (gameMinutes >= 20) eventPool.push('INHIBITOR'); // 억제기는 20분부터
-  if (gameMinutes >= 20 && matchData.baron_alive) eventPool.push('BARON'); // 바론은 20분부터
+  if (gameMinutes >= 8) eventPool.push('TURRET'); // 포탑은 8분부터
+  if (gameMinutes >= 15) eventPool.push('INHIBITOR'); // 억제기는 15분부터
+  if (gameMinutes >= 20 && matchData.baron_alive) eventPool.push('BARON');
   if (matchData.elder_available && matchData.dragon_alive) eventPool.push('ELDER_DRAGON');
 
   const eventType = eventPool[Math.floor(Math.random() * eventPool.length)];
