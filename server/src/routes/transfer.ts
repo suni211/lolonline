@@ -11,7 +11,8 @@ router.get('/fa', authenticateToken, async (req: AuthRequest, res) => {
     const { position, league, minOvr, maxOvr, search, sort = 'ovr_desc', page = 1, limit = 20 } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
-    let whereClause = 'WHERE NOT EXISTS (SELECT 1 FROM player_cards pc WHERE pc.pro_player_id = pp.id)';
+    // 계약된 카드가 있는 선수만 제외 (미계약 카드는 FA로 표시)
+    let whereClause = 'WHERE NOT EXISTS (SELECT 1 FROM player_cards pc WHERE pc.pro_player_id = pp.id AND pc.is_contracted = true)';
     const params: any[] = [];
 
     if (position && position !== 'all') {
