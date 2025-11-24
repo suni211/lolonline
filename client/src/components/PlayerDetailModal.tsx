@@ -114,29 +114,6 @@ export default function PlayerDetailModal({ player, onClose, onUpdate }: PlayerD
     condition: item.condition_value
   }));
 
-  const handleLevelUp = async () => {
-    const total = statAllocation.mental + statAllocation.teamfight + statAllocation.focus + statAllocation.laning;
-    if (total === 0) {
-      alert('스탯을 분배해주세요.');
-      return;
-    }
-    if (total > player.stat_points) {
-      alert('스탯 포인트가 부족합니다.');
-      return;
-    }
-
-    try {
-      await axios.post(`/api/players/${player.id}/levelup`, { stat_allocation: statAllocation });
-      soundManager.playSound('upgrade_success');
-      alert('레벨업 완료!');
-      setStatAllocation({ mental: 0, teamfight: 0, focus: 0, laning: 0 });
-      setShowLevelUp(false);
-      onUpdate();
-    } catch (error: any) {
-      alert(error.response?.data?.error || '레벨업 실패');
-    }
-  };
-
   const handleStatUpdate = async () => {
     const total = statAllocation.mental + statAllocation.teamfight + statAllocation.focus + statAllocation.laning;
     if (total === 0) {
