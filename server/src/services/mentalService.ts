@@ -33,9 +33,9 @@ export class MentalService {
   static async getTeamMental(teamId: number) {
     try {
       const players = await pool.query(
-        `SELECT pc.id as player_card_id, p.name, pc.position, pms.*
+        `SELECT pc.id as player_card_id, COALESCE(pp.name, pc.ai_player_name) as name, COALESCE(pp.position, pc.ai_position) as position, pms.*
          FROM player_cards pc
-         JOIN players p ON pc.player_id = p.id
+         LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
          LEFT JOIN player_mental_states pms ON pc.id = pms.player_card_id
          WHERE pc.team_id = ?`,
         [teamId]
@@ -55,10 +55,10 @@ export class MentalService {
 
       // 다시 조회
       const updatedPlayers = await pool.query(
-        `SELECT pc.id as player_card_id, p.name, pc.position,
+        `SELECT pc.id as player_card_id, COALESCE(pp.name, pc.ai_player_name) as name, COALESCE(pp.position, pc.ai_position) as position,
                 pms.morale, pms.stress, pms.confidence, pms.team_satisfaction
          FROM player_cards pc
-         JOIN players p ON pc.player_id = p.id
+         LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
          LEFT JOIN player_mental_states pms ON pc.id = pms.player_card_id
          WHERE pc.team_id = ?`,
         [teamId]
@@ -144,16 +144,16 @@ export class MentalService {
   static async getPlayerRelationships(playerCardId: number) {
     try {
       const relationships = await pool.query(
-        `SELECT pr.*, p.name as partner_name
+        `SELECT pr.*, COALESCE(pp.name, pc.ai_player_name) as partner_name
          FROM player_relationships pr
          JOIN player_cards pc ON (pr.player2_id = pc.id)
-         JOIN players p ON pc.player_id = p.id
+         LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
          WHERE pr.player1_id = ?
          UNION
-         SELECT pr.*, p.name as partner_name
+         SELECT pr.*, COALESCE(pp.name, pc.ai_player_name) as partner_name
          FROM player_relationships pr
          JOIN player_cards pc ON (pr.player1_id = pc.id)
-         JOIN players p ON pc.player_id = p.id
+         LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
          WHERE pr.player2_id = ?`,
         [playerCardId, playerCardId]
       );

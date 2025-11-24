@@ -542,6 +542,87 @@ router.get('/player/:playerId', async (req, res) => {
   }
 });
 
+// 카드 상세 조회 (이적시장 상세용)
+router.get('/card/:cardId', async (req, res) => {
+  try {
+    const cardId = parseInt(req.params.cardId);
+
+    const cards = await pool.query(
+      `SELECT pc.*, pp.name, pp.position, pp.nationality, pp.league, pp.team as pro_team, pp.face_image
+       FROM player_cards pc
+       LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
+       WHERE pc.id = ?`,
+      [cardId]
+    );
+
+    if (cards.length === 0) {
+      return res.status(404).json({ error: '선수를 찾을 수 없습니다' });
+    }
+
+    const card = cards[0];
+    const player = {
+      id: card.id,
+      name: card.name || card.ai_player_name,
+      position: card.position || card.ai_position,
+      nationality: card.nationality,
+      league: card.league,
+      pro_team: card.pro_team,
+      face_image: card.face_image,
+      overall: card.ovr
+    };
+
+    // 팀 정보
+    const teamInfo = card.team_id ? (await pool.query(
+      `SELECT id, name FROM teams WHERE id = ?`,
+      [card.team_id]
+    )) : [];
+
+    // 경기 통계
+    const matchStats = await pool.query(
+      `SELECT COUNT(*) as total_games, SUM(ms.kills) as total_kills, SUM(ms.deaths) as total_deaths,
+              SUM(ms.assists) as total_assists, SUM(ms.damage_dealt) as total_damage, AVG(ms.damage_dealt) as avg_damage
+       FROM match_stats ms WHERE ms.player_id = ?`,
+      [cardId]
+    );
+
+    const stats = matchStats[0] || { total_games: 0, total_kills: 0, total_deaths: 0, total_assists: 0, total_damage: 0, avg_damage: 0 };
+    const dpm = stats.avg_damage ? Math.round(stats.avg_damage / 25) : 0;
+
+    res.json({
+      player,
+      contract: card.team_id ? {
+        team_id: card.team_id,
+        team_name: teamInfo[0]?.name,
+        is_starter: card.is_starter
+      } : null,
+      stats: {
+        mental: card.mental,
+        teamfight: card.teamfight,
+        focus: card.focus,
+        laning: card.laning
+      },
+      personality: null,
+      monthly_salary: card.ovr * 100000,
+      annual_salary: card.ovr * 100000 * 12,
+      level: card.level || 1,
+      experience: 0,
+      career_stats: {
+        total_games: stats.total_games || 0,
+        total_kills: stats.total_kills || 0,
+        total_deaths: stats.total_deaths || 0,
+        total_assists: stats.total_assists || 0,
+        total_damage: stats.total_damage || 0,
+        avg_dpm: dpm,
+        kda: stats.total_deaths > 0 ? (stats.total_kills + stats.total_assists) / stats.total_deaths : 0
+      },
+      rankings: null
+    });
+  } catch (error: any) {
+    console.error('Card detail error:', error);
+    res.status(500).json({ error: '카드 정보 조회 실패' });
+  }
+});
+
 // 순위
 router.get('/rankings', async (req, res) => {
   try {

@@ -592,9 +592,9 @@ export default function Transfer() {
     return new Date(dateString).toLocaleDateString('ko-KR');
   };
 
-  const openPlayerDetail = async (proPlayerId: number) => {
+  const openPlayerDetail = async (cardId: number) => {
     try {
-      const response = await axios.get(`/api/transfer/player/${proPlayerId}`);
+      const response = await axios.get(`/api/transfer/card/${cardId}`);
       setSelectedMarketPlayer(response.data);
     } catch (error) {
       console.error('Failed to fetch player details:', error);
@@ -853,8 +853,7 @@ export default function Transfer() {
                 <div className="button-group">
                   <button
                     className="request-btn"
-                    onClick={() => openPlayerDetail(listing.pro_player_id)}
-                    disabled={!listing.pro_player_id}
+                    onClick={() => openPlayerDetail(listing.card_id)}
                   >
                     상세
                   </button>

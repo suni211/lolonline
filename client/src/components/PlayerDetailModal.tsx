@@ -74,11 +74,8 @@ export default function PlayerDetailModal({ player, onClose, onUpdate }: PlayerD
     focus: 0,
     laning: 0
   });
-  const [showLevelUp, setShowLevelUp] = useState(false);
   const [conditionHistory, setConditionHistory] = useState<ConditionHistory[]>([]);
   const [activeTab, setActiveTab] = useState<'stats' | 'condition' | 'abilities'>('stats');
-
-  const canLevelUp = player.exp >= player.exp_to_next;
 
   useEffect(() => {
     fetchConditionHistory();
@@ -369,19 +366,6 @@ export default function PlayerDetailModal({ player, onClose, onUpdate }: PlayerD
               )}
 
               <div className="actions-section">
-                {canLevelUp && (
-                  <button onClick={() => setShowLevelUp(!showLevelUp)} className="btn-primary">
-                    레벨업 ({player.stat_points + 5} 포인트 획득)
-                  </button>
-                )}
-                {showLevelUp && canLevelUp && (
-                  <div className="levelup-section">
-                    <p>레벨업 시 스탯 포인트 5개를 추가로 획득합니다.</p>
-                    <button onClick={handleLevelUp} className="btn-primary">
-                      레벨업 실행
-                    </button>
-                  </div>
-                )}
                 {player.uniform_level < 10 && (
                   <button onClick={handleUniformUpgrade} className="btn-primary">
                     유니폼 강화 (비용: {(500000 * Math.pow(2, player.uniform_level)).toLocaleString()} 원)
