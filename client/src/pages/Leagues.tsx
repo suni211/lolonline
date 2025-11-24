@@ -121,8 +121,8 @@ export default function Leagues() {
   };
 
   const getPromotionInfo = (_tier: string, rank: number, _totalTeams: number) => {
-    // SOUTH/NORTH는 상위 4팀이 WORLDS 진출
-    if (rank <= 4) return 'promotion'; // 상위 4팀 WORLDS
+    // SOUTH/NORTH는 상위 6팀이 플레이오프 진출
+    if (rank <= 6) return 'promotion'; // 상위 6팀 플레이오프
     return '';
   };
 
@@ -161,7 +161,7 @@ export default function Leagues() {
           </div>
 
           <div className="promotion-legend">
-            <span className="legend-item promotion">WORLDS 진출</span>
+            <span className="legend-item promotion">플레이오프 진출 (상위 6팀)</span>
             <span className="legend-item ai-team">AI 팀</span>
           </div>
 

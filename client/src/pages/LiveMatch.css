@@ -96,11 +96,18 @@
 /* 메인 콘텐츠 */
 .main-content {
   display: grid;
-  grid-template-columns: 180px 1fr 180px;
+  grid-template-columns: 200px 1fr 200px;
+  grid-template-rows: 1fr;
   gap: 8px;
   flex: 1;
   min-height: 0;
   overflow: hidden;
+}
+
+.main-content.with-map {
+  display: grid;
+  grid-template-columns: 200px 1fr 200px;
+  grid-template-rows: 1fr;
 }
 
 /* 팀 패널 */
@@ -111,11 +118,27 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
+  max-height: 100%;
 }
 
-.team-panel.home { border-left: 3px solid #3498db; }
-.team-panel.away { border-right: 3px solid #e74c3c; }
+.team-panel.home {
+  border-left: 3px solid #3498db;
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.team-panel.away {
+  border-right: 3px solid #e74c3c;
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.center-content {
+  grid-column: 2;
+  grid-row: 1;
+}
 
 /* 패널 섹션 */
 .panel-section {
@@ -209,7 +232,7 @@
 .stat-row-compact .cs { color: #9b59b6; }
 .stat-row-compact .dmg { color: #e74c3c; }
 
-/* 중앙 콘텐츠 */
+/* 중앙 콘텐츠 - grid position은 위에서 정의됨 */
 .center-content {
   display: flex;
   flex-direction: column;
