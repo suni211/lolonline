@@ -140,7 +140,7 @@ router.get('/:teamId/info', authenticateToken, async (req: AuthRequest, res) => 
       `SELECT COALESCE(SUM(ts.monthly_payment), 0) as monthly_income
        FROM team_sponsors ts
        INNER JOIN sponsors s ON ts.sponsor_id = s.id
-       WHERE ts.team_id = ? AND ts.end_date > NOW()`,
+       WHERE ts.team_id = ? AND ts.contract_end > NOW() AND ts.status = 'ACTIVE'`,
       [teamId]
     );
 
