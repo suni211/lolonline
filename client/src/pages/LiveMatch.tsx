@@ -387,6 +387,25 @@ export default function LiveMatch() {
     setChampions(positions);
   };
 
+  // 선수들을 특정 위치로 이동
+  const moveChampionsToPosition = (x: number, y: number, team?: 'home' | 'away' | 'all') => {
+    setChampions(prev => prev.map(champ => {
+      if (team && team !== 'all') {
+        const isTargetTeam = (team === 'home' && champ.team === 'blue') ||
+                             (team === 'away' && champ.team === 'red');
+        if (!isTargetTeam) return champ;
+      }
+      // 약간의 랜덤 오프셋으로 자연스럽게
+      const offsetX = (Math.random() - 0.5) * 8;
+      const offsetY = (Math.random() - 0.5) * 8;
+      return {
+        ...champ,
+        x: Math.max(5, Math.min(95, x + offsetX)),
+        y: Math.max(5, Math.min(95, y + offsetY))
+      };
+    }));
+  };
+
   // 이벤트에서 하이라이트 감지
   const detectHighlight = (event: MatchEvent) => {
     let highlight: Highlight | null = null;
@@ -420,16 +439,22 @@ export default function LiveMatch() {
         break;
 
       case 'TEAMFIGHT':
+        // 한타: 모든 선수가 중앙으로 모임
+        const teamfightX = 45 + Math.random() * 10;
+        const teamfightY = 45 + Math.random() * 10;
+        moveChampionsToPosition(teamfightX, teamfightY, 'all');
         highlight = {
           type: 'teamfight',
-          x: 50,
-          y: 50,
+          x: teamfightX,
+          y: teamfightY,
           description: 'TEAM FIGHT!'
         };
         duration = 45000;
         break;
 
       case 'DRAGON':
+        // 드래곤: 승리팀이 드래곤 위치로 이동
+        moveChampionsToPosition(64.9, 68, event.data?.team);
         highlight = {
           type: 'objective',
           x: 64.9,
@@ -441,6 +466,8 @@ export default function LiveMatch() {
         break;
 
       case 'BARON':
+        // 바론: 승리팀이 바론 위치로 이동
+        moveChampionsToPosition(36.6, 30.2, event.data?.team);
         highlight = {
           type: 'objective',
           x: 36.6,
@@ -452,6 +479,8 @@ export default function LiveMatch() {
         break;
 
       case 'HERALD':
+        // 전령: 승리팀이 전령 위치로 이동
+        moveChampionsToPosition(36.6, 30.2, event.data?.team);
         highlight = {
           type: 'objective',
           x: 36.6,
@@ -465,20 +494,33 @@ export default function LiveMatch() {
       case 'TURRET':
       case 'INHIBITOR':
       case 'NEXUS_TURRET':
+        // 포탑/억제기: 해당 위치로 이동
+        const turretPositions: {[key: string]: {x: number, y: number}} = {
+          'top': { x: 20, y: 25 },
+          'mid': { x: 50, y: 50 },
+          'bot': { x: 80, y: 75 }
+        };
+        const lane = event.data?.lane || 'mid';
+        const pos = turretPositions[lane] || { x: 50, y: 50 };
+        moveChampionsToPosition(pos.x, pos.y, event.data?.team);
         highlight = {
           type: 'objective',
-          x: 50,
-          y: 50,
+          x: pos.x,
+          y: pos.y,
           description: event.description
         };
         duration = 30000;
         break;
 
       case 'NEXUS_DESTROYED':
+        // 넥서스 파괴: 모든 선수가 적 넥서스 위치로 이동
+        const nexusX = event.data?.team === 'home' ? 85.2 : 13.9;
+        const nexusY = event.data?.team === 'home' ? 13.7 : 85.7;
+        moveChampionsToPosition(nexusX, nexusY, 'all');
         highlight = {
           type: 'ace',
-          x: event.data?.team === 'away' ? 13.9 : 85.2,
-          y: event.data?.team === 'away' ? 85.7 : 13.7,
+          x: nexusX,
+          y: nexusY,
           description: 'VICTORY!'
         };
         duration = 60000;
