@@ -985,20 +985,47 @@ async function updatePlayerStatsLOL(matchId: number, homePlayers: any[], awayPla
   const gameMinutes = gameTime / 60;
 
   for (const player of allPlayers) {
-    const isSupport = player.position === 'SUPPORT';
+    const position = player.position;
 
-    // CS 증가 (분당 7-10, 서폿은 1-2)
-    // 28분 기준: 라이너 약 250-300 CS, 서폿 약 30-50 CS
+    // 포지션별 CS 증가율 (분당)
+    // 30분 기준: ADC 280-320, MID 250-290, TOP 230-270, JG 180-220, SUP 20-35
+    let csPerMin: number;
+    let goldPerMin: number;
+
+    switch (position) {
+      case 'ADC':
+        csPerMin = 9 + Math.random() * 1.5;  // 9-10.5/분
+        goldPerMin = 400 + Math.random() * 100;
+        break;
+      case 'MID':
+        csPerMin = 8 + Math.random() * 1.5;  // 8-9.5/분
+        goldPerMin = 380 + Math.random() * 100;
+        break;
+      case 'TOP':
+        csPerMin = 7.5 + Math.random() * 1.5;  // 7.5-9/분
+        goldPerMin = 360 + Math.random() * 100;
+        break;
+      case 'JUNGLE':
+        csPerMin = 6 + Math.random() * 1.5;  // 6-7.5/분 (캠프)
+        goldPerMin = 340 + Math.random() * 100;
+        break;
+      case 'SUPPORT':
+        // 서폿은 30% 확률로만 CS 획득
+        csPerMin = Math.random() < 0.3 ? (0.5 + Math.random() * 0.5) : 0;  // 0-1/분
+        goldPerMin = 200 + Math.random() * 50;
+        break;
+      default:
+        csPerMin = 7 + Math.random() * 2;
+        goldPerMin = 350 + Math.random() * 100;
+    }
+
     // 10초마다 호출되므로 분당 CS / 6
-    const csPerMin = isSupport ? (1 + Math.random()) : (7 + Math.random() * 3);
-    const csIncrease = Math.max(1, Math.floor(csPerMin / 6));
-
-    // 골드 증가
-    const goldPerMin = isSupport ? 200 : (350 + Math.random() * 100);
+    const csIncrease = Math.floor(csPerMin / 6 + Math.random() * 0.5);
     const goldIncrease = Math.floor(goldPerMin / 6);
 
     // 딜량 (경기 끝날 때 2만~6만, 서포터는 1만 이하)
     // 30분 경기 기준 분당 ~1500-2000 딜
+    const isSupport = position === 'SUPPORT';
     const damagePerMin = isSupport ? (200 + Math.random() * 100) : (600 + Math.random() * 800);
     const damageIncrease = Math.floor(damagePerMin / 6);
 
