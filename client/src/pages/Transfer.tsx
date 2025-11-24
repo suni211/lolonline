@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import PlayerDetailModal from '../components/PlayerDetailModal';
 import './Transfer.css';
 
 interface TransferListing {
@@ -147,6 +148,9 @@ export default function Transfer() {
   const [requestMessage, setRequestMessage] = useState('');
   const [counterModal, setCounterModal] = useState<TransferRequest | null>(null);
   const [counterPrice, setCounterPrice] = useState('');
+
+  // 선수 상세 모달 상태
+  const [selectedMarketPlayer, setSelectedMarketPlayer] = useState<any>(null);
 
   // 필터 상태
   const [filters, setFilters] = useState({
@@ -594,6 +598,20 @@ export default function Transfer() {
     return new Date(dateString).toLocaleDateString('ko-KR');
   };
 
+  const openPlayerDetail = async (proPlayerId: number) => {
+    try {
+      const response = await axios.get(`/api/transfer/player/${proPlayerId}`);
+      setSelectedMarketPlayer(response.data);
+    } catch (error) {
+      console.error('Failed to fetch player details:', error);
+      alert('선수 정보를 가져오지 못했습니다');
+    }
+  };
+
+  const closePlayerDetail = () => {
+    setSelectedMarketPlayer(null);
+  };
+
   return (
     <div className="transfer-page page-wrapper">
       <h1 className="page-title">이적시장</h1>
@@ -860,6 +878,13 @@ export default function Transfer() {
                     disabled={loading || !team || team.gold < listing.asking_price}
                   >
                     구매하기
+                  </button>
+                  <button
+                    className="request-btn"
+                    onClick={() => openPlayerDetail(listing.pro_player_id)}
+                    disabled={!listing.pro_player_id}
+                  >
+                    상세
                   </button>
                   <button
                     className="profile-btn"
@@ -1359,6 +1384,15 @@ export default function Transfer() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 선수 상세 모달 */}
+      {selectedMarketPlayer && (
+        <PlayerDetailModal
+          player={selectedMarketPlayer}
+          onClose={closePlayerDetail}
+          onUpdate={closePlayerDetail}
+        />
       )}
     </div>
   );
