@@ -125,10 +125,19 @@ export async function startMatchById(matchId: number, io: Server) {
 
 async function processScheduledMatches(io: Server) {
   try {
-    // 현재 KST 시간 계산
+    // 현재 KST 시간 계산 (UTC+9)
     const now = new Date();
-    const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-    const kstNowStr = kstNow.toISOString().slice(0, 19).replace('T', ' ');
+    const kstOffset = 9 * 60 * 60 * 1000;
+    const kstTime = new Date(now.getTime() + kstOffset);
+
+    // KST 시간을 문자열로 변환 (YYYY-MM-DD HH:mm:ss 형식)
+    const year = kstTime.getUTCFullYear();
+    const month = String(kstTime.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(kstTime.getUTCDate()).padStart(2, '0');
+    const hours = String(kstTime.getUTCHours()).padStart(2, '0');
+    const minutes = String(kstTime.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(kstTime.getUTCSeconds()).padStart(2, '0');
+    const kstNowStr = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 
     // 예정된 경기 중 시작 시간이 된 경기 찾기 (KST 기준)
     const matches = await pool.query(
