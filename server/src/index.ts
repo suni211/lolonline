@@ -48,6 +48,7 @@ import { initializeInjurySystem } from './services/injuryService.js';
 import { initializeConditionRecovery } from './services/conditionService.js';
 import { initializeLeagueMatchService } from './services/leagueMatchService.js';
 import { initializeMerchandiseSystem } from './services/merchandiseService.js';
+import NewsService from './services/newsService.js';
 
 dotenv.config();
 
@@ -292,7 +293,15 @@ async function startServer() {
     // 프로 선수 및 선수팩 초기화
     await ProPlayerService.initializeProPlayers();
     await ProPlayerService.initializePlayerPacks();
-    
+
+    // 자동 뉴스 생성 초기화 (1시간마다 자동 생성)
+    setInterval(() => {
+      NewsService.generateAutoNews().catch(error => {
+        console.error('Error in auto news generation:', error);
+      });
+    }, 60 * 60 * 1000); // 1시간
+    console.log('Auto news generation system initialized');
+
     httpServer.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Server accessible at http://0.0.0.0:${PORT}`);

@@ -420,6 +420,127 @@ export class NewsService {
 
     await this.createPlayerConflict(players[0].pro_player_id, players[0].team_id, conflictType);
   }
+
+  // 자동 뉴스 생성 (모든 팀에 대해 일정 주기마다 실행)
+  static async generateAutoNews() {
+    try {
+      // 모든 플레이어팀 조회
+      const teams = await pool.query('SELECT id FROM teams WHERE is_ai = false');
+
+      if (teams.length === 0) return;
+
+      // 각 팀에 대해 랜덤 뉴스 생성
+      for (const team of teams) {
+        const newsTypes = [
+          'training',      // 훈련
+          'streaming',     // 방송
+          'facility',      // 시설 업그레이드
+          'sponsor',       // 스폰서
+          'card_pack'      // 카드팩
+        ];
+
+        // 60% 확률로 일반 뉴스 생성
+        if (Math.random() < 0.6) {
+          const newsType = newsTypes[Math.floor(Math.random() * newsTypes.length)];
+
+          switch (newsType) {
+            case 'training':
+              // 팀의 계약 선수 중 한 명 선택
+              const players = await pool.query(
+                `SELECT p.id, p.name, s.mental, s.teamfight, s.focus, s.laning
+                 FROM player_cards pc
+                 JOIN pro_players p ON pc.pro_player_id = p.id
+                 WHERE pc.team_id = ? AND pc.is_contracted = true
+                 ORDER BY RAND() LIMIT 1`,
+                [team.id]
+              );
+
+              if (players.length > 0) {
+                const stats = ['mental', 'teamfight', 'focus', 'laning'];
+                const statType = stats[Math.floor(Math.random() * stats.length)];
+
+                await this.createCommunityPost(team.id, 'TRAINING', {
+                  playerName: players[0].name,
+                  statType: statType,
+                  statIncrease: 1 + Math.floor(Math.random() * 3)
+                });
+              }
+              break;
+
+            case 'streaming':
+              const streamers = await pool.query(
+                `SELECT p.name FROM player_cards pc
+                 JOIN pro_players p ON pc.pro_player_id = p.id
+                 WHERE pc.team_id = ? AND pc.is_contracted = true
+                 ORDER BY RAND() LIMIT 1`,
+                [team.id]
+              );
+
+              if (streamers.length > 0) {
+                await this.createCommunityPost(team.id, 'STREAMING', {
+                  playerName: streamers[0].name,
+                  viewers: 1000 + Math.floor(Math.random() * 5000),
+                  income: 100000 + Math.floor(Math.random() * 500000),
+                  duration: 2 + Math.floor(Math.random() * 4)
+                });
+              }
+              break;
+
+            case 'facility':
+              const facilities = ['훈련장', '피지컬실', '분석실', '의료센터', '회의실'];
+              const facilityName = facilities[Math.floor(Math.random() * facilities.length)];
+
+              await this.createCommunityPost(team.id, 'FACILITY', {
+                facilityName: facilityName,
+                level: 1 + Math.floor(Math.random() * 5),
+                cost: 500000 + Math.floor(Math.random() * 2000000)
+              });
+              break;
+
+            case 'sponsor':
+              const sponsors = ['롯데', '삼성', 'SK', 'LG', '현대', '기아'];
+              const sponsorName = sponsors[Math.floor(Math.random() * sponsors.length)];
+
+              await this.createCommunityPost(team.id, 'SPONSOR', {
+                sponsorName: sponsorName,
+                amount: 5000000 + Math.floor(Math.random() * 15000000)
+              });
+              break;
+
+            case 'card_pack':
+              const grades = ['NORMAL', 'RARE', 'LEGEND'];
+              const grade = grades[Math.floor(Math.random() * grades.length)];
+
+              // 임의의 선수 정보로 뉴스 생성
+              const proPlayers = await pool.query(
+                `SELECT name, overall as ovr FROM pro_players ORDER BY RAND() LIMIT 1`
+              );
+
+              if (proPlayers.length > 0) {
+                await this.createCommunityPost(team.id, 'CARD_PACK', {
+                  playerName: proPlayers[0].name,
+                  grade: grade,
+                  ovr: proPlayers[0].ovr || 75
+                });
+              }
+              break;
+          }
+        }
+
+        // 30% 확률로 이적 루머 생성
+        if (Math.random() < 0.3) {
+          await this.generateRandomTransferRumor();
+        }
+
+        // 20% 확률로 선수 불화 뉴스 생성
+        if (Math.random() < 0.2) {
+          await this.generateRandomConflict();
+        }
+      }
+    } catch (error) {
+      console.error('Error generating auto news:', error);
+    }
+  }
 }
 
 export default NewsService;
