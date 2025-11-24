@@ -708,6 +708,24 @@ function generateAIPlayerName(): string {
   return first + middle + last;
 }
 
+// AI 팀 기존 카드 삭제 (실제 선수 FA화)
+router.post('/ai-teams/clear-cards', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    // AI 팀에 속한 모든 카드 삭제
+    const result = await pool.query(
+      `DELETE FROM player_cards WHERE team_id IN (SELECT id FROM teams WHERE is_ai = true)`
+    );
+
+    res.json({
+      success: true,
+      message: `AI 팀 카드 ${result.affectedRows}개가 삭제되었습니다. 모든 실제 선수가 FA 상태가 됩니다.`
+    });
+  } catch (error: any) {
+    console.error('Clear AI cards error:', error);
+    res.status(500).json({ error: 'AI 팀 카드 삭제 실패: ' + error.message });
+  }
+});
+
 // AI 팀에 가상 선수 카드 생성
 router.post('/ai-teams/generate-cards', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
   try {

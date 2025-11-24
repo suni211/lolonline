@@ -145,8 +145,22 @@ export default function Admin() {
     }
   };
 
+  const clearAICards = async () => {
+    if (!confirm('AI 팀의 모든 카드를 삭제하시겠습니까? 실제 선수들이 FA 상태가 됩니다.')) return;
+    try {
+      setLoading(true);
+      const res = await axios.post('/api/admin/ai-teams/clear-cards');
+      setMessage(res.data.message);
+      fetchData();
+    } catch (error: any) {
+      setMessage(error.response?.data?.error || 'AI 팀 카드 삭제 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const generateAICards = async () => {
-    if (!confirm('모든 AI 팀에 선수 카드를 생성하시겠습니까?')) return;
+    if (!confirm('모든 AI 팀에 가상 선수를 생성하시겠습니까?')) return;
     try {
       setLoading(true);
       const res = await axios.post('/api/admin/ai-teams/generate-cards');
@@ -434,8 +448,11 @@ export default function Admin() {
                 다음 시즌 시작
               </button>
             )}
+            <button onClick={clearAICards} disabled={loading} className="warning">
+              AI 팀 카드 삭제
+            </button>
             <button onClick={generateAICards} disabled={loading} className="primary">
-              AI 팀 카드 생성
+              AI 가상선수 생성
             </button>
             <button onClick={syncRoster} disabled={loading} className="primary">
               2025 선수 DB 동기화
