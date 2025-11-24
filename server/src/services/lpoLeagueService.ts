@@ -546,11 +546,65 @@ export class LPOLeagueService {
     }
   }
 
-  // 승강제 처리
+  // 아마추어 리그 생성 (리그 없는 팀이 4팀 이상일 때)
+  static async createAmateurLeague(season: number) {
+    try {
+      // 리그에 참가하지 않은 팀 조회
+      const unassignedTeams = await pool.query(
+        `SELECT t.id, t.name FROM teams t
+         WHERE t.user_id IS NOT NULL
+         AND t.id NOT IN (
+           SELECT team_id FROM league_participants lp
+           JOIN leagues l ON lp.league_id = l.id
+           WHERE l.season = ?
+         )`,
+        [season]
+      );
+
+      if (unassignedTeams.length < 4) {
+        console.log(`Not enough teams for amateur league: ${unassignedTeams.length} teams`);
+        return null;
+      }
+
+      // 아마추어 리그 생성
+      const amateurLeague = await pool.query(
+        "INSERT INTO leagues (name, region, season, current_month, status) VALUES ('LPO AMATEUR LEAGUE', 'AMATEUR', ?, 1, 'REGULAR')",
+        [season]
+      );
+
+      const leagueId = amateurLeague.insertId;
+
+      // 팀들을 아마추어 리그에 등록
+      for (const team of unassignedTeams) {
+        await pool.query(
+          `UPDATE teams SET league = 'AMATEUR' WHERE id = ?`,
+          [team.id]
+        );
+
+        await pool.query(
+          `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
+           VALUES (?, ?, 0, 0, 0, 0, 0)`,
+          [leagueId, team.id]
+        );
+      }
+
+      // 경기 일정 생성
+      await this.generateLeagueSchedule(leagueId);
+
+      console.log(`Amateur league created with ${unassignedTeams.length} teams`);
+      return leagueId;
+
+    } catch (error) {
+      console.error('Failed to create amateur league:', error);
+      throw error;
+    }
+  }
+
+  // 승강제 처리 (아마추어 리그 포함)
   static async processPromotionRelegation(season: number) {
     try {
       // 각 리그의 순위 계산
-      const tiers = ['SUPER', 'FIRST', 'SECOND'];
+      const tiers = ['SUPER', 'FIRST', 'SECOND', 'AMATEUR'];
 
       for (let i = 0; i < tiers.length; i++) {
         const tier = tiers[i];
@@ -573,37 +627,67 @@ export class LPOLeagueService {
           [league[0].id]
         );
 
-        // 강등 (SUPER, FIRST만 - 하위 2팀)
-        if (tier !== 'SECOND' && standings.length >= 2) {
-          const relegatedTeams = standings.slice(-2);
-          const lowerTier = tier === 'SUPER' ? 'FIRST' : 'SECOND';
+        // 강등 처리
+        if (tier === 'SUPER' || tier === 'FIRST') {
+          // SUPER, FIRST: 하위 2팀 강등
+          if (standings.length >= 2) {
+            const relegatedTeams = standings.slice(-2);
+            const lowerTier = tier === 'SUPER' ? 'FIRST' : 'SECOND';
 
-          for (const team of relegatedTeams) {
-            await pool.query(
-              `INSERT INTO promotions_relegations (season, team_id, from_tier, to_tier, type)
-               VALUES (?, ?, ?, ?, 'RELEGATION')`,
-              [season, team.team_id, tier, lowerTier]
-            );
+            for (const team of relegatedTeams) {
+              await pool.query(
+                `INSERT INTO promotions_relegations (season, team_id, from_tier, to_tier, type)
+                 VALUES (?, ?, ?, ?, 'RELEGATION')`,
+                [season, team.team_id, tier, lowerTier]
+              );
+              await pool.query('UPDATE teams SET league = ? WHERE id = ?', [lowerTier, team.team_id]);
+            }
+          }
+        } else if (tier === 'SECOND') {
+          // SECOND: 하위 4팀 아마추어로 강등
+          if (standings.length >= 4) {
+            const relegatedTeams = standings.slice(-4);
 
-            // 팀 티어 변경
-            await pool.query('UPDATE teams SET league = ? WHERE id = ?', [lowerTier, team.team_id]);
+            for (const team of relegatedTeams) {
+              await pool.query(
+                `INSERT INTO promotions_relegations (season, team_id, from_tier, to_tier, type)
+                 VALUES (?, ?, ?, ?, 'RELEGATION')`,
+                [season, team.team_id, tier, 'AMATEUR']
+              );
+              await pool.query('UPDATE teams SET league = ? WHERE id = ?', ['AMATEUR', team.team_id]);
+            }
           }
         }
 
-        // 승격 (FIRST, SECOND만 - 상위 2팀)
-        if (tier !== 'SUPER' && standings.length >= 2) {
-          const promotedTeams = standings.slice(0, 2);
-          const upperTier = tier === 'FIRST' ? 'SUPER' : 'FIRST';
+        // 승격 처리
+        if (tier === 'FIRST' || tier === 'SECOND') {
+          // FIRST, SECOND: 상위 2팀 승격
+          if (standings.length >= 2) {
+            const promotedTeams = standings.slice(0, 2);
+            const upperTier = tier === 'FIRST' ? 'SUPER' : 'FIRST';
 
-          for (const team of promotedTeams) {
-            await pool.query(
-              `INSERT INTO promotions_relegations (season, team_id, from_tier, to_tier, type)
-               VALUES (?, ?, ?, ?, 'PROMOTION')`,
-              [season, team.team_id, tier, upperTier]
-            );
+            for (const team of promotedTeams) {
+              await pool.query(
+                `INSERT INTO promotions_relegations (season, team_id, from_tier, to_tier, type)
+                 VALUES (?, ?, ?, ?, 'PROMOTION')`,
+                [season, team.team_id, tier, upperTier]
+              );
+              await pool.query('UPDATE teams SET league = ? WHERE id = ?', [upperTier, team.team_id]);
+            }
+          }
+        } else if (tier === 'AMATEUR') {
+          // AMATEUR: 상위 4팀 3부로 승격
+          if (standings.length >= 4) {
+            const promotedTeams = standings.slice(0, 4);
 
-            // 팀 티어 변경
-            await pool.query('UPDATE teams SET league = ? WHERE id = ?', [upperTier, team.team_id]);
+            for (const team of promotedTeams) {
+              await pool.query(
+                `INSERT INTO promotions_relegations (season, team_id, from_tier, to_tier, type)
+                 VALUES (?, ?, ?, ?, 'PROMOTION')`,
+                [season, team.team_id, tier, 'SECOND']
+              );
+              await pool.query('UPDATE teams SET league = ? WHERE id = ?', ['SECOND', team.team_id]);
+            }
           }
         }
       }
@@ -660,6 +744,9 @@ export class LPOLeagueService {
         // 새 시즌 경기 일정 생성 (현재 시간 이후로)
         await this.generateLeagueSchedule(leagueResult.insertId);
       }
+
+      // 아마추어 리그 생성 (리그 없는 팀이 4팀 이상일 때)
+      await this.createAmateurLeague(newSeason);
 
       console.log(`Season ${newSeason} started!`);
 

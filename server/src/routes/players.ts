@@ -4,7 +4,7 @@ import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// 내 선수 목록
+// 내 선수 목록 (player_cards 기반)
 router.get('/my', authenticateToken, async (req: AuthRequest, res) => {
   try {
     if (!req.teamId) {
@@ -14,29 +14,33 @@ router.get('/my', authenticateToken, async (req: AuthRequest, res) => {
     const { position, sort_by, order } = req.query;
 
     let query = `
-      SELECT p.*, po.is_starter, po.is_benched,
-             (p.mental + p.teamfight + p.focus + p.laning + 
-              COALESCE(p.leadership, 0) + COALESCE(p.adaptability, 0) + 
-              COALESCE(p.consistency, 0) + COALESCE(p.work_ethic, 0)) as overall
-      FROM players p
-      INNER JOIN player_ownership po ON p.id = po.player_id
-      WHERE po.team_id = ?
+      SELECT pc.id, pp.name, pp.nationality, pp.position, pp.face_image,
+             pc.mental, pc.teamfight, pc.focus, pc.laning,
+             pc.ovr as overall, pc.level, pc.exp, pc.is_starter, pc.is_contracted,
+             pc.personality, pc.card_type,
+             CASE WHEN pc.is_starter = true THEN false ELSE true END as is_benched,
+             100 as player_condition, 0 as exp_to_next, 0 as stat_points,
+             'NONE' as injury_status, 0 as injury_recovery_days, 0 as uniform_level
+      FROM player_cards pc
+      INNER JOIN pro_players pp ON pc.pro_player_id = pp.id
+      WHERE pc.team_id = ? AND pc.is_contracted = true
     `;
 
     const params: any[] = [req.teamId];
 
     if (position) {
-      query += ' AND p.position = ?';
+      query += ' AND pp.position = ?';
       params.push(position);
     }
 
     if (sort_by) {
-      const validSorts = ['overall', 'level', 'name', 'mental', 'teamfight', 'focus', 'laning', 'leadership', 'adaptability', 'consistency', 'work_ethic'];
+      const validSorts = ['overall', 'level', 'name', 'mental', 'teamfight', 'focus', 'laning'];
       if (validSorts.includes(sort_by as string)) {
-        query += ` ORDER BY ${sort_by} ${order === 'desc' ? 'DESC' : 'ASC'}`;
+        const sortColumn = sort_by === 'name' ? 'pp.name' : sort_by === 'overall' ? 'pc.ovr' : `pc.${sort_by}`;
+        query += ` ORDER BY ${sortColumn} ${order === 'desc' ? 'DESC' : 'ASC'}`;
       }
     } else {
-      query += ' ORDER BY overall DESC';
+      query += ' ORDER BY pc.ovr DESC';
     }
 
     const players = await pool.query(query, params);
@@ -399,37 +403,37 @@ router.post('/:playerId/uniform/upgrade', authenticateToken, async (req: AuthReq
   }
 });
 
-// 선수 스타터/벤치 설정
+// 선수 스타터/벤치 설정 (player_cards 기반)
 router.put('/:playerId/lineup', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const playerId = parseInt(req.params.playerId);
-    const { is_starter, is_benched } = req.body;
+    const { is_starter } = req.body;
 
-    // 선수 소유 확인
-    const ownership = await pool.query(
-      'SELECT * FROM player_ownership WHERE player_id = ? AND team_id = ?',
+    // 선수 카드 소유 확인
+    const cards = await pool.query(
+      'SELECT * FROM player_cards WHERE id = ? AND team_id = ? AND is_contracted = true',
       [playerId, req.teamId]
     );
 
-    if (ownership.length === 0) {
+    if (cards.length === 0) {
       return res.status(404).json({ error: 'Player not found or not owned' });
     }
 
     // 스타터는 최대 5명
     if (is_starter) {
       const starterCount = await pool.query(
-        'SELECT COUNT(*) as count FROM player_ownership WHERE team_id = ? AND is_starter = true',
+        'SELECT COUNT(*) as count FROM player_cards WHERE team_id = ? AND is_starter = true AND is_contracted = true',
         [req.teamId]
       );
 
-      if (starterCount[0].count >= 5 && !ownership[0].is_starter) {
+      if (starterCount[0].count >= 5 && !cards[0].is_starter) {
         return res.status(400).json({ error: 'Maximum 5 starters allowed' });
       }
     }
 
     await pool.query(
-      'UPDATE player_ownership SET is_starter = ?, is_benched = ? WHERE player_id = ? AND team_id = ?',
-      [is_starter || false, is_benched !== undefined ? is_benched : !is_starter, playerId, req.teamId]
+      'UPDATE player_cards SET is_starter = ? WHERE id = ? AND team_id = ?',
+      [is_starter || false, playerId, req.teamId]
     );
 
     res.json({ message: 'Lineup updated successfully' });
