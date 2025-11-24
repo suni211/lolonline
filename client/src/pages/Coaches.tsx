@@ -266,7 +266,7 @@ export default function Coaches() {
                 </div>
                 <div className="stat-row">
                   <span>계약 만료</span>
-                  <span>{new Date(coach.contract_end).toLocaleDateString()}</span>
+                  <span>{coach.contract_end ? new Date(coach.contract_end).toLocaleDateString() : '-'}</span>
                 </div>
               </div>
               <button onClick={() => handleFireCoach(coach.id)} className="btn-secondary">

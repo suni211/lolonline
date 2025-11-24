@@ -109,10 +109,10 @@ export class LPOLeagueService {
       );
 
       // AI 팀 생성 및 리그 배정
-      // SOUTH: 16팀, NORTH: 16팀
+      // SOUTH: 10팀, NORTH: 10팀
       const tiers = [
-        { leagueId: southLeague.insertId, tier: 'SOUTH', count: 16, startIdx: 0 },
-        { leagueId: northLeague.insertId, tier: 'NORTH', count: 16, startIdx: 16 }
+        { leagueId: southLeague.insertId, tier: 'SOUTH', count: 10, startIdx: 0 },
+        { leagueId: northLeague.insertId, tier: 'NORTH', count: 10, startIdx: 10 }
       ];
 
       for (const tierInfo of tiers) {
@@ -196,8 +196,8 @@ export class LPOLeagueService {
       await this.generateLeagueSchedule(northLeague.insertId);
 
       console.log('LPO League system initialized successfully!');
-      console.log(`- LPO SOUTH: ${16 - playerTeams.length} AI teams + ${playerTeams.length} player teams`);
-      console.log('- LPO NORTH: 16 AI teams');
+      console.log(`- LPO SOUTH: ${10 - playerTeams.length} AI teams + ${playerTeams.length} player teams`);
+      console.log('- LPO NORTH: 10 AI teams');
 
     } catch (error) {
       console.error('Failed to initialize LPO leagues:', error);
@@ -221,8 +221,8 @@ export class LPOLeagueService {
 
       const teamIds = teams.map((t: any) => t.team_id);
 
-      // 2홈 2어웨이 스케줄 생성 (라운드 로빈 방식)
-      // SOUTH/NORTH: 16팀 -> 각 팀 60경기 (15팀 * 4경기)
+      // 1홈 1어웨이 스케줄 생성 (라운드 로빈 방식)
+      // SOUTH/NORTH: 10팀 -> 각 팀 18경기 (9팀 * 2경기)
       const matches: { home: number; away: number }[] = [];
 
       // 1사이클 생성 (홈/어웨이 번갈아가며)
@@ -267,17 +267,13 @@ export class LPOLeagueService {
         return cycleMatches;
       };
 
-      // 4사이클: 1사이클-2사이클(반대)-3사이클-4사이클(반대)
+      // 2사이클: 1사이클-2사이클(반대) = 각 팀당 18경기
       const cycle1 = generateCycle(teamIds, false); // 1사이클
       const cycle2 = generateCycle(teamIds, true);  // 2사이클 (홈/어웨이 반대)
-      const cycle3 = generateCycle(teamIds, false); // 3사이클
-      const cycle4 = generateCycle(teamIds, true);  // 4사이클 (홈/어웨이 반대)
 
       // 모든 경기를 순서대로 추가
       matches.push(...cycle1);
       matches.push(...cycle2);
-      matches.push(...cycle3);
-      matches.push(...cycle4);
 
       // 경기 일정 생성
       // 한국 시간 기준으로 월~토 17:00~23:30 사이에 경기
