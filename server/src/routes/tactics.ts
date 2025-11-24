@@ -1,8 +1,45 @@
 import express from 'express';
 import pool from '../database/db.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { TacticsService } from '../services/tacticsService.js';
 
 const router = express.Router();
+
+// ===== 새로운 전술 시스템 =====
+
+// 전술 프리셋 적용
+router.post('/preset', authenticateToken, async (req: any, res) => {
+  try {
+    const { presetName } = req.body;
+    const result = await TacticsService.applyPreset(req.teamId, presetName);
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// 전술 추천
+router.get('/recommend', authenticateToken, async (req: any, res) => {
+  try {
+    const recommendation = await TacticsService.recommendTactics(req.teamId);
+    res.json(recommendation);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 상대팀과의 전술 효과 계산
+router.get('/matchup/:opponentId', authenticateToken, async (req: any, res) => {
+  try {
+    const opponentId = parseInt(req.params.opponentId);
+    const effect = await TacticsService.calculateTacticsEffect(req.teamId, opponentId);
+    res.json(effect);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== 기존 전술 시스템 =====
 
 // 포지션별 기본 플레이스타일
 const DEFAULT_PLAYSTYLES: Record<string, string> = {

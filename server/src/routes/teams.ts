@@ -262,26 +262,30 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: '이미 팀이 존재합니다' });
     }
 
-    const { name, abbreviation, logo_url, team_color } = req.body;
+    const { name, abbreviation, logo_url, team_color, region } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: '팀 이름을 입력해주세요' });
+    }
+
+    if (!region || !['SOUTH', 'NORTH'].includes(region)) {
+      return res.status(400).json({ error: '지역을 선택해주세요 (SOUTH 또는 NORTH)' });
     }
 
     // 약자 생성 (입력값 또는 팀 이름 앞 3글자)
     const teamAbbr = abbreviation?.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 3) ||
                      name.replace(/[^A-Za-z0-9]/g, '').substring(0, 3).toUpperCase();
 
-    // 팀 생성 (자동으로 LPO 2 LEAGUE로 배정, 기본 1억 골드)
+    // 팀 생성 (자동으로 1부 리그로 배정, 기본 1억 골드)
     const teamResult = await pool.query(
-      `INSERT INTO teams (user_id, name, abbreviation, league, logo_url, team_color, gold, diamond)
-       VALUES (?, ?, ?, 'SECOND', ?, ?, 100000000, 100)`,
-      [req.userId, name, teamAbbr, logo_url || null, team_color || '#1E3A8A']
+      `INSERT INTO teams (user_id, name, abbreviation, league, logo_url, team_color, gold, diamond, region, male_fans, female_fans)
+       VALUES (?, ?, ?, 'FIRST', ?, ?, 100000000, 100, ?, 500, 500)`,
+      [req.userId, name, teamAbbr, logo_url || null, team_color || '#1E3A8A', region]
     );
 
     const teamId = teamResult.insertId;
 
-    // AI 팀 대체 (LPO 2 LEAGUE에서 AI 팀 하나를 대체)
+    // AI 팀 대체 (1부 리그에서 AI 팀 하나를 대체)
     try {
       const replacement = await LPOLeagueService.replaceAITeam(teamId);
       console.log(`Team ${name} replaced AI team: ${replacement.replacedTeam}`);
@@ -289,7 +293,8 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
       console.error('AI team replacement failed:', replaceError.message);
       // 대체 실패 시 직접 리그에 등록
       const leagueResult = await pool.query(
-        "SELECT id FROM leagues WHERE region = 'SECOND' AND season = (SELECT MAX(season) FROM leagues WHERE region = 'SECOND')"
+        `SELECT id FROM leagues WHERE region = ? AND season = (SELECT MAX(season) FROM leagues WHERE region = ?)`,
+        [region, region]
       );
 
       if (leagueResult.length > 0) {
@@ -307,7 +312,8 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
       { expiresIn: '30d' }
     );
 
-    res.json({ teamId, token: newToken, message: '팀이 생성되었습니다. LPO 2 LEAGUE에 배정되었습니다.' });
+    const regionName = region === 'SOUTH' ? 'LPO SOUTH' : 'LPO NORTH';
+    res.json({ teamId, token: newToken, message: `팀이 생성되었습니다. ${regionName} 1부 리그에 배정되었습니다.` });
   } catch (error: any) {
     console.error('Create team error:', error);
     res.status(500).json({ error: '팀 생성에 실패했습니다: ' + (error.message || '알 수 없는 오류') });

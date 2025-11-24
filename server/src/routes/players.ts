@@ -370,18 +370,35 @@ router.post('/:playerId/uniform/upgrade', authenticateToken, async (req: AuthReq
     // 골드 차감
     await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [cost, req.teamId]);
 
+    // 재정 기록
+    await pool.query(
+      `INSERT INTO financial_records (team_id, record_type, category, amount, description)
+       VALUES (?, 'EXPENSE', 'OTHER', ?, ?)`,
+      [req.teamId, cost, `유니폼 강화 (Lv.${currentLevel} → Lv.${currentLevel + 1})`]
+    );
+
     if (success) {
-      // 강화 성공 - 레벨업
+      // 강화 성공 - 레벨업 + 스탯 증가
       const newLevel = currentLevel + 1;
+
+      // 스탯 증가: 레벨당 각 스탯 +1~2
+      const statBonus = Math.floor(Math.random() * 2) + 1;
       await pool.query(
-        'UPDATE player_cards SET level = ? WHERE id = ?',
-        [newLevel, cardId]
+        `UPDATE player_cards SET
+          level = ?,
+          mental = LEAST(200, mental + ?),
+          teamfight = LEAST(200, teamfight + ?),
+          focus = LEAST(200, focus + ?),
+          laning = LEAST(200, laning + ?)
+        WHERE id = ?`,
+        [newLevel, statBonus, statBonus, statBonus, statBonus, cardId]
       );
 
       res.json({
         success: true,
         level: newLevel,
-        message: `강화 성공! 레벨 ${newLevel}`
+        statBonus,
+        message: `강화 성공! 레벨 ${newLevel} (스탯 +${statBonus})`
       });
     } else {
       res.json({

@@ -31,6 +31,13 @@ import aiRoutes from './routes/ai.js';
 import scoutRoutes from './routes/scout.js';
 import cupRoutes from './routes/cup.js';
 import newsRoutes from './routes/news.js';
+import streamingRoutes from './routes/streaming.js';
+import fansRoutes from './routes/fans.js';
+import academyRoutes from './routes/academy.js';
+import mentalRoutes from './routes/mental.js';
+import loansRoutes from './routes/loans.js';
+import awardsRoutes from './routes/awards.js';
+import leagueStructureRoutes from './routes/leagueStructure.js';
 import { initializeDatabase } from './database/init.js';
 import { ProPlayerService } from './services/proPlayerService.js';
 import { initializeSeasonSystem } from './services/seasonService.js';
@@ -84,6 +91,13 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/scout', scoutRoutes);
 app.use('/api/cup', cupRoutes);
+app.use('/api/streaming', streamingRoutes);
+app.use('/api/fans', fansRoutes);
+app.use('/api/academy', academyRoutes);
+app.use('/api/mental', mentalRoutes);
+app.use('/api/loans', loansRoutes);
+app.use('/api/awards', awardsRoutes);
+app.use('/api/league-structure', leagueStructureRoutes);
 
 // 경기별 접속자 관리
 const matchViewers: Map<number, Map<string, string>> = new Map();

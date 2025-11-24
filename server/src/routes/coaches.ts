@@ -1,8 +1,65 @@
 import express from 'express';
 import pool from '../database/db.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { CoachService } from '../services/coachService.js';
 
 const router = express.Router();
+
+// ===== 새로운 코치 시스템 (계약 기반) =====
+
+// 고용 가능한 코치 목록
+router.get('/available', authenticateToken, async (req: any, res) => {
+  try {
+    const coaches = await CoachService.getAvailableCoaches(req.teamId);
+    res.json(coaches);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 팀의 현재 코치 목록 (계약)
+router.get('/contracts', authenticateToken, async (req: any, res) => {
+  try {
+    const coaches = await CoachService.getTeamCoaches(req.teamId);
+    res.json(coaches);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 코치 효과 조회
+router.get('/effects', authenticateToken, async (req: any, res) => {
+  try {
+    const effects = await CoachService.getCoachEffects(req.teamId);
+    res.json(effects);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 코치 고용
+router.post('/hire', authenticateToken, async (req: any, res) => {
+  try {
+    const { coachId, contractMonths } = req.body;
+    const result = await CoachService.hireCoach(req.teamId, coachId, contractMonths);
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// 코치 해고
+router.post('/fire', authenticateToken, async (req: any, res) => {
+  try {
+    const { teamCoachId } = req.body;
+    const result = await CoachService.fireCoach(req.teamId, teamCoachId);
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// ===== 기존 코치 시스템 =====
 
 // 내 감독/코치 목록
 router.get('/my', authenticateToken, async (req: AuthRequest, res) => {

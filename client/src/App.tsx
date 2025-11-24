@@ -25,6 +25,13 @@ import FriendlyMatch from './pages/FriendlyMatch';
 import LiveMatch from './pages/LiveMatch';
 import TeamInfo from './pages/TeamInfo';
 import PlayerProfile from './pages/PlayerProfile';
+import FansStreaming from './pages/FansStreaming';
+import SecondTeam from './pages/SecondTeam';
+import CoachManagement from './pages/CoachManagement';
+import MentalChemistry from './pages/MentalChemistry';
+import LoanMarket from './pages/LoanMarket';
+import Awards from './pages/Awards';
+import Worlds from './pages/Worlds';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import GlobalChat from './components/GlobalChat';
@@ -77,6 +84,13 @@ function App() {
             <Route path="friendly" element={<FriendlyMatch />} />
             <Route path="team-info" element={<TeamInfo />} />
             <Route path="player/:playerId" element={<PlayerProfile />} />
+            <Route path="fans-streaming" element={<FansStreaming />} />
+            <Route path="second-team" element={<SecondTeam />} />
+            <Route path="coaching" element={<CoachManagement />} />
+            <Route path="mental" element={<MentalChemistry />} />
+            <Route path="loans" element={<LoanMarket />} />
+            <Route path="awards" element={<Awards />} />
+            <Route path="worlds" element={<Worlds />} />
           </Route>
         </Routes>
       </Router>

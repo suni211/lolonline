@@ -278,5 +278,62 @@ router.get('/all-matches/recent', async (req, res) => {
   }
 });
 
+// 리그 순위 재계산 (모든 경기 결과 기반)
+router.post('/:leagueId/recalculate', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const leagueId = parseInt(req.params.leagueId);
+
+    // 모든 참가팀 순위 초기화
+    await pool.query(
+      'UPDATE league_participants SET wins = 0, losses = 0, draws = 0, points = 0 WHERE league_id = ?',
+      [leagueId]
+    );
+
+    // 완료된 경기 가져오기
+    const matches = await pool.query(
+      `SELECT home_team_id, away_team_id, home_score, away_score
+       FROM matches
+       WHERE league_id = ? AND status = 'FINISHED'`,
+      [leagueId]
+    );
+
+    // 각 경기 결과 반영
+    for (const match of matches) {
+      if (match.home_score > match.away_score) {
+        // 홈팀 승리
+        await pool.query(
+          'UPDATE league_participants SET wins = wins + 1, points = points + 3 WHERE league_id = ? AND team_id = ?',
+          [leagueId, match.home_team_id]
+        );
+        await pool.query(
+          'UPDATE league_participants SET losses = losses + 1 WHERE league_id = ? AND team_id = ?',
+          [leagueId, match.away_team_id]
+        );
+      } else if (match.away_score > match.home_score) {
+        // 원정팀 승리
+        await pool.query(
+          'UPDATE league_participants SET wins = wins + 1, points = points + 3 WHERE league_id = ? AND team_id = ?',
+          [leagueId, match.away_team_id]
+        );
+        await pool.query(
+          'UPDATE league_participants SET losses = losses + 1 WHERE league_id = ? AND team_id = ?',
+          [leagueId, match.home_team_id]
+        );
+      } else {
+        // 무승부
+        await pool.query(
+          'UPDATE league_participants SET draws = draws + 1, points = points + 1 WHERE league_id = ? AND team_id IN (?, ?)',
+          [leagueId, match.home_team_id, match.away_team_id]
+        );
+      }
+    }
+
+    res.json({ message: '순위가 재계산되었습니다', matches_processed: matches.length });
+  } catch (error: any) {
+    console.error('Recalculate standings error:', error);
+    res.status(500).json({ error: '순위 재계산 실패' });
+  }
+});
+
 export default router;
 

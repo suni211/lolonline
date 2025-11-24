@@ -4,6 +4,7 @@ import cron from 'node-cron';
 import { giveMatchExperience } from './playerService.js';
 import { checkInjuryAfterMatch, getInjuryPenalty } from './injuryService.js';
 import { EventService } from './eventService.js';
+import { NewsService } from './newsService.js';
 
 // 롤 게임 상수
 const GAME_CONSTANTS = {
@@ -1545,6 +1546,21 @@ async function processMatchEnd(match: any, matchData: any, homeScore: number, aw
     // 순위 업데이트 (리그 경기만)
     if (match.league_id) {
       await updateLeagueRankings(match.league_id);
+    }
+
+    // 뉴스 생성 (리그 경기만)
+    if (match.match_type === 'REGULAR' && homeScore !== awayScore) {
+      try {
+        await NewsService.generateMatchNews(
+          match.id,
+          winnerTeamId,
+          loserTeamId,
+          Math.max(homeScore, awayScore),
+          Math.min(homeScore, awayScore)
+        );
+      } catch (newsError) {
+        console.error('Error generating match news:', newsError);
+      }
     }
 
     // 벤치 선수 갈등 체크

@@ -234,13 +234,35 @@ router.get('/:contractId/penalty', authenticateToken, async (req: AuthRequest, r
 // 재정 기록 조회
 router.get('/financial-history', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const { days = 30 } = req.query;
+    const { days = 30, season } = req.query;
+
+    // 시즌 기반 필터링
+    let dateFilter = 'recorded_at >= DATE_SUB(NOW(), INTERVAL ? DAY)';
+    let dateParam: any = days;
+
+    if (season === 'current') {
+      // 현재 시즌 전체 조회 (시즌 시작부터 현재까지)
+      const currentSeason = await pool.query(
+        `SELECT start_date FROM seasons WHERE is_current = 1 LIMIT 1`
+      );
+      if (currentSeason.length > 0) {
+        dateFilter = 'recorded_at >= ?';
+        dateParam = currentSeason[0].start_date;
+      } else {
+        // 시즌 정보가 없으면 90일
+        dateParam = 90;
+      }
+    } else if (season === 'all') {
+      // 전체 기간
+      dateFilter = '1=1';
+      dateParam = null;
+    }
 
     const records = await pool.query(
       `SELECT * FROM financial_records
-       WHERE team_id = ? AND recorded_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+       WHERE team_id = ? AND ${dateFilter}
        ORDER BY recorded_at DESC`,
-      [req.teamId, days]
+      dateParam ? [req.teamId, dateParam] : [req.teamId]
     );
 
     // 일별 수입/지출 집계
@@ -250,10 +272,10 @@ router.get('/financial-history', authenticateToken, async (req: AuthRequest, res
         SUM(CASE WHEN record_type = 'INCOME' THEN amount ELSE 0 END) as income,
         SUM(CASE WHEN record_type = 'EXPENSE' THEN amount ELSE 0 END) as expense
        FROM financial_records
-       WHERE team_id = ? AND recorded_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+       WHERE team_id = ? AND ${dateFilter}
        GROUP BY DATE(recorded_at)
        ORDER BY date ASC`,
-      [req.teamId, days]
+      dateParam ? [req.teamId, dateParam] : [req.teamId]
     );
 
     // 카테고리별 집계
@@ -263,10 +285,10 @@ router.get('/financial-history', authenticateToken, async (req: AuthRequest, res
         record_type,
         SUM(amount) as total
        FROM financial_records
-       WHERE team_id = ? AND recorded_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+       WHERE team_id = ? AND ${dateFilter}
        GROUP BY category, record_type
        ORDER BY total DESC`,
-      [req.teamId, days]
+      dateParam ? [req.teamId, dateParam] : [req.teamId]
     );
 
     res.json({

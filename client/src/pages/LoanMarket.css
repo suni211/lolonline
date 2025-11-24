@@ -1,0 +1,218 @@
+.loan-market-page {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.loan-market-page h1 {
+  margin-bottom: 20px;
+  color: #e0e0e0;
+}
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tabs button {
+  padding: 10px 20px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  color: #888;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.tabs button.active {
+  background: #3a3a3a;
+  color: #fff;
+  border-color: #4a9eff;
+}
+
+.empty {
+  color: #666;
+  text-align: center;
+  padding: 40px;
+  background: #2a2a2a;
+  border-radius: 8px;
+}
+
+.player-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 15px;
+}
+
+.player-card {
+  background: #2a2a2a;
+  padding: 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.player-card:hover {
+  transform: translateY(-2px);
+}
+
+.player-card .position {
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.player-card .name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.player-card .overall {
+  font-size: 12px;
+  color: #4a9eff;
+  margin-bottom: 5px;
+}
+
+.player-card .team {
+  font-size: 11px;
+  color: #888;
+}
+
+/* Loan List Table */
+.loan-list {
+  background: #2a2a2a;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #3a3a3a;
+  font-size: 12px;
+}
+
+th {
+  color: #888;
+  font-weight: normal;
+  background: #1a1a1a;
+}
+
+td {
+  color: #e0e0e0;
+}
+
+td button {
+  padding: 5px 10px;
+  background: #ff6b6b;
+  border: none;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+td button:disabled {
+  background: #555;
+  cursor: not-allowed;
+}
+
+/* Modal */
+.loan-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #2a2a2a;
+  padding: 30px;
+  border-radius: 12px;
+  min-width: 350px;
+}
+
+.modal-content h2 {
+  margin-bottom: 15px;
+  color: #fff;
+  text-align: center;
+}
+
+.player-info {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 20px;
+  font-size: 12px;
+  color: #888;
+}
+
+.loan-options {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.loan-options label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  color: #888;
+}
+
+.loan-options select {
+  padding: 10px;
+  background: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  color: #fff;
+  border-radius: 4px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.modal-actions button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.modal-actions button:first-child {
+  background: #4a9eff;
+  color: #fff;
+}
+
+.modal-actions button.cancel {
+  background: #555;
+  color: #fff;
+}
+
+.modal-actions button:disabled {
+  background: #555;
+  cursor: not-allowed;
+}
+
+.loading {
+  text-align: center;
+  padding: 50px;
+  color: #888;
+}

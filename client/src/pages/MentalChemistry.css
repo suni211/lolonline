@@ -1,0 +1,242 @@
+.mental-chemistry-page {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.mental-chemistry-page h1 {
+  margin-bottom: 20px;
+  color: #e0e0e0;
+}
+
+.mental-chemistry-page h2 {
+  margin-bottom: 15px;
+  color: #e0e0e0;
+  font-size: 16px;
+}
+
+/* Chemistry Section */
+.chemistry-section {
+  background: #2a2a2a;
+  padding: 30px;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.chemistry-score {
+  font-size: 60px;
+  font-weight: bold;
+}
+
+.chemistry-label {
+  font-size: 14px;
+  color: #888;
+  margin-top: 5px;
+}
+
+/* Average Section */
+.average-section {
+  background: #2a2a2a;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.average-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.avg-stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avg-stat > span:first-child {
+  width: 80px;
+  font-size: 12px;
+  color: #888;
+}
+
+.avg-stat > span:last-child {
+  width: 30px;
+  font-size: 12px;
+  color: #fff;
+  text-align: right;
+}
+
+.avg-stat .bar {
+  flex: 1;
+  height: 8px;
+  background: #1a1a1a;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.avg-stat .fill {
+  height: 100%;
+  transition: width 0.3s;
+}
+
+/* Players Section */
+.players-section {
+  margin-bottom: 20px;
+}
+
+.player-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.player-mental-card {
+  background: #2a2a2a;
+  padding: 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.player-mental-card:hover {
+  transform: translateY(-2px);
+}
+
+.player-mental-card .position {
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.player-mental-card .name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.mental-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mini-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mini-bar span {
+  font-size: 10px;
+  color: #888;
+  width: 50px;
+}
+
+.bar-bg {
+  flex: 1;
+  height: 4px;
+  background: #1a1a1a;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  transition: width 0.3s;
+}
+
+/* Modal */
+.player-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #2a2a2a;
+  padding: 30px;
+  border-radius: 12px;
+  min-width: 350px;
+  max-width: 90%;
+}
+
+.modal-content h2 {
+  margin-bottom: 20px;
+  color: #fff;
+  text-align: center;
+  font-size: 18px;
+}
+
+.mental-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.mental-details .detail {
+  background: #1a1a1a;
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #888;
+}
+
+.care-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.care-options button {
+  padding: 12px;
+  background: #3a3a3a;
+  border: 1px solid #4a4a4a;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+}
+
+.care-options button:hover:not(:disabled) {
+  background: #4a4a4a;
+  border-color: #4a9eff;
+}
+
+.care-options button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.care-options button small {
+  color: #4ecdc4;
+  font-size: 11px;
+}
+
+.close-btn {
+  width: 100%;
+  padding: 10px;
+  background: #555;
+  border: none;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.loading {
+  text-align: center;
+  padding: 50px;
+  color: #888;
+}

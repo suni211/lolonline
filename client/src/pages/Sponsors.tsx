@@ -102,7 +102,7 @@ export default function Sponsors() {
         const response = await axios.get('/api/sponsors/my');
         setMyContracts(response.data);
       } else {
-        const response = await axios.get('/api/sponsors/financial-history?days=30');
+        const response = await axios.get('/api/sponsors/financial-history?season=current');
         setFinancialRecords(response.data.records);
         setDailySummary(response.data.dailySummary);
         setCategorySummary(response.data.categorySummary);
@@ -320,11 +320,11 @@ export default function Sponsors() {
         <div className="financial-section">
           <div className="financial-summary">
             <div className="summary-card income">
-              <h4>총 수입 (30일)</h4>
+              <h4>총 수입 (시즌)</h4>
               <p className="amount">+{totalIncome.toLocaleString()} 골드</p>
             </div>
             <div className="summary-card expense">
-              <h4>총 지출 (30일)</h4>
+              <h4>총 지출 (시즌)</h4>
               <p className="amount">-{totalExpense.toLocaleString()} 골드</p>
             </div>
             <div className="summary-card net">

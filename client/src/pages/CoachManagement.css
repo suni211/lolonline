@@ -1,0 +1,164 @@
+.coach-management-page {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.coach-management-page h1 {
+  margin-bottom: 20px;
+  color: #e0e0e0;
+}
+
+.coach-management-page h2 {
+  margin-bottom: 15px;
+  color: #e0e0e0;
+  font-size: 16px;
+}
+
+/* Effects Section */
+.effects-section {
+  background: #2a2a2a;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.effects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.effect-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  background: #1a1a1a;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.effect-item span:first-child {
+  color: #888;
+}
+
+.effect-item span:last-child {
+  color: #4ecdc4;
+  font-weight: bold;
+}
+
+.effect-item.overall {
+  background: #3a3a3a;
+}
+
+.effect-item.overall span:last-child {
+  color: #f9ca24;
+}
+
+/* Team Coaches Section */
+.team-coaches-section,
+.available-coaches-section {
+  margin-bottom: 30px;
+}
+
+.empty {
+  color: #666;
+  text-align: center;
+  padding: 30px;
+  background: #2a2a2a;
+  border-radius: 8px;
+}
+
+.coach-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 15px;
+}
+
+.coach-card {
+  background: #2a2a2a;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+.coach-card.hired {
+  border: 1px solid #4a9eff;
+}
+
+.coach-type {
+  font-size: 12px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.coach-name {
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.coach-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 8px;
+}
+
+.coach-specialty {
+  font-size: 11px;
+  color: #4a9eff;
+  margin-bottom: 10px;
+}
+
+.coach-salary {
+  font-size: 12px;
+  color: #f9ca24;
+  margin-bottom: 10px;
+}
+
+.contract-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 10px;
+}
+
+.hire-btn,
+.fire-btn {
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.hire-btn {
+  background: #4a9eff;
+  color: #fff;
+}
+
+.hire-btn:disabled {
+  background: #555;
+  cursor: not-allowed;
+}
+
+.fire-btn {
+  background: #ff6b6b;
+  color: #fff;
+}
+
+.fire-btn:disabled {
+  background: #555;
+  cursor: not-allowed;
+}
+
+.loading {
+  text-align: center;
+  padding: 50px;
+  color: #888;
+}
