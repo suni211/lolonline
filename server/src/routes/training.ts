@@ -69,10 +69,20 @@ router.post('/individual', authenticateToken, async (req: AuthRequest, res) => {
     // 골드 차감
     await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [cost, req.teamId]);
 
-    // 훈련 효과 계산 - 경험치 기반
-    const baseExpGain = 20 + (trainingLevel * 5); // 시설 레벨당 +5 경험치
-    const currentExp = card.exp || 0;
-    const newExp = currentExp + baseExpGain;
+    // 훈련 효과 계산 - 경험치 기반 (개선된 버전)
+    // 기본 경험치: 50 (이전: 20)
+    // 시설 레벨당 보너스: +10 (이전: +5)
+    // 추가 보너스: 조건이 좋으면 +10%, 낮으면 -20%
+    const baseExpGain = 50 + (trainingLevel * 10);
+
+    // 현재 상태에 따른 보너스 (조건이 좋으면 더 많은 경험치 획득)
+    const conditionBonus = card.condition >= 80 ? 1.1 :
+                          card.condition >= 60 ? 1.0 :
+                          card.condition >= 40 ? 0.9 : 0.8;
+
+    const finalExpGain = Math.floor(baseExpGain * conditionBonus);
+    const currentExp = card.experience || 0;
+    const newExp = currentExp + finalExpGain;
 
     // 선호 스탯 가져오기 (없으면 훈련하는 스탯으로 설정)
     let preferredStat = card.preferred_stat || stat_type;
@@ -85,26 +95,50 @@ router.post('/individual', authenticateToken, async (req: AuthRequest, res) => {
       remainingExp -= 100;
     }
 
-    // 스탯 증가 (레벨업 시 선호 스탯 자동 증가)
+    // 스탯 증가 (개선: 레벨업 시 선호 스탯당 2 증가, 다른 스탯도 1 증가)
     let actualStatIncrease = 0;
+    let otherStatIncreases: Record<string, number> = {};
     const statField = preferredStat.toLowerCase();
     const currentStat = card[statField as keyof typeof card] as number || 50;
     const maxStat = 200;
 
     if (levelUps > 0) {
-      actualStatIncrease = Math.min(levelUps, maxStat - currentStat);
+      // 선호 스탯 증가 (레벨당 2)
+      actualStatIncrease = Math.min(levelUps * 2, maxStat - currentStat);
 
       if (actualStatIncrease > 0) {
+        // 다른 스탯도 약간 증가 (레벨당 1)
+        const otherStats = ['MENTAL', 'TEAMFIGHT', 'FOCUS', 'LANING']
+          .filter(s => s !== preferredStat);
+
+        for (const otherStat of otherStats) {
+          const otherField = otherStat.toLowerCase();
+          const otherCurrentStat = card[otherField as keyof typeof card] as number || 50;
+          const otherIncrease = Math.min(levelUps, maxStat - otherCurrentStat);
+          if (otherIncrease > 0) {
+            otherStatIncreases[otherField] = otherIncrease;
+          }
+        }
+
         // 스탯 증가 및 레벨, 경험치 업데이트
-        await pool.query(
-          `UPDATE player_cards
-           SET ${statField} = LEAST(${statField} + ?, 200),
-               exp = ?,
-               level = COALESCE(level, 1) + ?,
-               preferred_stat = ?
-           WHERE id = ?`,
-          [actualStatIncrease, remainingExp, levelUps, preferredStat, player_id]
-        );
+        let updateQuery = `UPDATE player_cards SET
+          ${statField} = LEAST(${statField} + ?, 200),
+          experience = ?,
+          level = COALESCE(level, 0) + ?,
+          preferred_stat = ?,
+          condition = LEAST(condition + ?, 100)`;
+
+        const updateParams: any[] = [actualStatIncrease, remainingExp, levelUps, preferredStat, levelUps];
+
+        // 다른 스탯도 업데이트
+        for (const [field, increase] of Object.entries(otherStatIncreases)) {
+          updateQuery += `, ${field} = LEAST(${field} + ${increase}, 200)`;
+        }
+
+        updateQuery += ` WHERE id = ?`;
+        updateParams.push(player_id);
+
+        await pool.query(updateQuery, updateParams);
 
         // OVR 정확히 재계산
         const newStats = await pool.query('SELECT mental, teamfight, focus, laning FROM player_cards WHERE id = ?', [player_id]);
@@ -114,9 +148,11 @@ router.post('/individual', authenticateToken, async (req: AuthRequest, res) => {
         }
       }
     } else {
-      // 경험치만 업데이트, 선호 스탯 저장
+      // 경험치만 업데이트, 선호 스탯 저장, 조건 회복
       await pool.query(
-        `UPDATE player_cards SET exp = ?, preferred_stat = ? WHERE id = ?`,
+        `UPDATE player_cards
+         SET experience = ?, preferred_stat = ?, condition = LEAST(condition + 5, 100)
+         WHERE id = ?`,
         [remainingExp, preferredStat, player_id]
       );
     }
@@ -129,25 +165,32 @@ router.post('/individual', authenticateToken, async (req: AuthRequest, res) => {
     );
 
     // 응답 메시지 생성
-    let message = `훈련 완료! 경험치 +${baseExpGain}`;
+    const statNames: Record<string, string> = {
+      MENTAL: '멘탈',
+      TEAMFIGHT: '팀파이트',
+      FOCUS: '집중력',
+      LANING: '라인전'
+    };
+
+    let message = `훈련 완료! 경험치 +${finalExpGain}`;
     if (levelUps > 0) {
-      const statNames: Record<string, string> = {
-        MENTAL: '멘탈',
-        TEAMFIGHT: '팀파이트',
-        FOCUS: '집중력',
-        LANING: '라인전'
-      };
-      message += `, 레벨업 x${levelUps}! ${statNames[preferredStat] || preferredStat} +${actualStatIncrease}`;
+      message += `, 🎉 레벨업 x${levelUps}! ${statNames[preferredStat] || preferredStat} +${actualStatIncrease}`;
+      for (const [field, increase] of Object.entries(otherStatIncreases)) {
+        const fieldName = statNames[field.toUpperCase()] || field;
+        message += `, ${fieldName} +${increase}`;
+      }
     }
 
     res.json({
       message,
-      exp_gained: baseExpGain,
+      exp_gained: finalExpGain,
       current_exp: remainingExp,
       level_ups: levelUps,
       stat_increase: actualStatIncrease,
+      other_stat_increases: otherStatIncreases,
       preferred_stat: preferredStat,
-      cost
+      cost,
+      condition_bonus: conditionBonus !== 1.0 ? `${Math.round(conditionBonus * 100)}%` : 'Normal'
     });
   } catch (error: any) {
     console.error('Individual training error:', error);
@@ -212,23 +255,51 @@ router.post('/team', authenticateToken, async (req: AuthRequest, res) => {
     // 골드 차감
     await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [totalCost, req.teamId]);
 
-    // 팀 훈련 효과
-    const baseStatIncrease = Math.floor(1 + trainingLevel / 3);
+    // 팀 훈련 효과 (개선된 버전)
+    // 기본 스탯 증가: 2 (이전: 1)
+    // 시설 레벨당 보너스: +0.5 (이전: +0.33)
+    const baseStatIncrease = Math.floor(2 + trainingLevel * 0.5);
+
+    // 추가 경험치도 부여 (팀 훈련에서도 경험치 획득)
+    const baseTeamExpGain = 30 + (trainingLevel * 8);
 
     let totalStatIncrease = 0;
+    let totalExpGain = 0;
 
     for (const card of cards) {
+      // 조건에 따른 경험치 보너스
+      const conditionBonus = card.condition >= 80 ? 1.1 :
+                            card.condition >= 60 ? 1.0 :
+                            card.condition >= 40 ? 0.9 : 0.8;
+
+      const finalExpGain = Math.floor(baseTeamExpGain * conditionBonus);
+      const currentExp = card.experience || 0;
+      const newExp = currentExp + finalExpGain;
+
+      // 레벨업 확인
+      let levelUps = 0;
+      let remainingExp = newExp;
+      while (remainingExp >= 100) {
+        levelUps++;
+        remainingExp -= 100;
+      }
+
       // 스탯 증가
       const statField = stat_type.toLowerCase();
       const currentStat = card[statField as keyof typeof card] as number;
-      const actualStatIncrease = Math.min(baseStatIncrease, 200 - currentStat);
+      // 개선: 팀 훈련은 더 큰 스탯 증가 (기본값 * 1.5)
+      const actualStatIncrease = Math.min(Math.ceil(baseStatIncrease * 1.5), 200 - currentStat);
 
-      if (actualStatIncrease > 0) {
+      if (actualStatIncrease > 0 || finalExpGain > 0) {
+        // 경험치와 조건 회복도 포함
         await pool.query(
           `UPDATE player_cards
-           SET ${statField} = LEAST(${statField} + ?, 200)
+           SET ${statField} = LEAST(${statField} + ?, 200),
+               experience = ?,
+               level = COALESCE(level, 0) + ?,
+               condition = LEAST(condition + ?, 100)
            WHERE id = ?`,
-          [actualStatIncrease, card.id]
+          [actualStatIncrease, remainingExp, levelUps, Math.ceil(levelUps / 2), card.id]
         );
 
         // OVR 재계산
@@ -242,18 +313,21 @@ router.post('/team', authenticateToken, async (req: AuthRequest, res) => {
       // 훈련 기록
       await pool.query(
         `INSERT INTO player_training (player_id, team_id, training_type, stat_type, exp_gained, stat_increase)
-         VALUES (?, ?, 'TEAM', ?, 0, ?)`,
-        [card.id, req.teamId, stat_type, actualStatIncrease]
+         VALUES (?, ?, 'TEAM', ?, ?, ?)`,
+        [card.id, req.teamId, stat_type, finalExpGain, actualStatIncrease]
       );
 
       totalStatIncrease += actualStatIncrease;
+      totalExpGain += finalExpGain;
     }
 
     res.json({
-      message: 'Team training completed',
+      message: `팀 훈련 완료! ${cards.length}명의 선수가 훈련했습니다. 총 경험치 +${totalExpGain}`,
       players_trained: cards.length,
       total_stat_increase: totalStatIncrease,
-      cost: totalCost
+      total_exp_gain: totalExpGain,
+      cost: totalCost,
+      avg_exp_per_player: Math.floor(totalExpGain / cards.length)
     });
   } catch (error: any) {
     console.error('Team training error:', error);
