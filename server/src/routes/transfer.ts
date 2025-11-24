@@ -377,21 +377,43 @@ router.get('/player/:playerId', async (req, res) => {
 
     const player = players[0];
 
+    // 계약된 카드 확인
     const cards = await pool.query(
-      `SELECT pc.*, t.name as team_name FROM player_cards pc LEFT JOIN teams t ON pc.team_id = t.id WHERE pc.pro_player_id = ? AND pc.is_contracted = true`,
+      `SELECT pc.*, t.name as contracted_team_name FROM player_cards pc
+       LEFT JOIN teams t ON pc.team_id = t.id
+       WHERE pc.pro_player_id = ? AND pc.is_contracted = true`,
       [playerId]
     );
 
     const card = cards.length > 0 ? cards[0] : null;
 
-    const stats = await pool.query(
+    // 스탯 계산 (카드가 없으면 base_ovr 기반으로 추정)
+    let mental, teamfight, focus, laning, ovr;
+
+    if (card) {
+      mental = card.mental;
+      teamfight = card.teamfight;
+      focus = card.focus;
+      laning = card.laning;
+      ovr = card.ovr;
+    } else {
+      // 계약되지 않은 선수는 base_ovr 기반 추정 스탯
+      const baseOvr = player.overall;
+      const baseStat = baseOvr;
+      mental = baseStat;
+      teamfight = baseStat;
+      focus = baseStat;
+      laning = baseStat;
+      ovr = baseOvr;
+    }
+
+    const matchStats = card ? (await pool.query(
       `SELECT COUNT(*) as total_games, SUM(ms.kills) as total_kills, SUM(ms.deaths) as total_deaths,
               SUM(ms.assists) as total_assists, SUM(ms.damage_dealt) as total_damage, AVG(ms.damage_dealt) as avg_damage
        FROM match_stats ms WHERE ms.player_id = ?`,
-      [card?.id || 0]
-    );
+      [card.id]
+    ))[0] : { total_games: 0, total_kills: 0, total_deaths: 0, total_assists: 0, total_damage: 0, avg_damage: 0 };
 
-    const matchStats = stats[0];
     const dpm = matchStats.avg_damage ? Math.round(matchStats.avg_damage / 25) : 0;
 
     let personalityInfo = null;
@@ -412,7 +434,7 @@ router.get('/player/:playerId', async (req, res) => {
     );
 
     let damageRank = 0, killsRank = 0, kdaRank = 0, dpmRank = 0;
-    const totalPlayers = allPlayers.length;
+    const totalPlayers = allPlayers.length || 1;
 
     if (card) {
       const sortedByDamage = [...allPlayers].sort((a: any, b: any) => (b.total_damage || 0) - (a.total_damage || 0));
@@ -432,14 +454,19 @@ router.get('/player/:playerId', async (req, res) => {
         name: player.name,
         position: player.position,
         nationality: player.nationality,
-        team: player.team,
+        original_team: player.team,  // 팀컬러 (원래 소속팀)
         league: player.league,
         face_image: player.face_image,
-        overall: card?.ovr || player.overall
+        overall: ovr
       },
-      stats: card ? { mental: card.mental, teamfight: card.teamfight, focus: card.focus, laning: card.laning } : null,
+      contract: card ? {
+        team_id: card.team_id,
+        team_name: card.contracted_team_name,
+        is_starter: card.is_starter
+      } : null,  // 계약 정보 (없으면 FA)
+      stats: { mental, teamfight, focus, laning },
       personality: personalityInfo,
-      salary: (card?.ovr || player.overall) * 100000,
+      salary: ovr * 100000,
       career_stats: {
         total_games: matchStats.total_games || 0,
         total_kills: matchStats.total_kills || 0,
@@ -449,13 +476,13 @@ router.get('/player/:playerId', async (req, res) => {
         avg_dpm: dpm,
         kda: matchStats.total_deaths > 0 ? (matchStats.total_kills + matchStats.total_assists) / matchStats.total_deaths : 0
       },
-      rankings: {
+      rankings: card ? {
         damage_rank: damageRank || totalPlayers,
         kills_rank: killsRank || totalPlayers,
         kda_rank: kdaRank || totalPlayers,
         dpm_rank: dpmRank || totalPlayers,
         total_players: totalPlayers
-      }
+      } : null
     });
   } catch (error: any) {
     console.error('Profile error:', error);

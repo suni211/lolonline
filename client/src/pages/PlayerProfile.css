@@ -116,6 +116,36 @@
   border-radius: 4px;
 }
 
+.team-color {
+  font-weight: 600;
+}
+
+.contract-status {
+  margin-top: 0.75rem;
+}
+
+.contract-status .contracted {
+  color: #51cf66;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  background-color: rgba(81, 207, 102, 0.2);
+  border-radius: 4px;
+}
+
+.contract-status .fa-status {
+  color: #ffd43b;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  background-color: rgba(255, 212, 59, 0.2);
+  border-radius: 4px;
+}
+
+.estimated {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: normal;
+}
+
 /* 프로필 콘텐츠 */
 .profile-content {
   display: flex;

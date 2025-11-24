@@ -8,10 +8,16 @@ interface PlayerInfo {
   name: string;
   position: string;
   nationality: string;
-  team: string;
+  original_team: string;  // 팀컬러
   league: string;
   face_image: string;
   overall: number;
+}
+
+interface ContractInfo {
+  team_id: number;
+  team_name: string;
+  is_starter: boolean;
 }
 
 interface CardStats {
@@ -47,11 +53,12 @@ interface Rankings {
 
 interface ProfileData {
   player: PlayerInfo;
-  stats: CardStats | null;
+  contract: ContractInfo | null;  // 계약 정보 (null이면 FA)
+  stats: CardStats;
   personality: PersonalityInfo | null;
   salary: number;
   career_stats: CareerStats;
-  rankings: Rankings;
+  rankings: Rankings | null;
 }
 
 export default function PlayerProfile() {
@@ -124,7 +131,7 @@ export default function PlayerProfile() {
     );
   }
 
-  const { player, stats, personality, salary, career_stats, rankings } = profile;
+  const { player, contract, stats, personality, salary, career_stats, rankings } = profile;
 
   return (
     <div className="player-profile-page page-wrapper">
@@ -157,9 +164,18 @@ export default function PlayerProfile() {
             </span>
           </div>
           <div className="player-details">
-            <span>{player.team}</span>
+            <span className="team-color">{player.original_team}</span>
             <span>{player.league}</span>
             <span>{player.nationality}</span>
+          </div>
+          <div className="contract-status">
+            {contract ? (
+              <span className="contracted">
+                계약: {contract.team_name} {contract.is_starter && '(스타터)'}
+              </span>
+            ) : (
+              <span className="fa-status">FA (미계약)</span>
+            )}
           </div>
         </div>
       </div>
@@ -172,53 +188,51 @@ export default function PlayerProfile() {
           </div>
         </div>
 
-        {stats && (
-          <div className="profile-section">
-            <h2>스탯</h2>
-            <div className="stats-grid">
-              <div className="stat-item">
-                <span className="stat-label">멘탈</span>
-                <div className="stat-bar">
-                  <div
-                    className="stat-fill"
-                    style={{ width: `${stats.mental}%`, backgroundColor: '#ff6b6b' }}
-                  />
-                </div>
-                <span className="stat-value">{stats.mental}</span>
+        <div className="profile-section">
+          <h2>스탯 {!contract && <span className="estimated">(추정치)</span>}</h2>
+          <div className="stats-grid">
+            <div className="stat-item">
+              <span className="stat-label">멘탈</span>
+              <div className="stat-bar">
+                <div
+                  className="stat-fill"
+                  style={{ width: `${Math.min(stats.mental, 100)}%`, backgroundColor: '#ff6b6b' }}
+                />
               </div>
-              <div className="stat-item">
-                <span className="stat-label">팀파이트</span>
-                <div className="stat-bar">
-                  <div
-                    className="stat-fill"
-                    style={{ width: `${stats.teamfight}%`, backgroundColor: '#51cf66' }}
-                  />
-                </div>
-                <span className="stat-value">{stats.teamfight}</span>
+              <span className="stat-value">{stats.mental}</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">팀파이트</span>
+              <div className="stat-bar">
+                <div
+                  className="stat-fill"
+                  style={{ width: `${Math.min(stats.teamfight, 100)}%`, backgroundColor: '#51cf66' }}
+                />
               </div>
-              <div className="stat-item">
-                <span className="stat-label">집중력</span>
-                <div className="stat-bar">
-                  <div
-                    className="stat-fill"
-                    style={{ width: `${stats.focus}%`, backgroundColor: '#339af0' }}
-                  />
-                </div>
-                <span className="stat-value">{stats.focus}</span>
+              <span className="stat-value">{stats.teamfight}</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">집중력</span>
+              <div className="stat-bar">
+                <div
+                  className="stat-fill"
+                  style={{ width: `${Math.min(stats.focus, 100)}%`, backgroundColor: '#339af0' }}
+                />
               </div>
-              <div className="stat-item">
-                <span className="stat-label">라인전</span>
-                <div className="stat-bar">
-                  <div
-                    className="stat-fill"
-                    style={{ width: `${stats.laning}%`, backgroundColor: '#ffd43b' }}
-                  />
-                </div>
-                <span className="stat-value">{stats.laning}</span>
+              <span className="stat-value">{stats.focus}</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">라인전</span>
+              <div className="stat-bar">
+                <div
+                  className="stat-fill"
+                  style={{ width: `${Math.min(stats.laning, 100)}%`, backgroundColor: '#ffd43b' }}
+                />
               </div>
+              <span className="stat-value">{stats.laning}</span>
             </div>
           </div>
-        )}
+        </div>
 
         {personality && (
           <div className="profile-section">
@@ -264,7 +278,7 @@ export default function PlayerProfile() {
           </div>
         </div>
 
-        {rankings.total_players > 0 && (
+        {rankings && rankings.total_players > 0 && (
           <div className="profile-section">
             <h2>순위 ({rankings.total_players}명 중)</h2>
             <div className="rankings-grid">
