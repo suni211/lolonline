@@ -120,7 +120,7 @@ export default function FriendlyMatch() {
         <div className="opponents-section">
           <div className="section-header">
             <h2>상대 팀 선택</h2>
-            <p>AI 팀과 친선전을 통해 골드와 경험치를 획득하세요</p>
+            <p>AI 팀과 친선전을 통해 원와 경험치를 획득하세요</p>
           </div>
 
           <div className="opponents-grid">
@@ -182,9 +182,9 @@ export default function FriendlyMatch() {
           <div className="rewards-info">
             <h3>보상 안내</h3>
             <ul>
-              <li>승리: 50,000골드 + 킬당 5,000골드</li>
-              <li>패배: 20,000골드</li>
-              <li>무승부: 35,000골드</li>
+              <li>승리: 50,000원 + 킬당 5,000원</li>
+              <li>패배: 20,000원</li>
+              <li>무승부: 35,000원</li>
               <li>경험치: 리그전의 50%</li>
             </ul>
           </div>

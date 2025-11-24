@@ -125,7 +125,7 @@ export default function Cards() {
 
   const openPack = async (packId: number, price: number) => {
     if (!team || team.gold < price) {
-      alert('골드가 부족합니다!');
+      alert('원가 부족합니다!');
       return;
     }
 

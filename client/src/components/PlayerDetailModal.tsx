@@ -384,7 +384,7 @@ export default function PlayerDetailModal({ player, onClose, onUpdate }: PlayerD
                 )}
                 {player.uniform_level < 10 && (
                   <button onClick={handleUniformUpgrade} className="btn-primary">
-                    유니폼 강화 (비용: {(500000 * Math.pow(2, player.uniform_level)).toLocaleString()} 골드)
+                    유니폼 강화 (비용: {(500000 * Math.pow(2, player.uniform_level)).toLocaleString()} 원)
                   </button>
                 )}
               </div>

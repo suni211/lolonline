@@ -218,16 +218,16 @@ export default function Facilities() {
                 <div className="facility-stats">
                   <div className="stat-row">
                     <span>시간당 수익</span>
-                    <span className="revenue">+{facility?.revenue_per_hour.toLocaleString()} 골드</span>
+                    <span className="revenue">+{facility?.revenue_per_hour.toLocaleString()} 원</span>
                   </div>
                   <div className="stat-row">
                     <span>유지비</span>
-                    <span className="cost">-{facility?.maintenance_cost.toLocaleString()} 골드</span>
+                    <span className="cost">-{facility?.maintenance_cost.toLocaleString()} 원</span>
                   </div>
                   <div className="stat-row net-revenue">
                     <span>순수익 (시간당)</span>
                     <span className={netRevenue >= 0 ? 'positive' : 'negative'}>
-                      {netRevenue >= 0 ? '+' : ''}{netRevenue.toLocaleString()} 골드
+                      {netRevenue >= 0 ? '+' : ''}{netRevenue.toLocaleString()} 원
                     </span>
                   </div>
                 </div>
@@ -246,7 +246,7 @@ export default function Facilities() {
                     disabled={loading}
                     className="btn-primary"
                   >
-                    {level === 0 ? '건설' : '업그레이드'} ({formatCost(upgradeCost)} 골드)
+                    {level === 0 ? '건설' : '업그레이드'} ({formatCost(upgradeCost)} 원)
                   </button>
                 ) : (
                   <button disabled className="btn-secondary">

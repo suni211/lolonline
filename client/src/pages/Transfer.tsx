@@ -403,7 +403,7 @@ export default function Transfer() {
 
   const buyCard = async (listingId: number, price: number) => {
     if (!team || team.gold < price) {
-      alert('골드가 부족합니다!');
+      alert('원가 부족합니다!');
       return;
     }
 
@@ -444,7 +444,7 @@ export default function Transfer() {
 
     const price = parseInt(offerPrice);
     if (!team || team.gold < price) {
-      alert('골드가 부족합니다!');
+      alert('원가 부족합니다!');
       return;
     }
 

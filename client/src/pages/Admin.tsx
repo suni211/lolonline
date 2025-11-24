@@ -419,14 +419,14 @@ export default function Admin() {
   };
 
   const addGoldToAllTeams = async () => {
-    if (!confirm(`모든 유저 팀에 ${goldAmount.toLocaleString()} 골드를 지급하시겠습니까?`)) return;
+    if (!confirm(`모든 유저 팀에 ${goldAmount.toLocaleString()} 원를 지급하시겠습니까?`)) return;
     try {
       setLoading(true);
       const res = await axios.post('/api/admin/teams/add-gold-all', { amount: goldAmount });
       setMessage(res.data.message);
       fetchData();
     } catch (error: any) {
-      setMessage(error.response?.data?.error || '골드 지급 실패');
+      setMessage(error.response?.data?.error || '원 지급 실패');
     } finally {
       setLoading(false);
     }
@@ -588,7 +588,7 @@ export default function Admin() {
           </div>
 
           <div className="gold-section">
-            <h3>골드 지급</h3>
+            <h3>원 지급</h3>
             <div className="gold-controls">
               <input
                 type="number"

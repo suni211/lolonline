@@ -60,7 +60,7 @@ interface Standing {
 
 export default function Leagues() {
   const [leagues, setLeagues] = useState<League[]>([]);
-  const [selectedTier, setSelectedTier] = useState<'SUPER' | 'FIRST' | 'SECOND'>('SUPER');
+  const [selectedTier, setSelectedTier] = useState<'SOUTH' | 'NORTH'>('SOUTH');
   const [standings, setStandings] = useState<Standing[]>([]);
   const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
   const [playoffBracket, setPlayoffBracket] = useState<any[]>([]);
@@ -106,31 +106,23 @@ export default function Leagues() {
 
   const getTierName = (tier: string) => {
     switch (tier) {
-      case 'SUPER': return 'LPO SUPER LEAGUE';
-      case 'FIRST': return 'LPO 1 LEAGUE';
-      case 'SECOND': return 'LPO 2 LEAGUE';
+      case 'SOUTH': return 'LPO SOUTH';
+      case 'NORTH': return 'LPO NORTH';
       default: return tier;
     }
   };
 
   const getTierDescription = (tier: string) => {
     switch (tier) {
-      case 'SUPER': return '1부 리그 - 최상위 10팀';
-      case 'FIRST': return '2부 리그 - 10팀';
-      case 'SECOND': return '3부 리그 - 12팀 (신규 팀 시작)';
+      case 'SOUTH': return '남부 리그 - 16팀';
+      case 'NORTH': return '북부 리그 - 16팀';
       default: return '';
     }
   };
 
-  const getPromotionInfo = (tier: string, rank: number, totalTeams: number) => {
-    if (tier === 'SUPER') {
-      if (rank >= totalTeams - 1) return 'relegation'; // 하위 2팀 강등
-    } else if (tier === 'FIRST') {
-      if (rank <= 2) return 'promotion'; // 상위 2팀 승격
-      if (rank >= totalTeams - 1) return 'relegation'; // 하위 2팀 강등
-    } else if (tier === 'SECOND') {
-      if (rank <= 2) return 'promotion'; // 상위 2팀 승격
-    }
+  const getPromotionInfo = (_tier: string, rank: number, _totalTeams: number) => {
+    // SOUTH/NORTH는 상위 4팀이 WORLDS 진출
+    if (rank <= 4) return 'promotion'; // 상위 4팀 WORLDS
     return '';
   };
 
@@ -140,25 +132,18 @@ export default function Leagues() {
 
       <div className="tier-selector">
         <button
-          onClick={() => setSelectedTier('SUPER')}
-          className={`tier-btn super ${selectedTier === 'SUPER' ? 'active' : ''}`}
+          onClick={() => setSelectedTier('SOUTH')}
+          className={`tier-btn south ${selectedTier === 'SOUTH' ? 'active' : ''}`}
         >
-          <div className="tier-name">SUPER</div>
-          <div className="tier-sub">1부</div>
+          <div className="tier-name">SOUTH</div>
+          <div className="tier-sub">남부</div>
         </button>
         <button
-          onClick={() => setSelectedTier('FIRST')}
-          className={`tier-btn first ${selectedTier === 'FIRST' ? 'active' : ''}`}
+          onClick={() => setSelectedTier('NORTH')}
+          className={`tier-btn north ${selectedTier === 'NORTH' ? 'active' : ''}`}
         >
-          <div className="tier-name">1 LEAGUE</div>
-          <div className="tier-sub">2부</div>
-        </button>
-        <button
-          onClick={() => setSelectedTier('SECOND')}
-          className={`tier-btn second ${selectedTier === 'SECOND' ? 'active' : ''}`}
-        >
-          <div className="tier-name">2 LEAGUE</div>
-          <div className="tier-sub">3부</div>
+          <div className="tier-name">NORTH</div>
+          <div className="tier-sub">북부</div>
         </button>
       </div>
 
@@ -176,8 +161,7 @@ export default function Leagues() {
           </div>
 
           <div className="promotion-legend">
-            <span className="legend-item promotion">승격권</span>
-            <span className="legend-item relegation">강등권</span>
+            <span className="legend-item promotion">WORLDS 진출</span>
             <span className="legend-item ai-team">AI 팀</span>
           </div>
 
@@ -231,7 +215,6 @@ export default function Leagues() {
                       key={idx}
                       className={`
                         ${promoStatus === 'promotion' ? 'promotion-zone' : ''}
-                        ${promoStatus === 'relegation' ? 'relegation-zone' : ''}
                         ${standing.is_ai ? 'ai-team-row' : ''}
                       `}
                     >

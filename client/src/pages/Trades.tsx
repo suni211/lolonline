@@ -124,7 +124,7 @@ export default function Trades() {
                 <p className="position">{trade.position}</p>
                 <p className="overall">오버롤: {trade.overall}</p>
                 <div className="price">
-                  {trade.price_gold && <span>골드: {trade.price_gold.toLocaleString()}</span>}
+                  {trade.price_gold && <span>원: {trade.price_gold.toLocaleString()}</span>}
                   {trade.price_diamond && <span>다이아: {trade.price_diamond}</span>}
                 </div>
                 <p className="seller">판매자: {trade.seller_team_name}</p>
@@ -147,7 +147,7 @@ export default function Trades() {
                 <p className="position">{trade.position}</p>
                 <p className="overall">오버롤: {trade.overall}</p>
                 <div className="price">
-                  {trade.price_gold && <span>골드: {trade.price_gold.toLocaleString()}</span>}
+                  {trade.price_gold && <span>원: {trade.price_gold.toLocaleString()}</span>}
                   {trade.price_diamond && <span>다이아: {trade.price_diamond}</span>}
                 </div>
                 <p className="status">상태: {trade.status}</p>
@@ -174,7 +174,7 @@ export default function Trades() {
                   checked={exchangeType === 'GOLD_TO_DIAMOND'}
                   onChange={(e) => setExchangeType(e.target.value as any)}
                 />
-                골드 → 다이아몬드 (1,000골드 = 1다이아)
+                원 → 다이아몬드 (1,000원 = 1다이아)
               </label>
               <label>
                 <input
@@ -183,7 +183,7 @@ export default function Trades() {
                   checked={exchangeType === 'DIAMOND_TO_GOLD'}
                   onChange={(e) => setExchangeType(e.target.value as any)}
                 />
-                다이아몬드 → 골드 (1다이아 = 1,000골드)
+                다이아몬드 → 원 (1다이아 = 1,000원)
               </label>
             </div>
             <div className="exchange-input">
@@ -199,7 +199,7 @@ export default function Trades() {
             </div>
             {team && (
               <div className="current-balance">
-                <p>현재 보유: 골드 {team.gold.toLocaleString()} | 다이아 {team.diamond}</p>
+                <p>현재 보유: 원 {team.gold.toLocaleString()} | 다이아 {team.diamond}</p>
               </div>
             )}
           </div>

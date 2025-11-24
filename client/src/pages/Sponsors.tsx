@@ -135,7 +135,7 @@ export default function Sponsors() {
       const { penaltyFee, remainingMonths } = penaltyResponse.data;
 
       const confirmMessage = penaltyFee > 0
-        ? `정말 계약을 해지하시겠습니까?\n\n남은 기간: ${remainingMonths}개월\n위약금: ${penaltyFee.toLocaleString()} 골드`
+        ? `정말 계약을 해지하시겠습니까?\n\n남은 기간: ${remainingMonths}개월\n위약금: ${penaltyFee.toLocaleString()} 원`
         : '정말 계약을 해지하시겠습니까?';
 
       if (!confirm(confirmMessage)) {
@@ -145,7 +145,7 @@ export default function Sponsors() {
 
       const response = await axios.post(`/api/sponsors/${contractId}/terminate`);
       const message = response.data.penaltyFee > 0
-        ? `${response.data.message}\n위약금 ${response.data.penaltyFee.toLocaleString()} 골드가 차감되었습니다.`
+        ? `${response.data.message}\n위약금 ${response.data.penaltyFee.toLocaleString()} 원가 차감되었습니다.`
         : response.data.message;
       alert(message);
       fetchData();
@@ -235,11 +235,11 @@ export default function Sponsors() {
                 <div className="sponsor-details">
                   <div className="detail-row">
                     <span>월 지급액</span>
-                    <span className="value">{sponsor.base_payment.toLocaleString()} 골드</span>
+                    <span className="value">{sponsor.base_payment.toLocaleString()} 원</span>
                   </div>
                   <div className="detail-row">
                     <span>승리 보너스</span>
-                    <span className="value">+{sponsor.bonus_per_win.toLocaleString()} 골드</span>
+                    <span className="value">+{sponsor.bonus_per_win.toLocaleString()} 원</span>
                   </div>
                   <div className="detail-row">
                     <span>계약 기간</span>
@@ -284,15 +284,15 @@ export default function Sponsors() {
                   <div className="contract-details">
                     <div className="detail-row">
                       <span>월 지급액</span>
-                      <span className="value">{contract.monthly_payment.toLocaleString()} 골드</span>
+                      <span className="value">{contract.monthly_payment.toLocaleString()} 원</span>
                     </div>
                     <div className="detail-row">
                       <span>승리 보너스</span>
-                      <span className="value">+{contract.bonus_per_win.toLocaleString()} 골드</span>
+                      <span className="value">+{contract.bonus_per_win.toLocaleString()} 원</span>
                     </div>
                     <div className="detail-row">
                       <span>총 수익</span>
-                      <span className="value total">{contract.total_earnings.toLocaleString()} 골드</span>
+                      <span className="value total">{contract.total_earnings.toLocaleString()} 원</span>
                     </div>
                     <div className="detail-row">
                       <span>계약 기간</span>
@@ -321,16 +321,16 @@ export default function Sponsors() {
           <div className="financial-summary">
             <div className="summary-card income">
               <h4>총 수입 (시즌)</h4>
-              <p className="amount">+{totalIncome.toLocaleString()} 골드</p>
+              <p className="amount">+{totalIncome.toLocaleString()} 원</p>
             </div>
             <div className="summary-card expense">
               <h4>총 지출 (시즌)</h4>
-              <p className="amount">-{totalExpense.toLocaleString()} 골드</p>
+              <p className="amount">-{totalExpense.toLocaleString()} 원</p>
             </div>
             <div className="summary-card net">
               <h4>순수익</h4>
               <p className={`amount ${totalIncome - totalExpense >= 0 ? 'positive' : 'negative'}`}>
-                {(totalIncome - totalExpense >= 0 ? '+' : '')}{(totalIncome - totalExpense).toLocaleString()} 골드
+                {(totalIncome - totalExpense >= 0 ? '+' : '')}{(totalIncome - totalExpense).toLocaleString()} 원
               </p>
             </div>
           </div>
@@ -358,7 +358,7 @@ export default function Sponsors() {
                   <YAxis tick={{ fill: '#fff' }} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #1e3a8a', color: '#fff' }}
-                    formatter={(value: number) => [value.toLocaleString() + ' 골드']}
+                    formatter={(value: number) => [value.toLocaleString() + ' 원']}
                   />
                   <Legend />
                   <Area type="monotone" dataKey="income" name="수입" stroke="#34d399" fillOpacity={1} fill="url(#colorIncome)" />
@@ -387,7 +387,7 @@ export default function Sponsors() {
                         <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number) => value.toLocaleString() + ' 골드'} />
+                    <Tooltip formatter={(value: number) => value.toLocaleString() + ' 원'} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -413,7 +413,7 @@ export default function Sponsors() {
                         <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number) => value.toLocaleString() + ' 골드'} />
+                    <Tooltip formatter={(value: number) => value.toLocaleString() + ' 원'} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -433,7 +433,7 @@ export default function Sponsors() {
                   </div>
                   <div className="record-amount">
                     <span className={record.record_type === 'INCOME' ? 'positive' : 'negative'}>
-                      {record.record_type === 'INCOME' ? '+' : '-'}{record.amount.toLocaleString()} 골드
+                      {record.record_type === 'INCOME' ? '+' : '-'}{record.amount.toLocaleString()} 원
                     </span>
                     <span className="record-date">{formatDate(record.recorded_at)}</span>
                   </div>

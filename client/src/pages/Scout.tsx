@@ -272,7 +272,7 @@ export default function Scout() {
           <h2>스카우터 영입</h2>
           <div className="hire-scouter-box">
             <p className="hire-description">
-              골드를 투자하여 스카우터를 영입하세요.
+              원를 투자하여 스카우터를 영입하세요.
               더 많이 투자할수록 높은 등급의 스카우터를 얻을 확률이 높아집니다.
             </p>
             <div className="hire-controls">
@@ -280,12 +280,12 @@ export default function Scout() {
                 value={hireCost}
                 onChange={(e) => setHireCost(parseInt(e.target.value))}
               >
-                <option value={1000000}>100만 골드 (1~2성 확률 높음)</option>
-                <option value={5000000}>500만 골드 (2성 확률 높음)</option>
-                <option value={10000000}>1000만 골드 (2~3성 확률 높음)</option>
-                <option value={20000000}>2000만 골드 (3성 확률 높음)</option>
-                <option value={50000000}>5000만 골드 (3~4성 확률 높음)</option>
-                <option value={100000000}>1억 골드 (4~5성 확률 높음)</option>
+                <option value={1000000}>100만 원 (1~2성 확률 높음)</option>
+                <option value={5000000}>500만 원 (2성 확률 높음)</option>
+                <option value={10000000}>1000만 원 (2~3성 확률 높음)</option>
+                <option value={20000000}>2000만 원 (3성 확률 높음)</option>
+                <option value={50000000}>5000만 원 (3~4성 확률 높음)</option>
+                <option value={100000000}>1억 원 (4~5성 확률 높음)</option>
               </select>
               <button
                 className="hire-btn"

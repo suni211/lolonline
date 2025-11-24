@@ -210,7 +210,7 @@ export default function LiveMatch() {
       setHomeSetWins(data.home_set_wins);
       setAwaySetWins(data.away_set_wins);
       setGameTime(0);
-      // 킬/골드 초기화
+      // 킬/원 초기화
       setHomeState(prev => prev ? {
         ...prev,
         kills: 0,
@@ -840,7 +840,7 @@ export default function LiveMatch() {
           <div className="gold-diff">
             {homeState && awayState && (
               <span className={homeState.gold > awayState.gold ? 'home-lead' : 'away-lead'}>
-                {formatGold(Math.abs(homeState.gold - awayState.gold))} 골드 차
+                {formatGold(Math.abs(homeState.gold - awayState.gold))} 원 차
               </span>
             )}
           </div>

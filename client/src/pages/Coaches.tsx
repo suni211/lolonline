@@ -102,7 +102,7 @@ export default function Coaches() {
                   checked={scoutCost === 'gold'}
                   onChange={(e) => setScoutCost(e.target.value as 'gold' | 'diamond')}
                 />
-                골드 2,000
+                원 2,000
               </label>
               <label>
                 <input
@@ -148,7 +148,7 @@ export default function Coaches() {
                 </div>
                 <div className="stat-row">
                   <span>연봉</span>
-                  <span>{coach.salary.toLocaleString()} 골드</span>
+                  <span>{coach.salary.toLocaleString()} 원</span>
                 </div>
               </div>
             </div>

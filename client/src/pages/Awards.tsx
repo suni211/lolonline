@@ -123,7 +123,7 @@ export default function Awards() {
                   </div>
                   <div className="player-name">{award.player_name}</div>
                   <div className="team-name">{award.team_name}</div>
-                  <div className="prize">{award.prize_gold.toLocaleString()} 골드</div>
+                  <div className="prize">{award.prize_gold.toLocaleString()} 원</div>
                 </div>
               ))}
             </div>

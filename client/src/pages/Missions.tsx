@@ -59,7 +59,7 @@ export default function Missions() {
       if (response.data.already_claimed) {
         alert(`이미 출석했습니다. (연속 ${response.data.day}일)`);
       } else {
-        alert(`출석 완료! 연속 ${response.data.day}일 (골드 +${response.data.reward_gold}, 다이아 +${response.data.reward_diamond})`);
+        alert(`출석 완료! 연속 ${response.data.day}일 (원 +${response.data.reward_gold}, 다이아 +${response.data.reward_diamond})`);
         setAttendanceDay(response.data.day);
         window.location.reload();
       }
@@ -111,7 +111,7 @@ export default function Missions() {
                   </div>
                   <div className="mission-rewards">
                     {mission.reward_gold > 0 && (
-                      <span className="reward">골드: {mission.reward_gold.toLocaleString()}</span>
+                      <span className="reward">원: {mission.reward_gold.toLocaleString()}</span>
                     )}
                     {mission.reward_diamond > 0 && (
                       <span className="reward">다이아: {mission.reward_diamond}</span>
@@ -161,7 +161,7 @@ export default function Missions() {
                   </div>
                   <div className="mission-rewards">
                     {mission.reward_gold > 0 && (
-                      <span className="reward">골드: {mission.reward_gold.toLocaleString()}</span>
+                      <span className="reward">원: {mission.reward_gold.toLocaleString()}</span>
                     )}
                     {mission.reward_diamond > 0 && (
                       <span className="reward">다이아: {mission.reward_diamond}</span>
