@@ -369,3 +369,14 @@
 .recharts-tooltip-label {
   color: #fff !important;
 }
+
+/* 파이 차트 라벨 색상 */
+.recharts-pie-label-text {
+  fill: #fff !important;
+  font-size: 11px;
+}
+
+/* 바 차트 라벨 색상 */
+.recharts-bar-rectangle text {
+  fill: #fff !important;
+}
