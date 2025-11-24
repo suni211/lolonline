@@ -9,6 +9,7 @@ export default function CreateTeam() {
   const [abbreviation, setAbbreviation] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [teamColor, setTeamColor] = useState('#1E3A8A');
+  const [league, setLeague] = useState<'SOUTH' | 'NORTH'>('SOUTH');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { fetchUserInfo } = useAuth();
@@ -30,7 +31,8 @@ export default function CreateTeam() {
         name: teamName,
         abbreviation: abbreviation.toUpperCase() || teamName.substring(0, 3).toUpperCase(),
         logo_url: logoUrl || null,
-        team_color: teamColor
+        team_color: teamColor,
+        region: league
       });
 
       // 새로운 토큰이 있으면 저장
@@ -88,14 +90,19 @@ export default function CreateTeam() {
           </div>
 
           <div className="form-group">
-            <label>리그 배정</label>
-            <div className="league-info-box">
-              <div className="league-name">LPO 2 LEAGUE</div>
-              <div className="league-desc">
-                모든 신규 팀은 LPO 2 LEAGUE (3부 리그)에서 시작합니다.
-                <br />시즌 종료 시 상위 2팀이 LPO 1 LEAGUE로 승격됩니다.
-              </div>
-            </div>
+            <label htmlFor="league">리그 선택 *</label>
+            <select
+              id="league"
+              value={league}
+              onChange={(e) => setLeague(e.target.value as 'SOUTH' | 'NORTH')}
+              className="form-input"
+            >
+              <option value="SOUTH">LPO SOUTH (남부 리그)</option>
+              <option value="NORTH">LPO NORTH (북부 리그)</option>
+            </select>
+            <small style={{ color: '#888', fontSize: '0.8rem' }}>
+              시즌 종료 시 각 리그 상위 4팀이 WORLDS에 진출합니다.
+            </small>
           </div>
 
           <div className="form-group">
