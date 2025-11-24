@@ -79,10 +79,51 @@ interface NegotiationInfo {
   base_price: number;
 }
 
+interface TransferRequest {
+  id: number;
+  card_id: number;
+  seller_team_id: number;
+  buyer_team_id: number;
+  offer_price: number;
+  status: string;
+  counter_price: number | null;
+  message: string | null;
+  response_message: string | null;
+  created_at: string;
+  expires_at: string;
+  player_name: string;
+  position: string;
+  ovr: number;
+  buyer_team_name?: string;
+  seller_team_name?: string;
+}
+
+interface TeamPlayer {
+  card_id: number;
+  ovr: number;
+  mental: number;
+  teamfight: number;
+  focus: number;
+  laning: number;
+  is_starter: boolean;
+  name: string;
+  position: string;
+  pro_team: string;
+  league: string;
+  team_name: string;
+}
+
+interface TeamInfo {
+  id: number;
+  name: string;
+  league: string;
+  logo_url: string | null;
+}
+
 export default function Transfer() {
   const { team, refreshTeam } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'fa' | 'market' | 'sell' | 'release' | 'history'>('fa');
+  const [activeTab, setActiveTab] = useState<'fa' | 'market' | 'sell' | 'release' | 'requests' | 'history'>('fa');
   const [listings, setListings] = useState<TransferListing[]>([]);
   const [myListings, setMyListings] = useState<TransferListing[]>([]);
   const [myCards, setMyCards] = useState<MyCard[]>([]);
@@ -92,6 +133,18 @@ export default function Transfer() {
   // FA 상태
   const [faPlayers, setFaPlayers] = useState<FAPlayer[]>([]);
   const [contractedCards, setContractedCards] = useState<ContractedCard[]>([]);
+
+  // 이적 요청 상태
+  const [incomingRequests, setIncomingRequests] = useState<TransferRequest[]>([]);
+  const [outgoingRequests, setOutgoingRequests] = useState<TransferRequest[]>([]);
+  const [allTeams, setAllTeams] = useState<TeamInfo[]>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  const [teamPlayers, setTeamPlayers] = useState<TeamPlayer[]>([]);
+  const [requestModal, setRequestModal] = useState<{cardId: number, playerName: string, ovr: number} | null>(null);
+  const [requestOfferPrice, setRequestOfferPrice] = useState('');
+  const [requestMessage, setRequestMessage] = useState('');
+  const [counterModal, setCounterModal] = useState<TransferRequest | null>(null);
+  const [counterPrice, setCounterPrice] = useState('');
 
   // 필터 상태
   const [filters, setFilters] = useState({
@@ -129,6 +182,8 @@ export default function Transfer() {
     fetchMyCards();
     fetchContractedCards();
     fetchHistory();
+    fetchRequests();
+    fetchAllTeams();
   }, []);
 
   useEffect(() => {
@@ -210,6 +265,139 @@ export default function Transfer() {
       setHistory(response.data);
     } catch (error) {
       console.error('Failed to fetch history:', error);
+    }
+  };
+
+  const fetchRequests = async () => {
+    try {
+      const [incoming, outgoing] = await Promise.all([
+        axios.get('/api/transfer/requests/incoming'),
+        axios.get('/api/transfer/requests/outgoing')
+      ]);
+      setIncomingRequests(incoming.data);
+      setOutgoingRequests(outgoing.data);
+    } catch (error) {
+      console.error('Failed to fetch requests:', error);
+    }
+  };
+
+  const fetchAllTeams = async () => {
+    try {
+      const response = await axios.get('/api/teams/all');
+      setAllTeams(response.data.filter((t: any) => t.id !== team?.id));
+    } catch (error) {
+      console.error('Failed to fetch teams:', error);
+    }
+  };
+
+  const fetchTeamPlayers = async (teamId: number) => {
+    try {
+      const response = await axios.get(`/api/transfer/teams/${teamId}/players`);
+      setTeamPlayers(response.data);
+    } catch (error) {
+      console.error('Failed to fetch team players:', error);
+    }
+  };
+
+  const sendTransferRequest = async () => {
+    if (!requestModal || !requestOfferPrice) return;
+
+    setLoading(true);
+    try {
+      const response = await axios.post('/api/transfer/request', {
+        cardId: requestModal.cardId,
+        offerPrice: parseInt(requestOfferPrice),
+        message: requestMessage || null
+      });
+      alert(response.data.message);
+      setRequestModal(null);
+      setRequestOfferPrice('');
+      setRequestMessage('');
+      await fetchRequests();
+    } catch (error: any) {
+      alert(error.response?.data?.error || '요청 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const acceptRequest = async (requestId: number) => {
+    if (!confirm('이 요청을 수락하시겠습니까?')) return;
+
+    setLoading(true);
+    try {
+      const response = await axios.post(`/api/transfer/requests/${requestId}/accept`);
+      alert(response.data.message);
+      await refreshTeam();
+      await fetchRequests();
+      await fetchContractedCards();
+    } catch (error: any) {
+      alert(error.response?.data?.error || '수락 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const rejectRequest = async (requestId: number) => {
+    if (!confirm('이 요청을 거절하시겠습니까?')) return;
+
+    setLoading(true);
+    try {
+      await axios.post(`/api/transfer/requests/${requestId}/reject`);
+      alert('요청을 거절했습니다');
+      await fetchRequests();
+    } catch (error: any) {
+      alert(error.response?.data?.error || '거절 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendCounter = async () => {
+    if (!counterModal || !counterPrice) return;
+
+    setLoading(true);
+    try {
+      await axios.post(`/api/transfer/requests/${counterModal.id}/counter`, {
+        counterPrice: parseInt(counterPrice)
+      });
+      alert('역제안을 보냈습니다');
+      setCounterModal(null);
+      setCounterPrice('');
+      await fetchRequests();
+    } catch (error: any) {
+      alert(error.response?.data?.error || '역제안 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const acceptCounter = async (requestId: number) => {
+    if (!confirm('역제안을 수락하시겠습니까?')) return;
+
+    setLoading(true);
+    try {
+      const response = await axios.post(`/api/transfer/requests/${requestId}/accept-counter`);
+      alert(response.data.message);
+      await refreshTeam();
+      await fetchRequests();
+      await fetchContractedCards();
+    } catch (error: any) {
+      alert(error.response?.data?.error || '수락 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelRequest = async (requestId: number) => {
+    if (!confirm('요청을 취소하시겠습니까?')) return;
+
+    try {
+      await axios.delete(`/api/transfer/requests/${requestId}`);
+      alert('요청을 취소했습니다');
+      await fetchRequests();
+    } catch (error: any) {
+      alert(error.response?.data?.error || '취소 실패');
     }
   };
 
@@ -408,6 +596,17 @@ export default function Transfer() {
           onClick={() => setActiveTab('release')}
         >
           선수 방출
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'requests' ? 'active' : ''}`}
+          onClick={() => setActiveTab('requests')}
+        >
+          이적 요청
+          {(incomingRequests.length > 0 || outgoingRequests.filter(r => r.status === 'COUNTER').length > 0) && (
+            <span className="request-badge">
+              {incomingRequests.length + outgoingRequests.filter(r => r.status === 'COUNTER').length}
+            </span>
+          )}
         </button>
         <button
           className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
@@ -738,6 +937,134 @@ export default function Transfer() {
         </div>
       )}
 
+      {activeTab === 'requests' && (
+        <div className="requests-section">
+          <div className="requests-columns">
+            <div className="requests-column">
+              <h2>받은 요청 ({incomingRequests.length})</h2>
+              {incomingRequests.length > 0 ? (
+                <div className="request-list">
+                  {incomingRequests.map((req) => (
+                    <div key={req.id} className="request-item incoming">
+                      <div className="request-info">
+                        <span className="player-name">{req.player_name}</span>
+                        <span className="position" style={{ backgroundColor: getPositionColor(req.position) }}>
+                          {req.position}
+                        </span>
+                        <span className="ovr">OVR {req.ovr}</span>
+                      </div>
+                      <div className="request-details">
+                        <p>제안 팀: {req.buyer_team_name}</p>
+                        <p>제안 금액: {req.offer_price.toLocaleString()}원</p>
+                        {req.status === 'COUNTER' && (
+                          <p className="counter-info">역제안: {req.counter_price?.toLocaleString()}원</p>
+                        )}
+                      </div>
+                      <div className="request-actions">
+                        <button onClick={() => acceptRequest(req.id)} disabled={loading}>수락</button>
+                        <button onClick={() => setCounterModal(req)} disabled={loading}>역제안</button>
+                        <button onClick={() => rejectRequest(req.id)} disabled={loading} className="reject">거절</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="no-listings">받은 요청이 없습니다.</p>
+              )}
+            </div>
+
+            <div className="requests-column">
+              <h2>보낸 요청 ({outgoingRequests.length})</h2>
+              {outgoingRequests.length > 0 ? (
+                <div className="request-list">
+                  {outgoingRequests.map((req) => (
+                    <div key={req.id} className={`request-item outgoing ${req.status === 'COUNTER' ? 'has-counter' : ''}`}>
+                      <div className="request-info">
+                        <span className="player-name">{req.player_name}</span>
+                        <span className="position" style={{ backgroundColor: getPositionColor(req.position) }}>
+                          {req.position}
+                        </span>
+                        <span className="ovr">OVR {req.ovr}</span>
+                      </div>
+                      <div className="request-details">
+                        <p>판매 팀: {req.seller_team_name}</p>
+                        <p>제안 금액: {req.offer_price.toLocaleString()}원</p>
+                        {req.status === 'COUNTER' && (
+                          <p className="counter-info">역제안: {req.counter_price?.toLocaleString()}원</p>
+                        )}
+                      </div>
+                      <div className="request-actions">
+                        {req.status === 'COUNTER' ? (
+                          <button onClick={() => acceptCounter(req.id)} disabled={loading}>역제안 수락</button>
+                        ) : (
+                          <span className="waiting">대기중</span>
+                        )}
+                        <button onClick={() => cancelRequest(req.id)} className="cancel">취소</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="no-listings">보낸 요청이 없습니다.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="browse-teams">
+            <h2>다른 팀 선수 영입</h2>
+            <div className="team-select">
+              <select
+                value={selectedTeamId || ''}
+                onChange={(e) => {
+                  const id = parseInt(e.target.value);
+                  setSelectedTeamId(id || null);
+                  if (id) fetchTeamPlayers(id);
+                }}
+              >
+                <option value="">팀 선택...</option>
+                {allTeams.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name} ({t.league})</option>
+                ))}
+              </select>
+            </div>
+
+            {selectedTeamId && teamPlayers.length > 0 && (
+              <div className="team-players-grid">
+                {teamPlayers.map((player) => (
+                  <div key={player.card_id} className="team-player-card">
+                    <div className="card-header">
+                      <span className="position" style={{ backgroundColor: getPositionColor(player.position) }}>
+                        {player.position}
+                      </span>
+                      <span className="ovr" style={{ color: getOvrColor(player.ovr) }}>
+                        {player.ovr}
+                      </span>
+                    </div>
+                    <div className="player-name">{player.name}</div>
+                    <div className="stats">
+                      <span>멘탈 {player.mental}</span>
+                      <span>팀파 {player.teamfight}</span>
+                      <span>집중 {player.focus}</span>
+                      <span>라인 {player.laning}</span>
+                    </div>
+                    {player.is_starter && <span className="starter-badge">주전</span>}
+                    <button
+                      className="request-btn"
+                      onClick={() => {
+                        setRequestModal({ cardId: player.card_id, playerName: player.name, ovr: player.ovr });
+                        setRequestOfferPrice((player.ovr * 150000).toString());
+                      }}
+                    >
+                      이적 요청
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {activeTab === 'history' && (
         <div className="history-section">
           <h2>거래 내역</h2>
@@ -850,6 +1177,74 @@ export default function Transfer() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 이적 요청 모달 */}
+      {requestModal && (
+        <div className="modal-overlay" onClick={() => setRequestModal(null)}>
+          <div className="negotiation-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>이적 요청</h2>
+            <div className="request-modal-content">
+              <p className="player-info">
+                <strong>{requestModal.playerName}</strong> (OVR {requestModal.ovr})
+              </p>
+              <div className="form-group">
+                <label>제안 금액:</label>
+                <input
+                  type="number"
+                  value={requestOfferPrice}
+                  onChange={(e) => setRequestOfferPrice(e.target.value)}
+                  placeholder="제안 금액"
+                />
+              </div>
+              <div className="form-group">
+                <label>메시지 (선택):</label>
+                <textarea
+                  value={requestMessage}
+                  onChange={(e) => setRequestMessage(e.target.value)}
+                  placeholder="판매 팀에게 보낼 메시지"
+                  rows={3}
+                />
+              </div>
+              <div className="offer-buttons">
+                <button onClick={sendTransferRequest} disabled={loading || !requestOfferPrice}>
+                  {loading ? '처리중...' : '요청 보내기'}
+                </button>
+                <button onClick={() => setRequestModal(null)} className="cancel">취소</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 역제안 모달 */}
+      {counterModal && (
+        <div className="modal-overlay" onClick={() => setCounterModal(null)}>
+          <div className="negotiation-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>역제안</h2>
+            <div className="request-modal-content">
+              <p className="player-info">
+                <strong>{counterModal.player_name}</strong> (OVR {counterModal.ovr})
+              </p>
+              <p>원래 제안: {counterModal.offer_price.toLocaleString()}원</p>
+              <div className="form-group">
+                <label>역제안 금액:</label>
+                <input
+                  type="number"
+                  value={counterPrice}
+                  onChange={(e) => setCounterPrice(e.target.value)}
+                  placeholder="역제안 금액"
+                />
+              </div>
+              <div className="offer-buttons">
+                <button onClick={sendCounter} disabled={loading || !counterPrice}>
+                  {loading ? '처리중...' : '역제안 보내기'}
+                </button>
+                <button onClick={() => setCounterModal(null)} className="cancel">취소</button>
+              </div>
             </div>
           </div>
         </div>

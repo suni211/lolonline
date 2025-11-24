@@ -518,12 +518,21 @@ CREATE TABLE IF NOT EXISTS player_cards (
     is_contracted BOOLEAN DEFAULT FALSE,
     contract_season INT DEFAULT NULL,
     contract_cost BIGINT DEFAULT 1000000,
+    -- 상세 계약 조건
+    annual_salary BIGINT DEFAULT 0,
+    contract_years INT DEFAULT 1,
+    signing_bonus BIGINT DEFAULT 0,
+    championship_bonus BIGINT DEFAULT 0,  -- 우승 보너스
+    mvp_bonus BIGINT DEFAULT 0,           -- MVP 보너스
+    match_win_bonus BIGINT DEFAULT 0,     -- 경기당 승리 보너스
+    relegation_clause BOOLEAN DEFAULT FALSE,  -- 강등 시 계약 해지
+    contract_expires_at DATETIME NULL,
     -- 성장
     level INT DEFAULT 1,
     exp INT DEFAULT 0,
     -- AI 가상 선수용
     ai_player_name VARCHAR(100) NULL,
-    position VARCHAR(20) NULL,
+    ai_position VARCHAR(20) NULL,
     personality VARCHAR(50) NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (pro_player_id) REFERENCES pro_players(id) ON DELETE CASCADE,
@@ -535,7 +544,17 @@ CREATE TABLE IF NOT EXISTS player_cards (
 -- 기존 테이블 마이그레이션 (AI 가상 선수 지원)
 -- ALTER TABLE player_cards MODIFY pro_player_id INT NULL;
 -- ALTER TABLE player_cards ADD COLUMN ai_player_name VARCHAR(100) NULL;
--- ALTER TABLE player_cards ADD COLUMN position VARCHAR(20) NULL;
+-- ALTER TABLE player_cards ADD COLUMN ai_position VARCHAR(20) NULL;
+
+-- 계약 조건 마이그레이션
+-- ALTER TABLE player_cards ADD COLUMN annual_salary BIGINT DEFAULT 0;
+-- ALTER TABLE player_cards ADD COLUMN contract_years INT DEFAULT 1;
+-- ALTER TABLE player_cards ADD COLUMN signing_bonus BIGINT DEFAULT 0;
+-- ALTER TABLE player_cards ADD COLUMN championship_bonus BIGINT DEFAULT 0;
+-- ALTER TABLE player_cards ADD COLUMN mvp_bonus BIGINT DEFAULT 0;
+-- ALTER TABLE player_cards ADD COLUMN match_win_bonus BIGINT DEFAULT 0;
+-- ALTER TABLE player_cards ADD COLUMN relegation_clause BOOLEAN DEFAULT FALSE;
+-- ALTER TABLE player_cards ADD COLUMN contract_expires_at DATETIME NULL;
 
 -- 선수팩 테이블
 CREATE TABLE IF NOT EXISTS player_packs (
@@ -586,6 +605,28 @@ CREATE TABLE IF NOT EXISTS transfer_market (
     FOREIGN KEY (buyer_team_id) REFERENCES teams(id) ON DELETE SET NULL,
     INDEX idx_status (status),
     INDEX idx_listed_at (listed_at)
+);
+
+-- 이적 요청 테이블 (다른 팀 선수에게 이적 요청)
+CREATE TABLE IF NOT EXISTS transfer_requests (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    card_id INT NOT NULL,
+    seller_team_id INT NOT NULL,
+    buyer_team_id INT NOT NULL,
+    offer_price BIGINT NOT NULL,
+    status ENUM('PENDING', 'ACCEPTED', 'REJECTED', 'COUNTER', 'CANCELLED', 'EXPIRED') DEFAULT 'PENDING',
+    counter_price BIGINT NULL,
+    message TEXT NULL,
+    response_message TEXT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    responded_at DATETIME NULL,
+    expires_at DATETIME NOT NULL,
+    FOREIGN KEY (card_id) REFERENCES player_cards(id) ON DELETE CASCADE,
+    FOREIGN KEY (seller_team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (buyer_team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    INDEX idx_seller (seller_team_id, status),
+    INDEX idx_buyer (buyer_team_id, status),
+    INDEX idx_expires (expires_at)
 );
 
 -- 팀 전술 테이블

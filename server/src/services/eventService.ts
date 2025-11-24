@@ -274,6 +274,82 @@ export class EventService {
     }
     return 0;
   }
+
+  // 벤치 선수 불만족 체크 및 갈등 이벤트 생성
+  static async checkBenchedPlayerConflicts(teamId: number): Promise<void> {
+    try {
+      // 벤치 선수 중 고OVR 선수 조회 (player_cards 기반)
+      const benchedPlayers = await pool.query(
+        `SELECT pc.id,
+                COALESCE(pp.name, pc.ai_player_name) as name,
+                pc.ovr, pc.personality
+         FROM player_cards pc
+         LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
+         WHERE pc.team_id = ? AND pc.is_contracted = true AND pc.is_starter = false`,
+        [teamId]
+      );
+
+      // 스타터 평균 OVR 계산
+      const starters = await pool.query(
+        `SELECT AVG(ovr) as avg_ovr FROM player_cards
+         WHERE team_id = ? AND is_contracted = true AND is_starter = true`,
+        [teamId]
+      );
+      const starterAvgOvr = starters[0]?.avg_ovr || 50;
+
+      for (const player of benchedPlayers) {
+        // 벤치 선수가 스타터 평균보다 높은 OVR을 가진 경우
+        if (player.ovr > starterAvgOvr) {
+          const ovrDiff = player.ovr - starterAvgOvr;
+
+          // OVR 차이에 따른 갈등 확률 (차이 10당 10%)
+          const conflictChance = Math.min(0.5, ovrDiff * 0.01);
+
+          if (Math.random() < conflictChance) {
+            // 성격에 따른 갈등 유형 결정
+            const personality = player.personality || 'CALM';
+            let eventTitle = '';
+            let eventDesc = '';
+            let effectValue = -5;
+
+            switch (personality) {
+              case 'HOTHEAD':
+              case 'REBELLIOUS':
+                eventTitle = `${player.name}이(가) 출전 기회에 불만 폭발`;
+                eventDesc = '더 높은 실력을 가지고도 벤치를 지키는 것에 분노를 표출했습니다.';
+                effectValue = -15;
+                break;
+              case 'GREEDY':
+                eventTitle = `${player.name}이(가) 이적 요청`;
+                eventDesc = '출전 기회가 없다며 이적을 요청했습니다.';
+                effectValue = -10;
+                break;
+              case 'LEADER':
+                eventTitle = `${player.name}이(가) 경쟁 선언`;
+                eventDesc = '주전 자리를 되찾겠다는 강한 의지를 표명했습니다.';
+                effectValue = -3;
+                break;
+              default:
+                eventTitle = `${player.name}이(가) 출전 기회 부족에 실망`;
+                eventDesc = '실력에 비해 출전 기회가 적다고 생각합니다.';
+                effectValue = -5;
+            }
+
+            // 갈등 이벤트 저장
+            await pool.query(
+              `INSERT INTO team_events (team_id, event_type, player_id, title, description, effect_type, effect_value)
+               VALUES (?, 'CONFLICT', ?, ?, ?, 'MORALE', ?)`,
+              [teamId, player.id, eventTitle, eventDesc, effectValue]
+            );
+
+            console.log(`Benched player conflict: ${player.name} (OVR ${player.ovr} vs avg ${starterAvgOvr})`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check benched player conflicts:', error);
+    }
+  }
 }
 
 export default EventService;

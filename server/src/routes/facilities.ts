@@ -44,8 +44,8 @@ router.post('/:facilityType/upgrade', authenticateToken, async (req: AuthRequest
       return res.status(400).json({ error: 'Facility is already at maximum level' });
     }
 
-    // 업그레이드 비용 계산 (기본 100만 * 2^레벨, 기하급수적 증가)
-    const upgradeCost = 1000000 * Math.pow(2, currentLevel);
+    // 업그레이드 비용 계산 (기본 500만 * 2^레벨, 기하급수적 증가)
+    const upgradeCost = 5000000 * Math.pow(2, currentLevel);
 
     // 골드 확인
     const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);
@@ -108,18 +108,18 @@ function calculateRevenuePerHour(facilityType: string, level: number): number {
 
 function calculateMaintenanceCost(facilityType: string, level: number): number {
   const baseCost: Record<string, number> = {
-    'STADIUM': 2000,
-    'MERCHANDISE': 1000,
-    'RESTAURANT': 800,
-    'ACCOMMODATION': 600,
-    'MEDIA': 400,
-    'GAMING_HOUSE': 1000,
-    'BROADCAST_STUDIO': 1500,
-    'FAN_ZONE': 1200,
-    'ANALYTICS_CENTER': 800,
-    'TRAINING': 500,
-    'MEDICAL': 300,
-    'SCOUTING': 200
+    'STADIUM': 10000,
+    'MERCHANDISE': 5000,
+    'RESTAURANT': 4000,
+    'ACCOMMODATION': 3000,
+    'MEDIA': 2000,
+    'GAMING_HOUSE': 5000,
+    'BROADCAST_STUDIO': 7500,
+    'FAN_ZONE': 6000,
+    'ANALYTICS_CENTER': 4000,
+    'TRAINING': 2500,
+    'MEDICAL': 1500,
+    'SCOUTING': 1000
   };
 
   return (baseCost[facilityType] || 0) * level;

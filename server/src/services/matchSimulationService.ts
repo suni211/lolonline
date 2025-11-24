@@ -3,6 +3,7 @@ import pool from '../database/db.js';
 import cron from 'node-cron';
 import { giveMatchExperience } from './playerService.js';
 import { checkInjuryAfterMatch, getInjuryPenalty } from './injuryService.js';
+import { EventService } from './eventService.js';
 
 // 롤 게임 상수
 const GAME_CONSTANTS = {
@@ -124,13 +125,23 @@ export async function startMatchById(matchId: number, io: Server) {
 
 async function processScheduledMatches(io: Server) {
   try {
-    // 예정된 경기 중 시작 시간이 된 경기 찾기
+    // 현재 KST 시간 계산
+    const now = new Date();
+    const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const kstNowStr = kstNow.toISOString().slice(0, 19).replace('T', ' ');
+
+    // 예정된 경기 중 시작 시간이 된 경기 찾기 (KST 기준)
     const matches = await pool.query(
-      `SELECT * FROM matches 
-       WHERE status = 'SCHEDULED' 
-       AND scheduled_at <= NOW() 
-       LIMIT 10`
+      `SELECT * FROM matches
+       WHERE status = 'SCHEDULED'
+       AND scheduled_at <= ?
+       LIMIT 10`,
+      [kstNowStr]
     );
+
+    if (matches.length > 0) {
+      console.log(`[${kstNowStr}] Found ${matches.length} scheduled matches to start`);
+    }
 
     for (const match of matches) {
       await startMatch(match, io);
@@ -1292,6 +1303,8 @@ async function processMatchEnd(match: any, matchData: any, homeScore: number, aw
       // 리그전 보상 - 입장료 수익 + 랜덤 선수 카드
       await giveLeagueMatchRewards(match, winnerTeamId, loserTeamId, homeScore, awayScore);
       await giveMatchRewards(match, winnerTeamId);
+      // 경기당 승리 보너스 지급
+      await giveMatchWinBonuses(winnerTeamId);
       // 경험치 지급 (팬 수에 비례)
       const homeExpMultiplier = await getExpMultiplier(match.home_team_id);
       const awayExpMultiplier = await getExpMultiplier(match.away_team_id);
@@ -1315,6 +1328,10 @@ async function processMatchEnd(match: any, matchData: any, homeScore: number, aw
     if (match.league_id) {
       await updateLeagueRankings(match.league_id);
     }
+
+    // 벤치 선수 갈등 체크
+    await EventService.checkBenchedPlayerConflicts(match.home_team_id);
+    await EventService.checkBenchedPlayerConflicts(match.away_team_id);
   } catch (error) {
     console.error('Error finishing match:', error);
   }
@@ -1446,12 +1463,40 @@ async function giveLeagueMatchRewards(match: any, winnerTeamId: number, loserTea
     // 입장료 수익
     const ticketRevenue = attendance * ticketPrice;
 
+    // 중계권 수익 계산 (시청료)
+    // 양팀 팬 수 합산으로 시청자 수 추정
+    const awayTeams = await pool.query('SELECT fan_count FROM teams WHERE id = ?', [match.away_team_id]);
+    const awayFanCount = awayTeams.length > 0 ? (awayTeams[0].fan_count || 1000) : 1000;
+    const totalFans = fanCount + awayFanCount;
+
+    // 방송 스튜디오 레벨 조회
+    const broadcastStudios = await pool.query(
+      `SELECT level FROM team_facilities
+       WHERE team_id = ? AND facility_type = 'BROADCAST_STUDIO'`,
+      [homeTeamId]
+    );
+    const broadcastLevel = broadcastStudios.length > 0 ? broadcastStudios[0].level : 0;
+
+    // 리그 티어별 시청자 배율
+    const leagues = await pool.query('SELECT region FROM leagues WHERE id = ?', [match.league_id]);
+    const leagueTier = leagues.length > 0 ? leagues[0].region : 'SECOND';
+    const tierMultiplier = leagueTier === 'SUPER' ? 3.0 : leagueTier === 'FIRST' ? 2.0 : 1.0;
+
+    // 시청자 수: 팬 수의 5~15% + 방송 스튜디오 보너스
+    const baseViewers = Math.floor(totalFans * (0.05 + Math.random() * 0.10) * tierMultiplier);
+    const studioBonus = broadcastLevel * 0.1; // 레벨당 10% 추가
+    const viewers = Math.floor(baseViewers * (1 + studioBonus));
+
+    // 시청자당 수익 (광고 수익): 시청자 1명당 10~50골드
+    const revenuePerViewer = 10 + Math.floor(Math.random() * 40);
+    const broadcastRevenue = viewers * revenuePerViewer;
+
     // 승리 보너스
     const winBonus = 50000;
     const loseBonus = 10000;
 
-    // 홈팀 수익 지급
-    let homeGold = ticketRevenue;
+    // 홈팀 수익 지급 (입장료 + 중계권의 60%)
+    let homeGold = ticketRevenue + Math.floor(broadcastRevenue * 0.6);
     if (homeScore > awayScore) {
       homeGold += winBonus;
     } else if (awayScore > homeScore) {
@@ -1465,14 +1510,14 @@ async function giveLeagueMatchRewards(match: any, winnerTeamId: number, loserTea
       [homeGold, homeTeamId]
     );
 
-    // 원정팀 승리/패배 보너스만
-    let awayGold = 0;
+    // 원정팀 수익 (중계권의 40% + 승리/패배 보너스)
+    let awayGold = Math.floor(broadcastRevenue * 0.4);
     if (awayScore > homeScore) {
-      awayGold = winBonus;
+      awayGold += winBonus;
     } else if (homeScore > awayScore) {
-      awayGold = loseBonus;
+      awayGold += loseBonus;
     } else {
-      awayGold = 20000;
+      awayGold += 20000;
     }
 
     await pool.query(
@@ -1518,7 +1563,7 @@ async function giveLeagueMatchRewards(match: any, winnerTeamId: number, loserTea
       );
     }
 
-    console.log(`League match rewards: Home ${homeTeamId} +${homeGold}G (${attendance} attendance, capacity: ${stadiumCapacity}), Away ${match.away_team_id} +${awayGold}G`);
+    console.log(`League match rewards: Home ${homeTeamId} +${homeGold}G (${attendance} attendance, ${viewers} viewers), Away ${match.away_team_id} +${awayGold}G (broadcast: ${broadcastRevenue}G)`);
   } catch (error) {
     console.error('Error giving league match rewards:', error);
   }
@@ -1555,6 +1600,38 @@ async function giveFriendlyMatchRewards(match: any, winnerTeamId: number, loserT
     console.log(`Friendly match rewards: Winner ${winnerTeamId} +${winnerGold}G, Loser ${loserTeamId} +${loserGold}G`);
   } catch (error) {
     console.error('Error giving friendly match rewards:', error);
+  }
+}
+
+// 경기당 승리 보너스 지급
+async function giveMatchWinBonuses(teamId: number) {
+  try {
+    // 승리 팀의 스타터 선수들의 승리 보너스 조회
+    const starters = await pool.query(
+      `SELECT id, match_win_bonus FROM player_cards
+       WHERE team_id = ? AND is_starter = true AND is_contracted = true AND match_win_bonus > 0`,
+      [teamId]
+    );
+
+    if (starters.length === 0) return;
+
+    // 총 승리 보너스 계산
+    let totalBonus = 0;
+    for (const player of starters) {
+      totalBonus += player.match_win_bonus || 0;
+    }
+
+    if (totalBonus > 0) {
+      // 팀 골드에서 차감
+      await pool.query(
+        'UPDATE teams SET gold = gold - ? WHERE id = ?',
+        [totalBonus, teamId]
+      );
+
+      console.log(`Match win bonus paid: Team ${teamId} -${totalBonus}G for ${starters.length} players`);
+    }
+  } catch (error) {
+    console.error('Error giving match win bonuses:', error);
   }
 }
 

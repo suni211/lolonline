@@ -14,7 +14,11 @@ router.get('/my', authenticateToken, async (req: AuthRequest, res) => {
     const { position, sort_by, order } = req.query;
 
     let query = `
-      SELECT pc.id, pp.name, pp.nationality, pp.position, pp.face_image,
+      SELECT pc.id,
+             COALESCE(pp.name, pc.ai_player_name) as name,
+             COALESCE(pp.nationality, 'KR') as nationality,
+             COALESCE(pp.position, pc.ai_position) as position,
+             pp.face_image,
              pc.mental, pc.teamfight, pc.focus, pc.laning,
              pc.ovr as overall, pc.level, pc.exp, pc.is_starter, pc.is_contracted,
              pc.personality, pc.card_type,
@@ -22,21 +26,21 @@ router.get('/my', authenticateToken, async (req: AuthRequest, res) => {
              100 as player_condition, 0 as exp_to_next, 0 as stat_points,
              'NONE' as injury_status, 0 as injury_recovery_days, 0 as uniform_level
       FROM player_cards pc
-      INNER JOIN pro_players pp ON pc.pro_player_id = pp.id
+      LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
       WHERE pc.team_id = ? AND pc.is_contracted = true
     `;
 
     const params: any[] = [req.teamId];
 
     if (position) {
-      query += ' AND pp.position = ?';
+      query += ' AND COALESCE(pp.position, pc.ai_position) = ?';
       params.push(position);
     }
 
     if (sort_by) {
       const validSorts = ['overall', 'level', 'name', 'mental', 'teamfight', 'focus', 'laning'];
       if (validSorts.includes(sort_by as string)) {
-        const sortColumn = sort_by === 'name' ? 'pp.name' : sort_by === 'overall' ? 'pc.ovr' : `pc.${sort_by}`;
+        const sortColumn = sort_by === 'name' ? 'COALESCE(pp.name, pc.ai_player_name)' : sort_by === 'overall' ? 'pc.ovr' : `pc.${sort_by}`;
         query += ` ORDER BY ${sortColumn} ${order === 'desc' ? 'DESC' : 'ASC'}`;
       }
     } else {

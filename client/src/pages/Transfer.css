@@ -747,3 +747,215 @@
 .offer-buttons button.cancel:hover {
   background-color: #4b5563;
 }
+
+/* 이적 요청 섹션 */
+.requests-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.requests-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.requests-column {
+  background: var(--primary-blue);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.requests-column h2 {
+  margin-bottom: 1rem;
+  color: var(--white);
+  font-size: 1.2rem;
+}
+
+.request-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.request-item {
+  background: var(--dark-blue);
+  border-radius: 6px;
+  padding: 1rem;
+  border-left: 3px solid var(--light-blue);
+}
+
+.request-item.has-counter {
+  border-left-color: #f59e0b;
+}
+
+.request-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.request-info .player-name {
+  font-weight: 600;
+  color: var(--white);
+}
+
+.request-details {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 0.75rem;
+}
+
+.request-details p {
+  margin: 0.25rem 0;
+}
+
+.counter-info {
+  color: #f59e0b !important;
+  font-weight: 600;
+}
+
+.request-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.request-actions button {
+  padding: 0.4rem 0.75rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.request-actions button:first-child {
+  background: #16a34a;
+  color: white;
+}
+
+.request-actions button.reject,
+.request-actions button.cancel {
+  background: #dc2626;
+  color: white;
+}
+
+.request-actions .waiting {
+  padding: 0.4rem 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.request-badge {
+  background: #dc2626;
+  color: white;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 10px;
+  margin-left: 0.5rem;
+}
+
+/* 팀 선수 탐색 */
+.browse-teams {
+  background: var(--primary-blue);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.browse-teams h2 {
+  margin-bottom: 1rem;
+  color: var(--white);
+}
+
+.team-select {
+  margin-bottom: 1rem;
+}
+
+.team-select select {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--dark-blue);
+  color: var(--white);
+  font-size: 1rem;
+  min-width: 300px;
+}
+
+.team-players-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.team-player-card {
+  background: var(--dark-blue);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.team-player-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.team-player-card .player-name {
+  font-weight: 600;
+  color: var(--white);
+  margin-bottom: 0.5rem;
+}
+
+.team-player-card .stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 0.5rem;
+}
+
+.team-player-card .request-btn {
+  width: 100%;
+  padding: 0.5rem;
+  background: var(--light-blue);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+.team-player-card .request-btn:hover {
+  background: #60a5fa;
+}
+
+/* 모달 추가 스타일 */
+.request-modal-content {
+  padding: 1rem 0;
+}
+
+.request-modal-content .player-info {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  color: var(--white);
+}
+
+.request-modal-content .form-group {
+  margin-bottom: 1rem;
+}
+
+.request-modal-content textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--dark-blue);
+  color: var(--white);
+  resize: vertical;
+}

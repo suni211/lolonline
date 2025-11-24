@@ -213,20 +213,24 @@ async function generateAIResponse(
     const baseRandom = Math.random() * 100; // 0~100 사이 랜덤 값
     const adjustedRandom = baseRandom + personalityMod.acceptChanceMod;
     const aiPersonality = adjustedRandom / 100; // 0~1 사이로 변환
-    
+
     let responseType: 'ACCEPT' | 'REJECT' | 'COUNTER';
     let counterSalary = 0;
     let counterYears = proposedYears;
     let counterBonus = proposedBonus;
-    
-    if (isExcellentOffer && aiPersonality > 0.2) {
-      // 매우 좋은 제안이면 높은 확률로 수락
+
+    // 높은 연봉을 제시하면 거의 항상 수락
+    if (proposedSalary >= idealSalary * 1.2) {
+      // 이상 연봉의 120% 이상이면 무조건 수락
       responseType = 'ACCEPT';
-    } else if (isGoodOffer && aiPersonality > 0.4) {
-      // 좋은 제안이면 중간 확률로 수락
-      responseType = 'ACCEPT';
-    } else if (proposedSalary < minAcceptableSalary * 0.7) {
-      // 너무 낮은 제안이면 거절
+    } else if (isExcellentOffer) {
+      // 이상 연봉 이상이면 90% 확률로 수락
+      responseType = aiPersonality > 0.1 ? 'ACCEPT' : 'COUNTER';
+    } else if (isGoodOffer) {
+      // 최소 수락 연봉 이상이면 70% 확률로 수락
+      responseType = aiPersonality > 0.3 ? 'ACCEPT' : 'COUNTER';
+    } else if (proposedSalary < minAcceptableSalary * 0.5) {
+      // 너무 낮은 제안이면 거절 (기존 0.7에서 0.5로 완화)
       responseType = 'REJECT';
     } else {
       // 카운터 오퍼

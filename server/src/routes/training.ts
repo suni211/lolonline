@@ -19,8 +19,9 @@ router.post('/individual', authenticateToken, async (req: AuthRequest, res) => {
 
     // 카드 소유권 확인
     const cards = await pool.query(
-      `SELECT pc.*, pp.name FROM player_cards pc
-       JOIN pro_players pp ON pc.pro_player_id = pp.id
+      `SELECT pc.*, COALESCE(pp.name, pc.ai_player_name) as name
+       FROM player_cards pc
+       LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
        WHERE pc.id = ? AND pc.team_id = ?`,
       [player_id, req.teamId]
     );
@@ -124,8 +125,9 @@ router.post('/team', authenticateToken, async (req: AuthRequest, res) => {
 
     // 스타터 카드들 가져오기 (계약된 카드만)
     const cards = await pool.query(
-      `SELECT pc.*, pp.name FROM player_cards pc
-       JOIN pro_players pp ON pc.pro_player_id = pp.id
+      `SELECT pc.*, COALESCE(pp.name, pc.ai_player_name) as name
+       FROM player_cards pc
+       LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
        WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true`,
       [req.teamId]
     );
@@ -224,7 +226,7 @@ router.get('/history', authenticateToken, async (req: AuthRequest, res) => {
     const { player_id, limit } = req.query;
 
     let query = `
-      SELECT pt.*, pp.name as player_name
+      SELECT pt.*, COALESCE(pp.name, pc.ai_player_name) as player_name
       FROM player_training pt
       LEFT JOIN player_cards pc ON pt.player_id = pc.id
       LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id

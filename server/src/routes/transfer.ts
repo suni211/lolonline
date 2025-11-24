@@ -2,6 +2,7 @@ import express from 'express';
 import pool from '../database/db.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { generatePersonality, generateContractNegotiationDialogue, personalityTraits, PersonalityType } from '../services/geminiService.js';
+import { NewsService } from '../services/newsService.js';
 
 const router = express.Router();
 
@@ -179,18 +180,29 @@ router.get('/fa/negotiate/:playerId', authenticateToken, async (req: AuthRequest
       }
     }
 
-    // 스탯 생성
+    // 스탯 생성 (선수 ID 기반으로 고정)
     const baseOvr = player.overall;
     const totalStats = baseOvr * 4;
     const baseStat = Math.floor(totalStats / 4);
     const variance = 10;
 
-    const mental = Math.max(1, Math.min(200, baseStat + Math.floor(Math.random() * variance * 2) - variance));
-    const teamfight = Math.max(1, Math.min(200, baseStat + Math.floor(Math.random() * variance * 2) - variance));
-    const focus = Math.max(1, Math.min(200, baseStat + Math.floor(Math.random() * variance * 2) - variance));
+    // 선수 ID를 시드로 사용하여 일관된 스탯 생성
+    const seed = playerId;
+    const seededRandom = (n: number) => {
+      const x = Math.sin(seed * n) * 10000;
+      return x - Math.floor(x);
+    };
+
+    const mental = Math.max(1, Math.min(200, baseStat + Math.floor(seededRandom(1) * variance * 2) - variance));
+    const teamfight = Math.max(1, Math.min(200, baseStat + Math.floor(seededRandom(2) * variance * 2) - variance));
+    const focus = Math.max(1, Math.min(200, baseStat + Math.floor(seededRandom(3) * variance * 2) - variance));
     const laning = Math.max(1, Math.min(200, totalStats - mental - teamfight - focus));
 
-    const personality = generatePersonality(mental);
+    // 성격도 선수 ID 기반으로 고정
+    const personalities: PersonalityType[] = ['LEADER', 'REBELLIOUS', 'CALM', 'EMOTIONAL', 'COMPETITIVE', 'TIMID', 'GREEDY', 'LOYAL', 'PERFECTIONIST', 'LAZY'];
+    const personalityIndex = Math.floor(seededRandom(4) * personalities.length);
+    const personality = personalities[personalityIndex];
+
     const ovr = Math.round((mental + teamfight + focus + laning) / 4);
 
     // 요구 연봉 계산
@@ -316,6 +328,13 @@ router.post('/fa/sign/:playerId', authenticateToken, async (req: AuthRequest, re
        VALUES (?, ?, ?, ?, ?, ?, ?, 'NORMAL', ?, false, true)`,
       [playerId, req.teamId, mental, teamfight, focus, laning, ovr, personality]
     );
+
+    // 오피셜 뉴스 생성 (FA 영입)
+    try {
+      await NewsService.createTransferOfficial(playerId, null, req.teamId!, null);
+    } catch (newsError) {
+      console.error('Failed to create transfer news:', newsError);
+    }
 
     res.json({
       success: true,
@@ -788,6 +807,18 @@ router.post('/buy/:listingId', authenticateToken, async (req: AuthRequest, res) 
       WHERE id = ?
     `, ['SOLD', req.teamId, listingId]);
 
+    // 오피셜 뉴스 생성 (이적시장 영입)
+    try {
+      await NewsService.createTransferOfficial(
+        listing.pro_player_id,
+        listing.seller_team_id,
+        req.teamId!,
+        null
+      );
+    } catch (newsError) {
+      console.error('Failed to create transfer news:', newsError);
+    }
+
     res.json({
       success: true,
       message: `${listing.player_name} 카드를 구매했습니다!`,
@@ -831,6 +862,359 @@ router.get('/history', authenticateToken, async (req: AuthRequest, res) => {
   } catch (error: any) {
     console.error('Get history error:', error);
     res.status(500).json({ error: '거래 내역 조회 실패' });
+  }
+});
+
+// 다른 팀 선수 목록 조회
+router.get('/teams/:teamId/players', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const teamId = parseInt(req.params.teamId);
+
+    if (teamId === req.teamId) {
+      return res.status(400).json({ error: '자신의 팀은 조회할 수 없습니다' });
+    }
+
+    const players = await pool.query(`
+      SELECT
+        pc.id as card_id,
+        pc.ovr,
+        pc.mental,
+        pc.teamfight,
+        pc.focus,
+        pc.laning,
+        pc.is_starter,
+        COALESCE(pp.name, pc.ai_player_name) as name,
+        COALESCE(pp.position, pc.ai_position) as position,
+        COALESCE(pp.team, 'AI') as pro_team,
+        COALESCE(pp.league, 'AI') as league,
+        t.name as team_name
+      FROM player_cards pc
+      LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
+      JOIN teams t ON pc.team_id = t.id
+      WHERE pc.team_id = ? AND pc.is_contracted = true
+      ORDER BY pc.ovr DESC
+    `, [teamId]);
+
+    res.json(players);
+  } catch (error: any) {
+    console.error('Get team players error:', error);
+    res.status(500).json({ error: '선수 목록 조회 실패' });
+  }
+});
+
+// 이적 요청 보내기
+router.post('/request', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { cardId, offerPrice, message } = req.body;
+
+    if (!cardId || !offerPrice) {
+      return res.status(400).json({ error: '카드 ID와 제안 금액이 필요합니다' });
+    }
+
+    // 카드 정보 조회
+    const cards = await pool.query(`
+      SELECT pc.*, COALESCE(pp.name, pc.ai_player_name) as player_name, t.name as team_name
+      FROM player_cards pc
+      LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
+      JOIN teams t ON pc.team_id = t.id
+      WHERE pc.id = ? AND pc.is_contracted = true
+    `, [cardId]);
+
+    if (cards.length === 0) {
+      return res.status(404).json({ error: '선수를 찾을 수 없습니다' });
+    }
+
+    const card = cards[0];
+
+    // 자기 팀 선수 요청 불가
+    if (card.team_id === req.teamId) {
+      return res.status(400).json({ error: '자신의 팀 선수에게는 요청할 수 없습니다' });
+    }
+
+    // 이미 이적시장에 등록된 선수인지 확인
+    const listed = await pool.query(
+      'SELECT id FROM transfer_market WHERE card_id = ? AND status = ?',
+      [cardId, 'LISTED']
+    );
+    if (listed.length > 0) {
+      return res.status(400).json({ error: '이미 이적시장에 등록된 선수입니다. 시장에서 구매하세요.' });
+    }
+
+    // 이미 요청 중인지 확인
+    const existing = await pool.query(
+      `SELECT id FROM transfer_requests
+       WHERE card_id = ? AND buyer_team_id = ? AND status IN ('PENDING', 'COUNTER')`,
+      [cardId, req.teamId]
+    );
+    if (existing.length > 0) {
+      return res.status(400).json({ error: '이미 요청 중인 선수입니다' });
+    }
+
+    // 48시간 후 만료
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 48);
+
+    await pool.query(`
+      INSERT INTO transfer_requests (card_id, seller_team_id, buyer_team_id, offer_price, message, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [cardId, card.team_id, req.teamId, offerPrice, message || null, expiresAt]);
+
+    res.json({
+      success: true,
+      message: `${card.team_name}의 ${card.player_name} 선수에게 이적 요청을 보냈습니다`
+    });
+  } catch (error: any) {
+    console.error('Send request error:', error);
+    res.status(500).json({ error: '이적 요청 실패' });
+  }
+});
+
+// 받은 이적 요청 목록
+router.get('/requests/incoming', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const requests = await pool.query(`
+      SELECT
+        tr.*,
+        COALESCE(pp.name, pc.ai_player_name) as player_name,
+        COALESCE(pp.position, pc.ai_position) as position,
+        pc.ovr,
+        bt.name as buyer_team_name
+      FROM transfer_requests tr
+      JOIN player_cards pc ON tr.card_id = pc.id
+      LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
+      JOIN teams bt ON tr.buyer_team_id = bt.id
+      WHERE tr.seller_team_id = ? AND tr.status IN ('PENDING', 'COUNTER')
+      ORDER BY tr.created_at DESC
+    `, [req.teamId]);
+
+    res.json(requests);
+  } catch (error: any) {
+    console.error('Get incoming requests error:', error);
+    res.status(500).json({ error: '받은 요청 조회 실패' });
+  }
+});
+
+// 보낸 이적 요청 목록
+router.get('/requests/outgoing', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const requests = await pool.query(`
+      SELECT
+        tr.*,
+        COALESCE(pp.name, pc.ai_player_name) as player_name,
+        COALESCE(pp.position, pc.ai_position) as position,
+        pc.ovr,
+        st.name as seller_team_name
+      FROM transfer_requests tr
+      JOIN player_cards pc ON tr.card_id = pc.id
+      LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
+      JOIN teams st ON tr.seller_team_id = st.id
+      WHERE tr.buyer_team_id = ? AND tr.status IN ('PENDING', 'COUNTER')
+      ORDER BY tr.created_at DESC
+    `, [req.teamId]);
+
+    res.json(requests);
+  } catch (error: any) {
+    console.error('Get outgoing requests error:', error);
+    res.status(500).json({ error: '보낸 요청 조회 실패' });
+  }
+});
+
+// 이적 요청 수락
+router.post('/requests/:id/accept', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const requestId = parseInt(req.params.id);
+
+    const requests = await pool.query(`
+      SELECT tr.*, COALESCE(pp.name, pc.ai_player_name) as player_name, pc.id as card_id, pc.pro_player_id
+      FROM transfer_requests tr
+      JOIN player_cards pc ON tr.card_id = pc.id
+      LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
+      WHERE tr.id = ? AND tr.seller_team_id = ? AND tr.status IN ('PENDING', 'COUNTER')
+    `, [requestId, req.teamId]);
+
+    if (requests.length === 0) {
+      return res.status(404).json({ error: '요청을 찾을 수 없습니다' });
+    }
+
+    const request = requests[0];
+    const finalPrice = request.status === 'COUNTER' ? request.counter_price : request.offer_price;
+
+    // 구매자 골드 확인
+    const buyers = await pool.query('SELECT gold FROM teams WHERE id = ?', [request.buyer_team_id]);
+    if (buyers.length === 0 || buyers[0].gold < finalPrice) {
+      return res.status(400).json({ error: '구매자의 골드가 부족합니다' });
+    }
+
+    // 트랜잭션 처리
+    // 1. 구매자 골드 차감
+    await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [finalPrice, request.buyer_team_id]);
+
+    // 2. 판매자 골드 증가 (수수료 5%)
+    const sellerReceives = Math.floor(finalPrice * 0.95);
+    await pool.query('UPDATE teams SET gold = gold + ? WHERE id = ?', [sellerReceives, request.seller_team_id]);
+
+    // 3. 카드 소유권 이전
+    await pool.query('UPDATE player_cards SET team_id = ?, is_starter = false WHERE id = ?', [request.buyer_team_id, request.card_id]);
+
+    // 4. 요청 상태 업데이트
+    await pool.query(`
+      UPDATE transfer_requests
+      SET status = 'ACCEPTED', responded_at = NOW()
+      WHERE id = ?
+    `, [requestId]);
+
+    // 5. 오피셜 뉴스 생성
+    try {
+      if (request.pro_player_id) {
+        await NewsService.createTransferOfficial(
+          request.pro_player_id,
+          request.seller_team_id,
+          request.buyer_team_id,
+          null
+        );
+      }
+    } catch (newsError) {
+      console.error('Failed to create transfer news:', newsError);
+    }
+
+    res.json({
+      success: true,
+      message: `${request.player_name} 선수 이적 완료! ${sellerReceives.toLocaleString()}원 획득`,
+      received: sellerReceives
+    });
+  } catch (error: any) {
+    console.error('Accept request error:', error);
+    res.status(500).json({ error: '요청 수락 실패' });
+  }
+});
+
+// 이적 요청 거절
+router.post('/requests/:id/reject', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const requestId = parseInt(req.params.id);
+    const { message } = req.body;
+
+    const result = await pool.query(`
+      UPDATE transfer_requests
+      SET status = 'REJECTED', response_message = ?, responded_at = NOW()
+      WHERE id = ? AND seller_team_id = ? AND status IN ('PENDING', 'COUNTER')
+    `, [message || null, requestId, req.teamId]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: '요청을 찾을 수 없습니다' });
+    }
+
+    res.json({ success: true, message: '이적 요청을 거절했습니다' });
+  } catch (error: any) {
+    console.error('Reject request error:', error);
+    res.status(500).json({ error: '요청 거절 실패' });
+  }
+});
+
+// 카운터 오퍼
+router.post('/requests/:id/counter', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const requestId = parseInt(req.params.id);
+    const { counterPrice, message } = req.body;
+
+    if (!counterPrice) {
+      return res.status(400).json({ error: '카운터 가격이 필요합니다' });
+    }
+
+    const result = await pool.query(`
+      UPDATE transfer_requests
+      SET status = 'COUNTER', counter_price = ?, response_message = ?, responded_at = NOW()
+      WHERE id = ? AND seller_team_id = ? AND status = 'PENDING'
+    `, [counterPrice, message || null, requestId, req.teamId]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: '요청을 찾을 수 없습니다' });
+    }
+
+    res.json({ success: true, message: `${counterPrice.toLocaleString()}원으로 역제안했습니다` });
+  } catch (error: any) {
+    console.error('Counter offer error:', error);
+    res.status(500).json({ error: '역제안 실패' });
+  }
+});
+
+// 카운터 오퍼 수락 (구매자가)
+router.post('/requests/:id/accept-counter', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const requestId = parseInt(req.params.id);
+
+    const requests = await pool.query(`
+      SELECT tr.*, COALESCE(pp.name, pc.ai_player_name) as player_name, pc.id as card_id, pc.pro_player_id
+      FROM transfer_requests tr
+      JOIN player_cards pc ON tr.card_id = pc.id
+      LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
+      WHERE tr.id = ? AND tr.buyer_team_id = ? AND tr.status = 'COUNTER'
+    `, [requestId, req.teamId]);
+
+    if (requests.length === 0) {
+      return res.status(404).json({ error: '요청을 찾을 수 없습니다' });
+    }
+
+    const request = requests[0];
+    const finalPrice = request.counter_price;
+
+    // 내 골드 확인
+    const buyers = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);
+    if (buyers[0].gold < finalPrice) {
+      return res.status(400).json({ error: '골드가 부족합니다' });
+    }
+
+    // 트랜잭션 처리
+    await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [finalPrice, req.teamId]);
+    const sellerReceives = Math.floor(finalPrice * 0.95);
+    await pool.query('UPDATE teams SET gold = gold + ? WHERE id = ?', [sellerReceives, request.seller_team_id]);
+    await pool.query('UPDATE player_cards SET team_id = ?, is_starter = false WHERE id = ?', [req.teamId, request.card_id]);
+    await pool.query('UPDATE transfer_requests SET status = ?, responded_at = NOW() WHERE id = ?', ['ACCEPTED', requestId]);
+
+    // 오피셜 뉴스 생성
+    try {
+      if (request.pro_player_id) {
+        await NewsService.createTransferOfficial(
+          request.pro_player_id,
+          request.seller_team_id,
+          req.teamId!,
+          null
+        );
+      }
+    } catch (newsError) {
+      console.error('Failed to create transfer news:', newsError);
+    }
+
+    res.json({
+      success: true,
+      message: `${request.player_name} 선수 영입 완료!`,
+      cost: finalPrice
+    });
+  } catch (error: any) {
+    console.error('Accept counter error:', error);
+    res.status(500).json({ error: '역제안 수락 실패' });
+  }
+});
+
+// 이적 요청 취소 (구매자가)
+router.delete('/requests/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const requestId = parseInt(req.params.id);
+
+    const result = await pool.query(`
+      UPDATE transfer_requests
+      SET status = 'CANCELLED'
+      WHERE id = ? AND buyer_team_id = ? AND status IN ('PENDING', 'COUNTER')
+    `, [requestId, req.teamId]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: '요청을 찾을 수 없습니다' });
+    }
+
+    res.json({ success: true, message: '이적 요청을 취소했습니다' });
+  } catch (error: any) {
+    console.error('Cancel request error:', error);
+    res.status(500).json({ error: '요청 취소 실패' });
   }
 });
 

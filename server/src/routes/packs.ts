@@ -156,19 +156,22 @@ router.post('/cards/:cardId/starter', authenticateToken, async (req: AuthRequest
     // 스타터로 설정할 경우, 같은 포지션의 다른 스타터 해제
     if (isStarter) {
       // 카드의 포지션 확인
-      const proPlayer = await pool.query(
-        'SELECT position FROM pro_players WHERE id = ?',
-        [card.pro_player_id]
+      const cardPosition = await pool.query(
+        `SELECT COALESCE(pp.position, pc.ai_position) as position
+         FROM player_cards pc
+         LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
+         WHERE pc.id = ?`,
+        [cardId]
       );
 
-      if (proPlayer.length > 0) {
+      if (cardPosition.length > 0 && cardPosition[0].position) {
         // 같은 포지션의 다른 스타터 해제
         await pool.query(
           `UPDATE player_cards pc
-           JOIN pro_players pp ON pc.pro_player_id = pp.id
+           LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
            SET pc.is_starter = false
-           WHERE pc.team_id = ? AND pp.position = ? AND pc.id != ?`,
-          [teamId, proPlayer[0].position, cardId]
+           WHERE pc.team_id = ? AND COALESCE(pp.position, pc.ai_position) = ? AND pc.id != ?`,
+          [teamId, cardPosition[0].position, cardId]
         );
       }
     }
@@ -196,9 +199,14 @@ router.get('/chemistry', authenticateToken, async (req: AuthRequest, res) => {
     }
 
     const cards = await pool.query(
-      `SELECT pc.*, pp.name, pp.team as pro_team, pp.position, pp.league, pp.nationality
+      `SELECT pc.*,
+              COALESCE(pp.name, pc.ai_player_name) as name,
+              COALESCE(pp.team, 'AI') as pro_team,
+              COALESCE(pp.position, pc.ai_position) as position,
+              COALESCE(pp.league, 'AI') as league,
+              COALESCE(pp.nationality, 'KR') as nationality
        FROM player_cards pc
-       JOIN pro_players pp ON pc.pro_player_id = pp.id
+       LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
        WHERE pc.team_id = ? AND pc.is_starter = true`,
       [teamId]
     );
@@ -364,9 +372,12 @@ router.get('/team-color-bonus', authenticateToken, async (req: AuthRequest, res)
 
     // 스타터 카드들의 팀컬러 확인
     const starters = await pool.query(
-      `SELECT pc.*, pp.name, pp.team as pro_team, pp.position
+      `SELECT pc.*,
+              COALESCE(pp.name, pc.ai_player_name) as name,
+              COALESCE(pp.team, 'AI') as pro_team,
+              COALESCE(pp.position, pc.ai_position) as position
        FROM player_cards pc
-       JOIN pro_players pp ON pc.pro_player_id = pp.id
+       LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
        WHERE pc.team_id = ? AND pc.is_starter = true`,
       [teamId]
     );

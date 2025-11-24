@@ -395,19 +395,28 @@
 }
 
 .player-row .position {
-  width: 40px;
+  min-width: 50px;
+  width: 50px;
+  flex-shrink: 0;
   font-weight: 600;
   color: #f39c12;
 }
 
 .player-row .name {
   flex: 1;
+  min-width: 0;
   color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .player-row .ovr {
+  min-width: 60px;
+  flex-shrink: 0;
   color: #2ecc71;
   font-weight: 600;
+  text-align: right;
 }
 
 .starter-badge {
@@ -416,6 +425,8 @@
   background: #3498db;
   color: #fff;
   border-radius: 3px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* 경기 섹션 */

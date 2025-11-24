@@ -349,25 +349,29 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
     const baseOvr = player.overall;
     const totalStats = baseOvr * 4;
 
-    // 4개 스탯을 랜덤하게 분배하되 총합 유지
-    let remaining = totalStats;
+    // 선수 ID를 시드로 사용하여 일관된 스탯 생성
+    const playerId = player.id;
+    const seededRandom = (n: number) => {
+      const x = Math.sin(playerId * n) * 10000;
+      return x - Math.floor(x);
+    };
+
+    // 4개 스탯을 분배하되 총합 유지
     const baseStat = Math.floor(totalStats / 4);
     const variance = 10; // 스탯 간 편차
 
-    // 먼저 3개 스탯을 랜덤하게 생성
-    const mental = Math.max(1, Math.min(200, baseStat + Math.floor(Math.random() * variance * 2) - variance));
-    remaining -= mental;
-
-    const teamfight = Math.max(1, Math.min(200, baseStat + Math.floor(Math.random() * variance * 2) - variance));
-    remaining -= teamfight;
-
-    const focus = Math.max(1, Math.min(200, baseStat + Math.floor(Math.random() * variance * 2) - variance));
-    remaining -= focus;
+    // 시드 기반 랜덤으로 스탯 생성
+    const mental = Math.max(1, Math.min(200, baseStat + Math.floor(seededRandom(1) * variance * 2) - variance));
+    const teamfight = Math.max(1, Math.min(200, baseStat + Math.floor(seededRandom(2) * variance * 2) - variance));
+    const focus = Math.max(1, Math.min(200, baseStat + Math.floor(seededRandom(3) * variance * 2) - variance));
 
     // 마지막 스탯은 나머지로 설정하여 총합 보장
-    const laning = Math.max(1, Math.min(200, remaining));
+    const laning = Math.max(1, Math.min(200, totalStats - mental - teamfight - focus));
 
-    const personality = generatePersonality(mental);
+    // 성격도 선수 ID 기반으로 고정
+    const personalities: PersonalityType[] = ['LEADER', 'REBELLIOUS', 'CALM', 'EMOTIONAL', 'COMPETITIVE', 'TIMID', 'GREEDY', 'LOYAL', 'PERFECTIONIST', 'LAZY'];
+    const personalityIndex = Math.floor(seededRandom(4) * personalities.length);
+    const personality = personalities[personalityIndex];
 
     // 발굴 기록 저장 (스카우터 정보 및 성격/스탯 저장)
     await pool.query(
@@ -612,12 +616,23 @@ router.post('/discoveries/:discoveryId/sign', authenticateToken, async (req: Aut
     // OVR 계산
     const ovr = Math.round((mental + teamfight + focus + laning) / 4);
 
-    // 선수 카드 생성
+    // 계약 만료일 계산 (기본 1년)
+    const contractExpires = new Date();
+    contractExpires.setFullYear(contractExpires.getFullYear() + 1);
+
+    // 기본 계약 조건 (OVR 기반)
+    const annualSalary = finalCost;  // 계약금 = 연봉
+    const matchWinBonus = Math.floor(ovr * 100);  // 경기당 승리 보너스
+    const championshipBonus = Math.floor(annualSalary * 0.5);  // 우승 시 연봉의 50%
+    const mvpBonus = Math.floor(annualSalary * 0.3);  // MVP 시 연봉의 30%
+
+    // 선수 카드 생성 (계약 조건 포함)
     const result = await pool.query(
       `INSERT INTO player_cards (
         pro_player_id, team_id, mental, teamfight, focus, laning,
-        ovr, card_type, personality, is_starter, is_contracted
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'NORMAL', ?, false, true)`,
+        ovr, card_type, personality, is_starter, is_contracted,
+        annual_salary, contract_years, match_win_bonus, championship_bonus, mvp_bonus, contract_expires_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'NORMAL', ?, false, true, ?, 1, ?, ?, ?, ?)`,
       [
         discovery.pro_player_id,
         req.teamId,
@@ -626,7 +641,12 @@ router.post('/discoveries/:discoveryId/sign', authenticateToken, async (req: Aut
         focus,
         laning,
         ovr,
-        personality
+        personality,
+        annualSalary,
+        matchWinBonus,
+        championshipBonus,
+        mvpBonus,
+        contractExpires
       ]
     );
 

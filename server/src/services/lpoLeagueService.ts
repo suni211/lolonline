@@ -330,9 +330,9 @@ export class LPOLeagueService {
             continue;
           }
 
-          // 17:00 KST 이전이면 17:00 KST로
-          if (kstHours < 17) {
-            result.setUTCHours(8, 0, 0, 0); // 17:00 KST = 08:00 UTC
+          // 17:30 KST 이전이면 17:30 KST로
+          if (kstHours < 17 || (kstHours === 17 && result.getUTCMinutes() < 30)) {
+            result.setUTCHours(8, 30, 0, 0); // 17:30 KST = 08:30 UTC
             // 다시 과거인지 체크
             if (result.getTime() < now.getTime()) {
               result.setTime(result.getTime() + 24 * 60 * 60 * 1000);
@@ -340,10 +340,10 @@ export class LPOLeagueService {
             continue;
           }
 
-          // 23:30 KST 이후면 다음 날 17:00 KST로
+          // 23:30 KST 이후면 다음 날 17:30 KST로
           if (kstHours >= 24 || (kstHours === 23 && result.getUTCMinutes() > 30)) {
             result.setTime(result.getTime() + 24 * 60 * 60 * 1000);
-            result.setUTCHours(8, 0, 0, 0);
+            result.setUTCHours(8, 30, 0, 0);
             continue;
           }
 
@@ -355,7 +355,7 @@ export class LPOLeagueService {
           console.error('Max iterations reached in getNextValidMatchTime');
           const fallback = new Date();
           fallback.setTime(fallback.getTime() + 24 * 60 * 60 * 1000);
-          fallback.setUTCHours(8, 0, 0, 0);
+          fallback.setUTCHours(8, 30, 0, 0); // 17:30 KST
           return fallback;
         }
 

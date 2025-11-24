@@ -488,9 +488,14 @@ export class ProPlayerService {
   static async getTeamCards(teamId: number) {
     try {
       const cards = await pool.query(
-        `SELECT pc.*, pp.name, pp.team as pro_team, pp.position, pp.league, pp.nationality
+        `SELECT pc.*,
+                COALESCE(pp.name, pc.ai_player_name) as name,
+                COALESCE(pp.team, 'AI') as pro_team,
+                COALESCE(pp.position, pc.ai_position) as position,
+                COALESCE(pp.league, 'AI') as league,
+                COALESCE(pp.nationality, 'KR') as nationality
          FROM player_cards pc
-         JOIN pro_players pp ON pc.pro_player_id = pp.id
+         LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
          WHERE pc.team_id = ?
          ORDER BY pc.ovr DESC`,
         [teamId]
