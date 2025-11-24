@@ -53,6 +53,7 @@ export default function Layout() {
     { path: '/loans', label: '임대시장' },
     { path: '/awards', label: '어워드' },
     { path: '/news', label: '뉴스' },
+    { path: '/community', label: '커뮤니티' },
     { path: '/team-info', label: '팀 정보' },
     { path: '/missions', label: '미션' },
     { path: '/team', label: '팀 관리' },

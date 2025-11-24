@@ -32,6 +32,7 @@ import LoanMarket from './pages/LoanMarket';
 import Awards from './pages/Awards';
 import Worlds from './pages/Worlds';
 import Finance from './pages/Finance';
+import Community from './pages/Community';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import GlobalChat from './components/GlobalChat';
@@ -80,6 +81,7 @@ function App() {
             <Route path="tactics" element={<Tactics />} />
             <Route path="transfer" element={<Transfer />} />
             <Route path="news" element={<News />} />
+            <Route path="community" element={<Community />} />
             <Route path="friendly" element={<FriendlyMatch />} />
             <Route path="team-info" element={<TeamInfo />} />
             <Route path="player/:playerId" element={<PlayerProfile />} />
