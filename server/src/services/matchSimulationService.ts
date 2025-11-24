@@ -6,13 +6,15 @@ import { checkInjuryAfterMatch, getInjuryPenalty } from './injuryService.js';
 import { EventService } from './eventService.js';
 import { NewsService } from './newsService.js';
 
-// 롤 게임 상수
+// 롤 게임 상수 (실제 프로 경기 기준)
 const GAME_CONSTANTS = {
-  // 시간 (초 단위, 실제 1초 = 게임 10초)
+  // 시간 (초 단위, 실제 1초 = 게임 6초)
   RIFT_HERALD_SPAWN: 480,      // 8분
+  FIRST_HERALD_DESPAWN: 1140,  // 19분 (첫 전령 사라짐)
+  SECOND_HERALD_SPAWN: 840,    // 14분 (두번째 전령)
   DRAGON_SPAWN: 300,           // 5분
   DRAGON_RESPAWN: 300,         // 5분
-  BARON_SPAWN: 1500,           // 25분
+  BARON_SPAWN: 1200,           // 20분 (실제 롤)
   BARON_RESPAWN: 360,          // 6분
   ELDER_DRAGON_SPAWN: 2100,    // 35분 (4용 이후)
 
@@ -20,6 +22,41 @@ const GAME_CONSTANTS = {
   TURRET_HP: 3000,
   INHIBITOR_HP: 2000,
   NEXUS_HP: 5000,
+
+  // 프로 경기 통계 기준
+  AVG_GAME_TIME_MIN: 30,       // 평균 30분
+  AVG_GAME_TIME_MAX: 35,       // 평균 35분
+  AVG_TOTAL_KILLS_MIN: 15,     // 양팀 합산 최소 킬
+  AVG_TOTAL_KILLS_MAX: 25,     // 양팀 합산 최대 킬
+
+  // 게임 페이즈 (분)
+  EARLY_GAME_END: 15,          // 초반전 종료
+  MID_GAME_END: 25,            // 중반전 종료
+};
+
+// 게임 페이즈별 특성
+const GAME_PHASES = {
+  EARLY: {
+    name: '초반',
+    killChance: 0.03,          // 낮은 킬 확률 (라인전, CS 파밍)
+    expectedKills: { min: 3, max: 6 },  // 양팀 합산 3-6킬
+    events: ['LANE_KILL', 'GANK', 'FIRST_BLOOD'],
+    objectives: ['FIRST_DRAGON', 'HERALD']
+  },
+  MID: {
+    name: '중반',
+    killChance: 0.08,          // 중간 킬 확률 (스커미시, 오브젝트 싸움)
+    expectedKills: { min: 5, max: 12 }, // 양팀 합산 5-12킬
+    events: ['SKIRMISH', 'OBJECTIVE_FIGHT', 'TURRET_DIVE'],
+    objectives: ['DRAGON', 'HERALD', 'FIRST_BARON']
+  },
+  LATE: {
+    name: '후반',
+    killChance: 0.12,          // 높은 킬 확률 (한타, 바론/소울 싸움)
+    expectedKills: { min: 5, max: 10 }, // 양팀 합산 5-10킬
+    events: ['TEAMFIGHT', 'BARON_FIGHT', 'SOUL_FIGHT', 'ELDER_FIGHT'],
+    objectives: ['BARON', 'ELDER', 'SOUL']
+  }
 };
 
 // 포탑 구조
@@ -315,8 +352,9 @@ async function startMatch(match: any, io: Server) {
       nexus: { twin1: true, twin2: true, nexus: true }
     };
 
-    // 경기 시간 20~45분 랜덤 (초 단위)
-    const maxGameTime = (20 + Math.floor(Math.random() * 26)) * 60;
+    // 경기 시간 30~35분 (프로 경기 평균, 초 단위)
+    const maxGameTime = (GAME_CONSTANTS.AVG_GAME_TIME_MIN +
+      Math.floor(Math.random() * (GAME_CONSTANTS.AVG_GAME_TIME_MAX - GAME_CONSTANTS.AVG_GAME_TIME_MIN + 1))) * 60;
 
     // 세트 설정: 플레이오프는 5판3선, 그 외는 3판2선
     const isPlayoff = match.match_type === 'PLAYOFF';
@@ -721,20 +759,30 @@ async function generateEvents(
     return 6 + (level - 1) * (54 / 17); // 6초 ~ 60초
   };
 
-  // 시간대별 이벤트 발생 확률
-  // 총 킬 10-25개 목표로 조정
-  // 초반 15분: 매우 낮은 확률 (라인전, CS 파밍)
-  // 중반 15-25분: 중간 확률 (스커미시, 오브젝트 싸움)
-  // 후반 25분+: 높은 확률 (팀파이트, 포탑 푸시)
+  // 실제 프로 경기 기반 이벤트 발생 확률
+  // 목표: 양팀 합산 15-25킬 (30-35분 경기)
   let eventChance: number;
-  if (gameMinutes < 10) {
-    eventChance = 0.04; // 10분 전: 4% (거의 이벤트 없음)
-  } else if (gameMinutes < 15) {
-    eventChance = 0.08; // 10-15분: 8% (가끔 킬)
-  } else if (gameMinutes < 25) {
-    eventChance = 0.15; // 15-25분: 15% (활발한 교전)
+  let currentPhase: 'EARLY' | 'MID' | 'LATE';
+
+  if (gameMinutes < GAME_CONSTANTS.EARLY_GAME_END) {
+    currentPhase = 'EARLY';
+    eventChance = GAME_PHASES.EARLY.killChance; // 3%
+  } else if (gameMinutes < GAME_CONSTANTS.MID_GAME_END) {
+    currentPhase = 'MID';
+    eventChance = GAME_PHASES.MID.killChance; // 8%
   } else {
-    eventChance = 0.20; // 25분+: 20% (치열한 팀파이트)
+    currentPhase = 'LATE';
+    eventChance = GAME_PHASES.LATE.killChance; // 12%
+  }
+
+  // 현재 총 킬 수
+  const totalKills = matchData.home.kills + matchData.away.kills;
+
+  // 킬 수가 너무 적으면 확률 증가, 너무 많으면 감소
+  if (totalKills < 10 && gameMinutes > 15) {
+    eventChance *= 1.5; // 킬이 적으면 확률 증가
+  } else if (totalKills > 20) {
+    eventChance *= 0.7; // 킬이 많으면 확률 감소
   }
 
   if (Math.random() > eventChance) return events;
@@ -778,23 +826,27 @@ async function generateEvents(
 
   if (winningPlayers.length === 0 || losingPlayers.length === 0) return events;
 
-  // 이벤트 타입 선택 (시간대별 현실적 진행)
-  // 총 킬 10-25개 목표
+  // 프로 경기 기반 이벤트 타입 선택
   const eventPool: string[] = [];
 
   // 시간대별 이벤트
-  if (gameMinutes < 10) {
-    // 극초반 (0~10분): 라인전, 가끔 정글 갱킹 (0-3킬)
-    eventPool.push('KILL', 'NOTHING', 'NOTHING', 'NOTHING', 'NOTHING', 'NOTHING');
-  } else if (gameMinutes < 15) {
-    // 초반 (10~15분): 1차 포탑 공략 시작 (3-6킬)
-    eventPool.push('KILL', 'NOTHING', 'NOTHING', 'NOTHING');
-  } else if (gameMinutes < 25) {
-    // 중반 (15~25분): 본격적인 교전과 포탑 파괴 (5-12킬)
-    eventPool.push('KILL', 'KILL', 'TURRET', 'NOTHING', 'NOTHING');
+  if (currentPhase === 'EARLY') {
+    // 초반 (0-15분): 라인전, 정글 갱킹, 첫 드래곤
+    if (gameMinutes < 5) {
+      // 극초반: 첫 킬 가능성
+      eventPool.push('NOTHING', 'NOTHING', 'NOTHING', 'NOTHING', 'KILL');
+      if (totalKills === 0) eventPool.push('FIRST_BLOOD'); // 퍼스트블러드
+    } else {
+      eventPool.push('KILL', 'GANK', 'NOTHING', 'NOTHING');
+    }
+  } else if (currentPhase === 'MID') {
+    // 중반 (15-25분): 스커미시, 오브젝트 싸움
+    eventPool.push('KILL', 'SKIRMISH', 'TURRET');
+    if (totalKills < 15) eventPool.push('KILL', 'TEAMFIGHT'); // 킬 부족하면 추가
   } else {
-    // 후반 (25분+): 억제기/넥서스 집중 (5-10킬)
-    eventPool.push('KILL', 'TURRET', 'TURRET', 'INHIBITOR', 'TEAMFIGHT');
+    // 후반 (25분+): 바론/소울 싸움, 대규모 한타
+    eventPool.push('TEAMFIGHT', 'TURRET', 'INHIBITOR');
+    if (totalKills < 20) eventPool.push('KILL', 'TEAMFIGHT'); // 킬 목표 달성
   }
 
   // 오브젝트 이벤트
@@ -1183,14 +1235,71 @@ async function generateEvents(
       }
       break;
 
-    case 'GANK':
-      event = createEvent(gameTime, 'GANK', `${killer.name}(이)가 갱킹에 성공하여 ${victim.name}(을)를 처치했습니다!`, {
+    case 'FIRST_BLOOD':
+      // 퍼스트블러드
+      event = createEvent(gameTime, 'KILL', `⚡ FIRST BLOOD! ${killer.name}(이)가 ${victim.name}(을)를 처치했습니다!`, {
         team: winningTeam,
+        killer_id: killer.id,
         killer_name: killer.name,
+        victim_id: victim.id,
+        victim_name: victim.name,
+        first_blood: true
+      });
+      winningState.kills++;
+      winningState.gold += 400; // 퍼블 추가 골드
+      await pool.query('UPDATE match_stats SET kills = kills + 1, first_blood = TRUE WHERE match_id = ? AND player_id = ?', [match.id, killer.id]);
+      await pool.query('UPDATE match_stats SET deaths = deaths + 1 WHERE match_id = ? AND player_id = ?', [match.id, victim.id]);
+
+      // 죽은 선수 추가
+      const fbRespawnSec = calculateRespawnTime(gameTime);
+      matchData.deadPlayers.push({
+        playerId: victim.id,
+        playerName: victim.name,
+        team: winningTeam === 'home' ? 'away' : 'home',
+        respawnAt: gameTime + fbRespawnSec
+      });
+      break;
+
+    case 'GANK':
+      // 갱킹 (정글러가 킬)
+      const jungler = winningPlayers.find(p => p.position === 'JUNGLE') || killer;
+      event = createEvent(gameTime, 'KILL', `🗡️ ${jungler.name}(이)가 갱킹에 성공하여 ${victim.name}(을)를 처치했습니다!`, {
+        team: winningTeam,
+        killer_id: jungler.id,
+        killer_name: jungler.name,
+        victim_id: victim.id,
         victim_name: victim.name
       });
       winningState.kills++;
-      winningState.gold += 400;
+      winningState.gold += 350;
+      await pool.query('UPDATE match_stats SET kills = kills + 1 WHERE match_id = ? AND player_id = ?', [match.id, jungler.id]);
+      await pool.query('UPDATE match_stats SET deaths = deaths + 1 WHERE match_id = ? AND player_id = ?', [match.id, victim.id]);
+
+      // 죽은 선수 추가
+      const gankRespawnSec = calculateRespawnTime(gameTime);
+      matchData.deadPlayers.push({
+        playerId: victim.id,
+        playerName: victim.name,
+        team: winningTeam === 'home' ? 'away' : 'home',
+        respawnAt: gameTime + gankRespawnSec
+      });
+      break;
+
+    case 'SKIRMISH':
+      // 소규모 교전 (2-3킬)
+      const skirmishKills = 1 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < skirmishKills && losingPlayers.length > i; i++) {
+        const skKiller = winningPlayers[Math.floor(Math.random() * winningPlayers.length)];
+        const skVictim = losingPlayers[i];
+        winningState.kills++;
+        winningState.gold += 300;
+        await pool.query('UPDATE match_stats SET kills = kills + 1 WHERE match_id = ? AND player_id = ?', [match.id, skKiller.id]);
+        await pool.query('UPDATE match_stats SET deaths = deaths + 1 WHERE match_id = ? AND player_id = ?', [match.id, skVictim.id]);
+      }
+      event = createEvent(gameTime, 'SKIRMISH', `소규모 교전! ${winningTeam === 'home' ? '블루팀' : '레드팀'}이 ${skirmishKills}킬 획득!`, {
+        team: winningTeam,
+        kills: skirmishKills
+      });
       break;
 
     case 'CS':

@@ -129,7 +129,7 @@ router.get('/transactions', authenticateToken, async (req: AuthRequest, res) => 
           tf.id,
           'FACILITY' as type,
           CONCAT(tf.facility_type, ' 시설 레벨 ', tf.level) as description,
-          -(1000000 * POWER(2, tf.level - 1)) as amount,
+          -(5000000 * POWER(2, tf.level)) as amount,
           tf.updated_at as date
          FROM team_facilities tf
          WHERE tf.team_id = ? AND tf.level > 0

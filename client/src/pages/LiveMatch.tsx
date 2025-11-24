@@ -161,9 +161,22 @@ export default function LiveMatch() {
         herald: { ...prev.herald, alive: data.herald_alive }
       }));
 
-      // 죽은 선수 ID 업데이트
+      // 죽은 선수 ID 업데이트 - 즉시 반영
       if (data.dead_players) {
-        setDeadPlayerIds(data.dead_players.map((dp: any) => dp.playerId));
+        const deadIds = data.dead_players.map((dp: any) => dp.playerId);
+        setDeadPlayerIds(deadIds);
+        // 챔피언 상태도 즉시 업데이트
+        setChampions(prev => prev.map(champ => ({
+          ...champ,
+          isAlive: !deadIds.includes(champ.playerId)
+        })));
+      } else {
+        // 죽은 선수가 없으면 모두 살아있음
+        setDeadPlayerIds([]);
+        setChampions(prev => prev.map(champ => ({
+          ...champ,
+          isAlive: true
+        })));
       }
     });
 
@@ -438,7 +451,7 @@ export default function LiveMatch() {
   // 이벤트에서 하이라이트 감지
   const detectHighlight = (event: MatchEvent) => {
     let highlight: Highlight | null = null;
-    let duration = 30000; // 기본 30초
+    let duration = 5000; // 기본 5초로 단축
 
     switch (event.type) {
       case 'KILL':
@@ -453,28 +466,17 @@ export default function LiveMatch() {
           y: killY,
           description: `${event.data?.killer_name || event.data?.killer || '???'} → ${event.data?.victim_name || event.data?.victim || '???'}`
         };
-        // 킬 발생 시 죽은 선수 표시
+        // 킬 발생 시 즉시 죽은 선수 처리
         if (event.data?.victim_id) {
+          // 즉시 죽은 선수 목록에 추가
+          setDeadPlayerIds(prev => [...prev, event.data.victim_id]);
           setChampions(prev => prev.map(champ =>
             champ.playerId === event.data.victim_id
               ? { ...champ, isAlive: false }
               : champ
           ));
-          // 레벨에 따른 부활 시간 (게임 시간으로 레벨 추정)
-          // 1레벨: 6초, 18레벨(30분+): 60초
-          const gameMinutes = gameTime / 60;
-          const estimatedLevel = Math.min(18, Math.floor(1 + gameMinutes * 0.6));
-          const respawnTime = 6 + (estimatedLevel - 1) * (54 / 17); // 6초 ~ 60초
-
-          setTimeout(() => {
-            setChampions(prev => prev.map(champ =>
-              champ.playerId === event.data.victim_id
-                ? { ...champ, isAlive: true }
-                : champ
-            ));
-          }, respawnTime * 1000);
         }
-        duration = 30000;
+        duration = 5000;
         break;
 
       case 'TEAMFIGHT':
@@ -540,10 +542,8 @@ export default function LiveMatch() {
         const tfEstimatedLevel = Math.min(18, Math.floor(1 + tfGameMinutes * 0.6));
         const tfRespawnTime = 6 + (tfEstimatedLevel - 1) * (54 / 17);
 
-        // 리스폰 시간 동안 하이라이트 지속 (죽은 선수가 많을수록 오래)
-        const deadCount = victimIds.length;
-        const respawnAdvantage = Math.min(60000, tfRespawnTime * 1000 * deadCount / 3);
-        duration = Math.max(45000, respawnAdvantage);
+        // 한타는 7초 정도 하이라이트
+        duration = 7000;
 
         setTimeout(() => {
           setChampions(prev => prev.map(champ =>
@@ -564,7 +564,7 @@ export default function LiveMatch() {
           description: `${event.data?.team === 'home' ? '블루' : '레드'} 드래곤`
         };
         setObjectives(prev => ({ ...prev, dragon: { alive: false } }));
-        duration = 30000;
+        duration = 5000;
         break;
 
       case 'BARON':
@@ -590,7 +590,7 @@ export default function LiveMatch() {
           description: `${event.data?.team === 'home' ? '블루' : '레드'} 전령`
         };
         setObjectives(prev => ({ ...prev, herald: { alive: false, taken: true } }));
-        duration = 30000;
+        duration = 5000;
         break;
 
       case 'TURRET':
@@ -645,7 +645,7 @@ export default function LiveMatch() {
           y: towerPos.y,
           description: event.description
         };
-        duration = 30000;
+        duration = 5000;
         break;
 
       case 'NEXUS_DESTROYED':
@@ -659,7 +659,7 @@ export default function LiveMatch() {
           y: nexusY,
           description: 'VICTORY!'
         };
-        duration = 60000;
+        duration = 10000; // 승리는 10초
         break;
     }
 

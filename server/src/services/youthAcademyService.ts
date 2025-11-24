@@ -164,10 +164,10 @@ export class YouthAcademyService {
       // 현재 능력치 (잠재력의 30~50%)
       const currentOverall = Math.floor(potential * (0.3 + Math.random() * 0.2));
 
-      // 이름 생성
-      const firstNames = ['김', '이', '박', '최', '정', '강', '조', '윤', '장', '임'];
-      const lastNames = ['민준', '서준', '도윤', '예준', '시우', '하준', '지호', '준서', '건우', '현우'];
-      const name = firstNames[Math.floor(Math.random() * firstNames.length)] +
+      // 영어 이름 생성
+      const firstNames = ['Alex', 'Ben', 'Chris', 'David', 'Eric', 'Frank', 'George', 'Henry', 'Ian', 'Jack', 'Kevin', 'Leo', 'Mike', 'Nick', 'Oliver', 'Paul'];
+      const lastNames = ['Kim', 'Lee', 'Park', 'Choi', 'Jung', 'Kang', 'Cho', 'Yoon', 'Chang', 'Lim', 'Han', 'Oh', 'Seo', 'Shin', 'Kwon', 'Song'];
+      const name = firstNames[Math.floor(Math.random() * firstNames.length)] + ' ' +
                    lastNames[Math.floor(Math.random() * lastNames.length)];
 
       await pool.query(
@@ -210,6 +210,15 @@ export class YouthAcademyService {
 
       const youth = player[0];
 
+      // 오늘 이미 훈련했는지 확인
+      const lastTrained = youth.last_trained_at ? new Date(youth.last_trained_at) : null;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (lastTrained && lastTrained >= today) {
+        throw new Error('이미 오늘 훈련을 완료했습니다');
+      }
+
       // 아카데미 정보
       const academy = await pool.query(
         `SELECT training_quality FROM youth_academy WHERE team_id = ?`,
@@ -233,9 +242,9 @@ export class YouthAcademyService {
       const newLaning = Math.min(youth.potential, youth.laning + laningGrowth);
       const newOverall = Math.floor((newMental + newTeamfight + newFocus + newLaning) / 4);
 
-      // 훈련 진행도 증가
+      // 훈련 진행도 증가 (최대 100%)
       const progressGain = Math.floor(10 * growthRate);
-      const newProgress = youth.training_progress + progressGain;
+      const newProgress = Math.min(100, youth.training_progress + progressGain);
 
       // 졸업 준비 확인 (진행도 100% 이상 + 오버롤이 잠재력의 80% 이상)
       const graduationReady = newProgress >= 100 && newOverall >= youth.potential * 0.8;
@@ -243,7 +252,8 @@ export class YouthAcademyService {
       await pool.query(
         `UPDATE youth_players SET
           mental = ?, teamfight = ?, focus = ?, laning = ?,
-          current_overall = ?, training_progress = ?, graduation_ready = ?
+          current_overall = ?, training_progress = ?, graduation_ready = ?,
+          last_trained_at = NOW()
          WHERE id = ?`,
         [newMental, newTeamfight, newFocus, newLaning,
          newOverall, newProgress, graduationReady, youthPlayerId]
@@ -285,23 +295,20 @@ export class YouthAcademyService {
         throw new Error('아직 졸업 준비가 되지 않았습니다');
       }
 
-      // 선수 카드 생성을 위해 players 테이블에 먼저 등록
-      const playerResult = await pool.query(
-        `INSERT INTO players (name, nationality, position, age, overall, popularity, salary, is_available)
-         VALUES (?, 'KR', ?, ?, ?, 1, ?, false)`,
-        [player.name, player.position, player.age, player.current_overall,
-         Math.floor(player.current_overall * 50000)]
-      );
+      // 1군에서의 시작 능력치 (유스 능력치의 40-50%로 매우 낮게 설정)
+      const firstTeamOverall = Math.floor(player.current_overall * (0.4 + Math.random() * 0.1));
+      const firstTeamMental = Math.floor(player.mental * (0.4 + Math.random() * 0.1));
+      const firstTeamTeamfight = Math.floor(player.teamfight * (0.4 + Math.random() * 0.1));
+      const firstTeamFocus = Math.floor(player.focus * (0.4 + Math.random() * 0.1));
+      const firstTeamLaning = Math.floor(player.laning * (0.4 + Math.random() * 0.1));
 
-      const playerId = playerResult.insertId;
-
-      // 선수 카드 생성
+      // AI 선수로 생성 (pro_player_id는 NULL로 설정)
       await pool.query(
         `INSERT INTO player_cards
-         (player_id, team_id, level, mental, teamfight, focus, laning, overall, \`condition\`, is_starter)
-         VALUES (?, ?, 1, ?, ?, ?, ?, ?, 100, false)`,
-        [playerId, teamId, player.mental, player.teamfight, player.focus,
-         player.laning, player.current_overall]
+         (pro_player_id, team_id, ai_player_name, ai_position, level, mental, teamfight, focus, laning, ovr, \`condition\`, is_starter, is_contracted, personality)
+         VALUES (NULL, ?, ?, ?, 1, ?, ?, ?, ?, ?, 100, false, true, ?)`,
+        [teamId, player.name, player.position, firstTeamMental, firstTeamTeamfight, firstTeamFocus,
+         firstTeamLaning, firstTeamOverall, 'CALM']  // 차분한 성격으로 시작
       );
 
       // 유스 선수 삭제
