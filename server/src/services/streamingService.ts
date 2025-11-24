@@ -4,11 +4,12 @@ export class StreamingService {
   // 스트리밍 시작
   static async startStream(teamId: number, playerCardId: number, durationHours: number = 2) {
     try {
-      // 선수 확인
+      // 선수 확인 (pro_players와 조인)
       const players = await pool.query(
-        `SELECT pc.*, p.name, p.popularity
+        `SELECT pc.id, pc.team_id, pc.ovr, pc.condition,
+                COALESCE(pp.name, pc.ai_player_name) as name
          FROM player_cards pc
-         JOIN players p ON pc.player_id = p.id
+         LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
          WHERE pc.id = ? AND pc.team_id = ?`,
         [playerCardId, teamId]
       );
@@ -35,9 +36,9 @@ export class StreamingService {
         throw new Error('컨디션이 너무 낮아 스트리밍을 할 수 없습니다');
       }
 
-      // 시청자 수 계산 (인기도 + 오버롤 기반)
-      const baseViewers = player.popularity * 100;
-      const overallBonus = player.overall * 50;
+      // 시청자 수 계산 (OVR 기반)
+      const baseViewers = 1000;
+      const overallBonus = (player.ovr || 70) * 50;
       const randomBonus = Math.floor(Math.random() * 5000);
       const viewers = baseViewers + overallBonus + randomBonus;
 
@@ -100,12 +101,13 @@ export class StreamingService {
   static async getStreamHistory(teamId: number, limit: number = 30) {
     try {
       const streams = await pool.query(
-        `SELECT ps.*, p.name as player_name
+        `SELECT ps.*,
+                COALESCE(pp.name, pc.ai_player_name) as player_name
          FROM player_streams ps
          JOIN player_cards pc ON ps.player_card_id = pc.id
-         JOIN players p ON pc.player_id = p.id
+         LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
          WHERE ps.team_id = ?
-         ORDER BY ps.stream_date DESC, ps.created_at DESC
+         ORDER BY ps.stream_date DESC
          LIMIT ?`,
         [teamId, limit]
       );
@@ -160,15 +162,15 @@ export class StreamingService {
       const playerStats = await pool.query(
         `SELECT
            pc.id as player_card_id,
-           p.name as player_name,
+           COALESCE(pp.name, pc.ai_player_name) as player_name,
            COUNT(*) as stream_count,
            SUM(ps.income) as total_income,
            AVG(ps.viewers) as avg_viewers
          FROM player_streams ps
          JOIN player_cards pc ON ps.player_card_id = pc.id
-         JOIN players p ON pc.player_id = p.id
+         LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
          WHERE ps.team_id = ?
-         GROUP BY pc.id, p.name
+         GROUP BY pc.id, COALESCE(pp.name, pc.ai_player_name)
          ORDER BY total_income DESC`,
         [teamId]
       );
