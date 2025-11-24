@@ -1352,6 +1352,55 @@ router.get('/players/list', authenticateToken, adminMiddleware, async (req: Auth
   }
 });
 
+// 팀에 골드 지급
+router.post('/teams/:teamId/add-gold', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const teamId = parseInt(req.params.teamId);
+    const { amount } = req.body;
+
+    if (!amount || isNaN(amount)) {
+      return res.status(400).json({ error: '금액을 입력해주세요' });
+    }
+
+    const teams = await pool.query('SELECT name, gold FROM teams WHERE id = ?', [teamId]);
+    if (teams.length === 0) {
+      return res.status(404).json({ error: '팀을 찾을 수 없습니다' });
+    }
+
+    await pool.query('UPDATE teams SET gold = gold + ? WHERE id = ?', [amount, teamId]);
+
+    const newGold = teams[0].gold + amount;
+    res.json({
+      success: true,
+      message: `${teams[0].name}에 ${amount.toLocaleString()} 골드 지급. 현재 잔액: ${newGold.toLocaleString()}`
+    });
+  } catch (error: any) {
+    console.error('Add gold error:', error);
+    res.status(500).json({ error: '골드 지급 실패: ' + error.message });
+  }
+});
+
+// 모든 팀에 골드 일괄 지급
+router.post('/teams/add-gold-all', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const { amount } = req.body;
+
+    if (!amount || isNaN(amount)) {
+      return res.status(400).json({ error: '금액을 입력해주세요' });
+    }
+
+    const result = await pool.query('UPDATE teams SET gold = gold + ? WHERE is_ai = false', [amount]);
+
+    res.json({
+      success: true,
+      message: `${result.affectedRows}개 팀에 각 ${amount.toLocaleString()} 골드 지급 완료`
+    });
+  } catch (error: any) {
+    console.error('Add gold all error:', error);
+    res.status(500).json({ error: '골드 일괄 지급 실패: ' + error.message });
+  }
+});
+
 // 2025 시즌 선수 데이터 DB 동기화
 router.post('/players/sync-roster', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
   try {

@@ -72,6 +72,7 @@ export default function Admin() {
   const [uploadingLeagueId, setUploadingLeagueId] = useState<number | null>(null);
   const [testHomeTeam, setTestHomeTeam] = useState<number | null>(null);
   const [testAwayTeam, setTestAwayTeam] = useState<number | null>(null);
+  const [goldAmount, setGoldAmount] = useState<number>(10000000);
 
   useEffect(() => {
     fetchData();
@@ -417,6 +418,20 @@ export default function Admin() {
     }
   };
 
+  const addGoldToAllTeams = async () => {
+    if (!confirm(`모든 유저 팀에 ${goldAmount.toLocaleString()} 골드를 지급하시겠습니까?`)) return;
+    try {
+      setLoading(true);
+      const res = await axios.post('/api/admin/teams/add-gold-all', { amount: goldAmount });
+      setMessage(res.data.message);
+      fetchData();
+    } catch (error: any) {
+      setMessage(error.response?.data?.error || '골드 지급 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="admin-page">
       <h1>어드민 관리</h1>
@@ -570,6 +585,23 @@ export default function Admin() {
                 테스트 경기 시작
               </button>
             </div>
+          </div>
+
+          <div className="gold-section">
+            <h3>골드 지급</h3>
+            <div className="gold-controls">
+              <input
+                type="number"
+                value={goldAmount}
+                onChange={(e) => setGoldAmount(parseInt(e.target.value) || 0)}
+                min="0"
+                step="1000000"
+              />
+              <button onClick={addGoldToAllTeams} disabled={loading} className="primary">
+                모든 유저 팀에 지급
+              </button>
+            </div>
+            <p className="hint">입력한 금액을 모든 유저 팀에 일괄 지급합니다.</p>
           </div>
 
           {cups.length > 0 && (
