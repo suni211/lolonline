@@ -56,7 +56,8 @@ interface ProfileData {
   contract: ContractInfo | null;  // 계약 정보 (null이면 FA)
   stats: CardStats;
   personality: PersonalityInfo | null;
-  salary: number;
+  monthly_salary: number;  // 월급
+  annual_salary: number;   // 연봉
   career_stats: CareerStats;
   rankings: Rankings | null;
 }
@@ -131,7 +132,7 @@ export default function PlayerProfile() {
     );
   }
 
-  const { player, contract, stats, personality, salary, career_stats, rankings } = profile;
+  const { player, contract, stats, personality, monthly_salary, annual_salary, career_stats, rankings } = profile;
 
   return (
     <div className="player-profile-page page-wrapper">
@@ -182,9 +183,16 @@ export default function PlayerProfile() {
 
       <div className="profile-content">
         <div className="profile-section">
-          <h2>연봉</h2>
-          <div className="salary-display">
-            {salary.toLocaleString()}원
+          <h2>급여</h2>
+          <div className="salary-grid">
+            <div className="salary-item">
+              <span className="salary-label">월급</span>
+              <span className="salary-value">{monthly_salary.toLocaleString()}원</span>
+            </div>
+            <div className="salary-item">
+              <span className="salary-label">연봉</span>
+              <span className="salary-value highlight">{annual_salary.toLocaleString()}원</span>
+            </div>
           </div>
         </div>
 

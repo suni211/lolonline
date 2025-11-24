@@ -69,14 +69,16 @@ function calculateNegotiationResult(
   };
 }
 
-// FA 선수 목록 (이적시장에 없는 모든 선수)
+// FA 선수 목록 (계약되지 않은 선수만)
 router.get('/fa', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { position, league, minOvr, maxOvr, search, sort = 'ovr_desc', page = 1, limit = 20 } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
-    // 모든 선수 표시 (계약 여부 상관없이)
-    let whereClause = 'WHERE 1=1';
+    // 계약되지 않은 선수만 표시
+    let whereClause = `WHERE NOT EXISTS (
+      SELECT 1 FROM player_cards pc WHERE pc.pro_player_id = pp.id AND pc.is_contracted = true
+    )`;
     const params: any[] = [];
 
     if (position && position !== 'all') {
@@ -466,7 +468,8 @@ router.get('/player/:playerId', async (req, res) => {
       } : null,  // 계약 정보 (없으면 FA)
       stats: { mental, teamfight, focus, laning },
       personality: personalityInfo,
-      salary: ovr * 100000 * 12,  // 연봉 = 월급 × 12
+      monthly_salary: ovr * 100000,  // 월급
+      annual_salary: ovr * 100000 * 12,  // 연봉 = 월급 × 12
       career_stats: {
         total_games: matchStats.total_games || 0,
         total_kills: matchStats.total_kills || 0,
