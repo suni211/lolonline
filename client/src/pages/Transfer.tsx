@@ -248,12 +248,27 @@ export default function Transfer() {
   const fetchMarket = async () => {
     try {
       const params = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value && value !== 'all') {
-          params.append(key, value);
-        }
-      });
-      const response = await axios.get(`/api/transfer?${params.toString()}`);
+      // name 필터는 browse-all에서만 지원
+      if (filters.name) {
+        params.append('name', filters.name);
+      }
+      if (filters.position && filters.position !== 'all') {
+        params.append('position', filters.position);
+      }
+      if (filters.league && filters.league !== 'all') {
+        params.append('league', filters.league);
+      }
+      if (filters.minOvr) {
+        params.append('minOvr', filters.minOvr);
+      }
+      if (filters.maxOvr) {
+        params.append('maxOvr', filters.maxOvr);
+      }
+      if (filters.sort) {
+        params.append('sort', filters.sort);
+      }
+      // browse-all 엔드포인트 사용 (모든 선수 조회)
+      const response = await axios.get(`/api/transfer/browse-all?${params.toString()}`);
       setListings(response.data);
     } catch (error) {
       console.error('Failed to fetch market:', error);
@@ -817,35 +832,20 @@ export default function Transfer() {
               onChange={(e) => setFilters({ ...filters, maxOvr: e.target.value })}
             />
 
-            <input
-              type="number"
-              placeholder="최소 가격"
-              value={filters.minPrice}
-              onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
-            />
-
-            <input
-              type="number"
-              placeholder="최대 가격"
-              value={filters.maxPrice}
-              onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
-            />
-
             <select
               value={filters.sort}
               onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
             >
-              <option value="newest">최신순</option>
-              <option value="price_asc">가격 낮은순</option>
-              <option value="price_desc">가격 높은순</option>
               <option value="ovr_desc">OVR 높은순</option>
               <option value="ovr_asc">OVR 낮은순</option>
+              <option value="name">이름순</option>
+              <option value="newest">최신등록</option>
             </select>
           </div>
 
           <div className="listings-grid">
             {listings.map((listing) => (
-              <div key={listing.listing_id} className="listing-card">
+              <div key={listing.card_id} className="listing-card">
                 <div className="card-header">
                   <span
                     className="position"
@@ -863,22 +863,15 @@ export default function Transfer() {
                 <div className="player-name">{listing.player_name}</div>
                 <div className="player-team">{listing.pro_team}</div>
                 <div className="player-info">{listing.league} | {listing.nationality}</div>
+                <div className="player-team" style={{ fontSize: '0.85rem', opacity: 0.8 }}>팀: {listing.team_name}</div>
                 <div className="stats">
                   <span>멘탈 {listing.mental}</span>
                   <span>팀파 {listing.teamfight}</span>
                   <span>집중 {listing.focus}</span>
                   <span>라인 {listing.laning}</span>
                 </div>
-                <div className="price">{listing.asking_price.toLocaleString()}원</div>
-                <div className="seller">판매자: {listing.seller_team_name}</div>
+                {listing.is_starter && <span className="starter-badge">주전</span>}
                 <div className="button-group">
-                  <button
-                    className="buy-btn"
-                    onClick={() => buyCard(listing.listing_id, listing.asking_price)}
-                    disabled={loading || !team || team.gold < listing.asking_price}
-                  >
-                    구매하기
-                  </button>
                   <button
                     className="request-btn"
                     onClick={() => openPlayerDetail(listing.pro_player_id)}

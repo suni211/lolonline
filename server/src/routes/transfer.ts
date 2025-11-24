@@ -674,6 +674,90 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
+// 모든 팀의 계약 선수 조회 (이적 가능 선수)
+router.get('/browse-all', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { position, minOvr, maxOvr, league, sort, name } = req.query;
+
+    let query = `
+      SELECT
+        pc.id as card_id,
+        pc.pro_player_id,
+        pc.ovr,
+        pc.mental,
+        pc.teamfight,
+        pc.focus,
+        pc.laning,
+        pc.card_type,
+        pp.name as player_name,
+        pp.team as pro_team,
+        pp.position,
+        pp.league,
+        pp.nationality,
+        t.name as team_name,
+        pc.is_starter
+      FROM player_cards pc
+      INNER JOIN pro_players pp ON pc.pro_player_id = pp.id
+      INNER JOIN teams t ON pc.team_id = t.id
+      WHERE pc.is_contracted = 1
+      AND pc.team_id != ?
+    `;
+
+    const params: any[] = [req.teamId];
+
+    // 필터링
+    if (name && name !== '') {
+      query += ' AND pp.name LIKE ?';
+      params.push(`%${name}%`);
+    }
+
+    if (position && position !== 'all') {
+      query += ' AND pp.position = ?';
+      params.push(position);
+    }
+
+    if (minOvr) {
+      query += ' AND pc.ovr >= ?';
+      params.push(Number(minOvr));
+    }
+
+    if (maxOvr) {
+      query += ' AND pc.ovr <= ?';
+      params.push(Number(maxOvr));
+    }
+
+    if (league && league !== 'all') {
+      query += ' AND pp.league = ?';
+      params.push(league);
+    }
+
+    // 정렬
+    switch (sort) {
+      case 'ovr_desc':
+        query += ' ORDER BY pc.ovr DESC';
+        break;
+      case 'ovr_asc':
+        query += ' ORDER BY pc.ovr ASC';
+        break;
+      case 'name':
+        query += ' ORDER BY pp.name ASC';
+        break;
+      case 'newest':
+      default:
+        query += ' ORDER BY pc.id DESC';
+        break;
+    }
+
+    query += ' LIMIT 200';
+
+    const players = await pool.query(query, params);
+    res.json(players);
+  } catch (error: any) {
+    console.error('Get all players error:', error);
+    res.status(500).json({ error: '선수 조회 실패' });
+  }
+});
+
 // 내 매물 목록
 router.get('/my-listings', authenticateToken, async (req: AuthRequest, res) => {
   try {
