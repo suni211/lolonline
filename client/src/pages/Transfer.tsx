@@ -6,11 +6,11 @@ import PlayerDetailModal from '../components/PlayerDetailModal';
 import './Transfer.css';
 
 interface TransferListing {
-  listing_id: number;
-  asking_price: number;
-  listed_at: string;
-  seller_team_id: number;
-  seller_team_name: string;
+  listing_id?: number;
+  asking_price?: number;
+  listed_at?: string;
+  seller_team_id?: number;
+  seller_team_name?: string;
   card_id: number;
   pro_player_id: number;
   ovr: number;
@@ -18,12 +18,14 @@ interface TransferListing {
   teamfight: number;
   focus: number;
   laning: number;
-  card_type: string;
+  card_type?: string;
   player_name: string;
   pro_team: string;
   position: string;
   league: string;
   nationality: string;
+  team_name?: string;
+  is_starter?: boolean;
   status?: string;
 }
 
@@ -439,29 +441,6 @@ export default function Transfer() {
     }
   };
 
-  const buyCard = async (listingId: number, price: number) => {
-    if (!team || team.gold < price) {
-      alert('원가 부족합니다!');
-      return;
-    }
-
-    if (!confirm(`이 카드를 ${price.toLocaleString()}원에 구매하시겠습니까?`)) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await axios.post(`/api/transfer/buy/${listingId}`);
-      alert(response.data.message);
-      await refreshTeam();
-      await fetchMarket();
-      await fetchHistory();
-    } catch (error: any) {
-      alert(error.response?.data?.error || '구매 실패');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const startNegotiation = async (playerId: number) => {
     setLoading(true);
@@ -949,11 +928,11 @@ export default function Transfer() {
                         {listing.position}
                       </span>
                       <span className="ovr">OVR {listing.ovr}</span>
-                      <span className="price">{listing.asking_price.toLocaleString()}원</span>
+                      <span className="price">{(listing.asking_price || 0).toLocaleString()}원</span>
                     </div>
                     <button
                       className="cancel-btn"
-                      onClick={() => cancelListing(listing.listing_id)}
+                      onClick={() => cancelListing(listing.listing_id || 0)}
                     >
                       취소
                     </button>
