@@ -110,7 +110,7 @@ router.get('/:teamId/info', authenticateToken, async (req: AuthRequest, res) => 
     // 선수 목록
     const players = await pool.query(
       `SELECT pc.id, pp.name as player_name, pp.position, pc.ovr, pc.is_starter,
-              pc.laning, pc.teamfight, pc.mentality, pc.consistency, pc.aggression
+              pc.mental, pc.teamfight, pc.focus, pc.laning
        FROM player_cards pc
        INNER JOIN pro_players pp ON pc.pro_player_id = pp.id
        WHERE pc.team_id = ? AND pc.is_contracted = true
