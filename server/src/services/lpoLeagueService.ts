@@ -445,9 +445,6 @@ export class LPOLeagueService {
 
     const range = statRanges[tier] || statRanges['SECOND'];
 
-    // 성격 목록 (players 테이블 ENUM과 동일)
-    const personalities = ['LEADER', 'LONER', 'TEAMPLAYER', 'HOTHEAD', 'CALM', 'GREEDY', 'HUMBLE', 'PRANKSTER'];
-
     for (const position of positions) {
       const name = this.generatePlayerName();
       const mental = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
@@ -455,16 +452,12 @@ export class LPOLeagueService {
       const focus = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
       const laning = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
       const ovr = Math.round((mental + teamfight + focus + laning) / 4);
-      const personality = personalities[Math.floor(Math.random() * personalities.length)];
 
-      // player_cards에 AI 가상 선수 생성 (pro_player_id = NULL)
+      // player_cards에 AI 가상 선수 생성 (admin.ts와 동일)
       await pool.query(
-        `INSERT INTO player_cards (
-          pro_player_id, team_id, mental, teamfight, focus, laning, ovr,
-          card_type, ai_player_name, ai_position, personality,
-          is_starter, is_contracted
-        ) VALUES (NULL, ?, ?, ?, ?, ?, ?, 'NORMAL', ?, ?, ?, true, true)`,
-        [teamId, mental, teamfight, focus, laning, ovr, name, position, personality]
+        `INSERT INTO player_cards (team_id, pro_player_id, mental, teamfight, focus, laning, ovr, card_type, is_contracted, is_starter, ai_player_name, ai_position)
+         VALUES (?, NULL, ?, ?, ?, ?, ?, 'NORMAL', true, true, ?, ?)`,
+        [teamId, mental, teamfight, focus, laning, ovr, name, position]
       );
     }
   }
