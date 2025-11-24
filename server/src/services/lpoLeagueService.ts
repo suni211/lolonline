@@ -462,7 +462,7 @@ export class LPOLeagueService {
   }
 
   // 플레이어 팀이 AI 팀을 대체
-  static async replaceAITeam(playerTeamId: number) {
+  static async replaceAITeam(playerTeamId: number, region: string = 'SOUTH') {
     try {
       // 플레이어 팀 정보 확인
       const playerTeam = await pool.query('SELECT * FROM teams WHERE id = ? AND is_ai = false', [playerTeamId]);
@@ -470,19 +470,20 @@ export class LPOLeagueService {
         throw new Error('Player team not found');
       }
 
-      // LPO 2 LEAGUE에서 가장 낮은 순위의 AI 팀 찾기
+      // 해당 리전에서 가장 낮은 순위의 AI 팀 찾기
       const aiTeam = await pool.query(
         `SELECT t.id, t.name, lp.league_id, lp.wins, lp.losses, lp.draws, lp.points, lp.goal_difference
          FROM teams t
          JOIN league_participants lp ON t.id = lp.team_id
          JOIN leagues l ON lp.league_id = l.id
-         WHERE t.is_ai = true AND l.region = 'SOUTH'
+         WHERE t.is_ai = true AND l.region = ?
          ORDER BY lp.points ASC, lp.goal_difference ASC
-         LIMIT 1`
+         LIMIT 1`,
+        [region]
       );
 
       if (aiTeam.length === 0) {
-        throw new Error('No AI team available in LPO SOUTH');
+        throw new Error(`No AI team available in LPO ${region}`);
       }
 
       const targetAI = aiTeam[0];
@@ -496,8 +497,8 @@ export class LPOLeagueService {
          targetAI.wins, targetAI.losses, targetAI.draws, targetAI.points, targetAI.goal_difference]
       );
 
-      // 플레이어 팀의 tier를 SOUTH로 변경
-      await pool.query('UPDATE teams SET league = ? WHERE id = ?', ['SOUTH', playerTeamId]);
+      // 플레이어 팀의 tier를 해당 리전으로 변경
+      await pool.query('UPDATE teams SET league = ? WHERE id = ?', [region, playerTeamId]);
 
       // AI 팀을 리그에서 제거
       await pool.query('DELETE FROM league_participants WHERE team_id = ?', [targetAI.id]);

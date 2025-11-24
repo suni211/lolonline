@@ -282,19 +282,19 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
     const teamAbbr = abbreviation?.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 3) ||
                      name.replace(/[^A-Za-z0-9]/g, '').substring(0, 3).toUpperCase();
 
-    // 팀 생성 (자동으로 SOUTH 리그로 배정, 기본 1억 골드)
+    // 팀 생성 (선택한 리그로 배정, 기본 1억 골드)
     const teamResult = await pool.query(
       `INSERT INTO teams (user_id, name, abbreviation, league, logo_url, team_color, gold, diamond, region, male_fans, female_fans)
-       VALUES (?, ?, ?, 'SOUTH', ?, ?, 100000000, 100, ?, 500, 500)`,
-      [req.userId, name, teamAbbr, logo_url || null, team_color || '#1E3A8A', region]
+       VALUES (?, ?, ?, ?, ?, ?, 100000000, 100, ?, 500, 500)`,
+      [req.userId, name, teamAbbr, region, logo_url || null, team_color || '#1E3A8A', region]
     );
 
     const teamId = teamResult.insertId;
 
-    // AI 팀 대체 (1부 리그에서 AI 팀 하나를 대체)
+    // AI 팀 대체 (해당 리그에서 AI 팀 하나를 대체)
     try {
-      const replacement = await LPOLeagueService.replaceAITeam(teamId);
-      console.log(`Team ${name} replaced AI team: ${replacement.replacedTeam}`);
+      const replacement = await LPOLeagueService.replaceAITeam(teamId, region);
+      console.log(`Team ${name} replaced AI team: ${replacement.replacedTeam} in ${region}`);
     } catch (replaceError: any) {
       console.error('AI team replacement failed:', replaceError.message);
       // 대체 실패 시 직접 리그에 등록
