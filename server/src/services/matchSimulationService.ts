@@ -8,7 +8,7 @@ import { NewsService } from './newsService.js';
 
 // 롤 게임 상수 (실제 프로 경기 기준)
 const GAME_CONSTANTS = {
-  // 시간 (초 단위, 실제 1초 = 게임 6초)
+  // 시간 (초 단위, 실제 1초 = 게임 10초)
   RIFT_HERALD_SPAWN: 480,      // 8분
   FIRST_HERALD_DESPAWN: 1140,  // 19분 (첫 전령 사라짐)
   SECOND_HERALD_SPAWN: 840,    // 14분 (두번째 전령)
@@ -23,9 +23,9 @@ const GAME_CONSTANTS = {
   INHIBITOR_HP: 2000,
   NEXUS_HP: 5000,
 
-  // 프로 경기 통계 기준
-  AVG_GAME_TIME_MIN: 30,       // 평균 30분
-  AVG_GAME_TIME_MAX: 35,       // 평균 35분
+  // 프로 경기 통계 기준 (15~45분)
+  AVG_GAME_TIME_MIN: 15,       // 최소 15분
+  AVG_GAME_TIME_MAX: 45,       // 최대 45분
   AVG_TOTAL_KILLS_MIN: 15,     // 양팀 합산 최소 킬
   AVG_TOTAL_KILLS_MAX: 25,     // 양팀 합산 최대 킬
 
@@ -488,8 +488,8 @@ async function simulateMatchProgress(match: any, io: Server) {
       return;
     }
 
-    // 시간 진행 (1초 = 6초) - 30분 게임 = 5분 실시간
-    matchData.game_time += 6;
+    // 시간 진행 (1초 = 10초) - 15~45분 게임 = 약 1.5~4.5분 실시간
+    matchData.game_time += 10;
     const gameTime = matchData.game_time;
     const gameMinutes = Math.floor(gameTime / 60);
 
@@ -666,25 +666,36 @@ async function simulateMatchProgress(match: any, io: Server) {
       matchData.winner = 'home';
       matchData.home_score = 1;
     }
-    // 2. 60분 시간제한 (킬 수로 승자 결정)
-    else if (gameTime >= 3600) {
+    // 2. 45분 시간제한 (넥서스 아직 안 파괴 시)
+    else if (gameTime >= 2700) {
       matchData.game_over = true;
-      if (matchData.home.kills > matchData.away.kills) {
+      // 최종 우위: 골드 차이 (3000골드 = 게임 우위)
+      const goldDifference = matchData.home.gold - matchData.away.gold;
+      if (goldDifference > 3000) {
         matchData.winner = 'home';
         matchData.home_score = 1;
-      } else if (matchData.away.kills > matchData.home.kills) {
+      } else if (goldDifference < -3000) {
         matchData.winner = 'away';
         matchData.away_score = 1;
       } else {
-        // 킬 동점이면 골드로
-        matchData.winner = matchData.home.gold >= matchData.away.gold ? 'home' : 'away';
-        if (matchData.winner === 'home') matchData.home_score = 1;
-        else matchData.away_score = 1;
+        // 3000골드 이내면 킬 수로 결정
+        if (matchData.home.kills > matchData.away.kills) {
+          matchData.winner = 'home';
+          matchData.home_score = 1;
+        } else if (matchData.away.kills > matchData.home.kills) {
+          matchData.winner = 'away';
+          matchData.away_score = 1;
+        } else {
+          // 킬도 동점이면 골드로 최종 결정
+          matchData.winner = matchData.home.gold >= matchData.away.gold ? 'home' : 'away';
+          if (matchData.winner === 'home') matchData.home_score = 1;
+          else matchData.away_score = 1;
+        }
       }
       matchData.events.push({
         type: 'GAME_END',
         time: gameTime,
-        description: '60분 시간제한으로 경기 종료'
+        description: '45분 시간제한으로 경기 종료 (골드 차이로 승자 결정)'
       });
     }
 
