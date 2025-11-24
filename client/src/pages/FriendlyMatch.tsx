@@ -26,10 +26,18 @@ interface MatchHistory {
   away_team_name: string;
 }
 
+interface MyStarter {
+  id: number;
+  name: string;
+  position: string;
+  ovr: number;
+}
+
 export default function FriendlyMatch() {
   const [opponents, setOpponents] = useState<Opponent[]>([]);
   const [history, setHistory] = useState<MatchHistory[]>([]);
   const [selectedOpponent, setSelectedOpponent] = useState<Opponent | null>(null);
+  const [myStarters, setMyStarters] = useState<MyStarter[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'opponents' | 'history'>('opponents');
@@ -37,6 +45,7 @@ export default function FriendlyMatch() {
   useEffect(() => {
     fetchOpponents();
     fetchHistory();
+    fetchMyStarters();
   }, []);
 
   const fetchOpponents = async () => {
@@ -54,6 +63,15 @@ export default function FriendlyMatch() {
       setHistory(res.data);
     } catch (error) {
       console.error('Failed to fetch history:', error);
+    }
+  };
+
+  const fetchMyStarters = async () => {
+    try {
+      const res = await axios.get('/api/players/starters');
+      setMyStarters(res.data);
+    } catch (error) {
+      console.error('Failed to fetch my starters:', error);
     }
   };
 
@@ -164,19 +182,38 @@ export default function FriendlyMatch() {
           </div>
 
           {selectedOpponent && (
-            <div className="match-creation">
-              <div className="selected-info">
-                <span>선택된 상대:</span>
-                <strong>{selectedOpponent.name}</strong>
+            <>
+              <div className="starters-section">
+                <h3>우리팀 스타터</h3>
+                <div className="starters-list">
+                  {myStarters.length > 0 ? (
+                    myStarters.map(starter => (
+                      <div key={starter.id} className="starter-item">
+                        <span className="name">{starter.name}</span>
+                        <span className="position">{starter.position}</span>
+                        <span className="ovr">{starter.ovr}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="empty">스타터 정보를 불러올 수 없습니다</p>
+                  )}
+                </div>
               </div>
-              <button
-                onClick={createMatch}
-                disabled={loading}
-                className="create-btn"
-              >
-                {loading ? '생성 중...' : '친선전 시작'}
-              </button>
-            </div>
+
+              <div className="match-creation">
+                <div className="selected-info">
+                  <span>선택된 상대:</span>
+                  <strong>{selectedOpponent.name}</strong>
+                </div>
+                <button
+                  onClick={createMatch}
+                  disabled={loading}
+                  className="create-btn"
+                >
+                  {loading ? '생성 중...' : '친선전 시작'}
+                </button>
+              </div>
+            </>
           )}
 
           <div className="rewards-info">
