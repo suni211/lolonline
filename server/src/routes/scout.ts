@@ -11,11 +11,16 @@ import {
 
 // 성격에 따른 계약금 배수
 const personalityContractModifiers: Record<PersonalityType, number> = {
-  LEADER: 1.2,      // 리더형: +20% (적당히 요구)
-  REBELLIOUS: 1.5,  // 반항적: +50% (까다로움)
-  CALM: 1.0,        // 차분함: 정상
-  EMOTIONAL: 1.3,   // 감정적: +30%
-  COMPETITIVE: 1.25 // 승부욕: +25%
+  LEADER: 1.2,        // 리더형: +20% (적당히 요구)
+  REBELLIOUS: 1.5,    // 반항적: +50% (까다로움)
+  CALM: 1.0,          // 차분함: 정상
+  EMOTIONAL: 1.3,     // 감정적: +30%
+  COMPETITIVE: 1.25,  // 승부욕: +25%
+  TIMID: 0.7,         // 소심함: -30% (순순히 따름)
+  GREEDY: 1.8,        // 탐욕스러움: +80% (많이 요구)
+  LOYAL: 0.9,         // 충성스러움: -10%
+  PERFECTIONIST: 1.3, // 완벽주의: +30%
+  LAZY: 0.8           // 게으름: -20%
 };
 
 // 협상 결과 계산
@@ -29,11 +34,16 @@ function calculateNegotiationResult(
 
   // 성격에 따른 수락 기준
   const acceptThresholds: Record<PersonalityType, number> = {
-    LEADER: 0.85,      // 85% 이상이면 수락
-    REBELLIOUS: 0.95,  // 95% 이상이면 수락 (까다로움)
-    CALM: 0.75,        // 75% 이상이면 수락 (관대함)
-    EMOTIONAL: 0.80,   // 80% 이상이면 수락
-    COMPETITIVE: 0.90  // 90% 이상이면 수락
+    LEADER: 0.85,        // 85% 이상이면 수락
+    REBELLIOUS: 0.95,    // 95% 이상이면 수락 (까다로움)
+    CALM: 0.75,          // 75% 이상이면 수락 (관대함)
+    EMOTIONAL: 0.80,     // 80% 이상이면 수락
+    COMPETITIVE: 0.90,   // 90% 이상이면 수락
+    TIMID: 0.50,         // 50% 이상이면 수락 (순순히 따름)
+    GREEDY: 0.98,        // 98% 이상이면 수락 (매우 까다로움)
+    LOYAL: 0.70,         // 70% 이상이면 수락
+    PERFECTIONIST: 0.88, // 88% 이상이면 수락
+    LAZY: 0.60           // 60% 이상이면 수락
   };
 
   const acceptThreshold = acceptThresholds[personality];
@@ -45,10 +55,15 @@ function calculateNegotiationResult(
   // 너무 낮은 제안은 거절 (협상 결렬)
   const rejectThresholds: Record<PersonalityType, number> = {
     LEADER: 0.5,
-    REBELLIOUS: 0.7,   // 30% 이상 깎으면 바로 거절
+    REBELLIOUS: 0.7,     // 30% 이상 깎으면 바로 거절
     CALM: 0.4,
     EMOTIONAL: 0.55,
-    COMPETITIVE: 0.6
+    COMPETITIVE: 0.6,
+    TIMID: 0.2,          // 80% 깎아도 거절 안함
+    GREEDY: 0.8,         // 20%만 깎아도 거절
+    LOYAL: 0.35,
+    PERFECTIONIST: 0.6,
+    LAZY: 0.3
   };
 
   if (ratio < rejectThresholds[personality]) {
@@ -301,15 +316,33 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
 
     const params: any[] = [overallRange.min, overallRange.max];
 
-    // 스카우터 전문 분야가 있으면 해당 포지션 우선
-    if (scouter.specialty) {
-      query += ` ORDER BY CASE WHEN pp.position = ? THEN 0 ELSE 1 END, RAND() LIMIT 20`;
+    // 스카우터 전문 분야가 있으면 해당 포지션만 가져옴 (90% 확률)
+    if (scouter.specialty && Math.random() < 0.9) {
+      query += ` AND pp.position = ? ORDER BY RAND() LIMIT 20`;
       params.push(scouter.specialty);
     } else {
       query += ` ORDER BY RAND() LIMIT 20`;
     }
 
-    const candidates = await pool.query(query, params);
+    let candidates = await pool.query(query, params);
+
+    // 전문 포지션으로 선수를 못 찾으면 전체에서 다시 검색
+    if (candidates.length === 0 && scouter.specialty) {
+      const fallbackQuery = `
+        SELECT pp.*, pp.base_ovr as overall
+        FROM pro_players pp
+        WHERE NOT EXISTS (
+          SELECT 1 FROM player_cards pc WHERE pc.pro_player_id = pp.id
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM scouter_discoveries sd WHERE sd.pro_player_id = pp.id AND sd.signed = false
+        )
+        AND pp.base_ovr >= ?
+        AND pp.base_ovr <= ?
+        ORDER BY RAND() LIMIT 20
+      `;
+      candidates = await pool.query(fallbackQuery, [overallRange.min, overallRange.max]);
+    }
 
     if (candidates.length === 0) {
       return res.status(400).json({ error: '발굴할 수 있는 선수가 없습니다' });

@@ -4,7 +4,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 // 선수 성격 타입
-export type PersonalityType = 'LEADER' | 'REBELLIOUS' | 'CALM' | 'EMOTIONAL' | 'COMPETITIVE';
+export type PersonalityType = 'LEADER' | 'REBELLIOUS' | 'CALM' | 'EMOTIONAL' | 'COMPETITIVE' | 'TIMID' | 'GREEDY' | 'LOYAL' | 'PERFECTIONIST' | 'LAZY';
 
 // 선수 성격에 따른 특성
 export const personalityTraits: Record<PersonalityType, {
@@ -42,6 +42,36 @@ export const personalityTraits: Record<PersonalityType, {
     description: '이기는 것에 집착하며, 패배 시 팀원을 탓하기도 함',
     conflictChance: 0.2,
     motivationBonus: 7
+  },
+  TIMID: {
+    name: '소심함',
+    description: '자기주장이 약하고 계약 조건에 순순히 따름. 갈등을 극도로 피함',
+    conflictChance: 0.02,
+    motivationBonus: -2
+  },
+  GREEDY: {
+    name: '탐욕스러움',
+    description: '돈과 명예에 집착하며, 더 좋은 조건을 항상 요구함',
+    conflictChance: 0.3,
+    motivationBonus: 2
+  },
+  LOYAL: {
+    name: '충성스러움',
+    description: '팀에 헌신적이며, 어려운 상황에서도 팀을 떠나지 않음',
+    conflictChance: 0.05,
+    motivationBonus: 4
+  },
+  PERFECTIONIST: {
+    name: '완벽주의',
+    description: '자신과 팀에 높은 기준을 요구하며, 실수에 민감함',
+    conflictChance: 0.15,
+    motivationBonus: 6
+  },
+  LAZY: {
+    name: '게으름',
+    description: '훈련에 열의가 없고, 최소한의 노력만 함',
+    conflictChance: 0.2,
+    motivationBonus: -7
   }
 };
 
@@ -49,25 +79,46 @@ export const personalityTraits: Record<PersonalityType, {
 export function generatePersonality(mental: number): PersonalityType {
   const rand = Math.random();
 
-  // mental이 높으면 LEADER, CALM 확률 증가
-  // mental이 낮으면 REBELLIOUS, EMOTIONAL 확률 증가
+  // mental이 높으면 좋은 성격, 낮으면 나쁜 성격 확률 증가
   if (mental >= 80) {
-    if (rand < 0.35) return 'LEADER';
+    // 고멘탈: 리더형, 충성, 완벽주의, 차분 위주
+    if (rand < 0.20) return 'LEADER';
+    if (rand < 0.35) return 'LOYAL';
+    if (rand < 0.50) return 'PERFECTIONIST';
     if (rand < 0.65) return 'CALM';
-    if (rand < 0.85) return 'COMPETITIVE';
+    if (rand < 0.80) return 'COMPETITIVE';
+    if (rand < 0.90) return 'TIMID';
     return 'EMOTIONAL';
   } else if (mental >= 60) {
-    if (rand < 0.2) return 'LEADER';
-    if (rand < 0.4) return 'CALM';
-    if (rand < 0.6) return 'COMPETITIVE';
-    if (rand < 0.8) return 'EMOTIONAL';
+    // 중멘탈: 다양한 성격
+    if (rand < 0.12) return 'LEADER';
+    if (rand < 0.24) return 'CALM';
+    if (rand < 0.36) return 'COMPETITIVE';
+    if (rand < 0.48) return 'LOYAL';
+    if (rand < 0.58) return 'PERFECTIONIST';
+    if (rand < 0.68) return 'TIMID';
+    if (rand < 0.78) return 'EMOTIONAL';
+    if (rand < 0.88) return 'GREEDY';
     return 'REBELLIOUS';
+  } else if (mental >= 40) {
+    // 저멘탈: 부정적 성격 증가
+    if (rand < 0.15) return 'REBELLIOUS';
+    if (rand < 0.30) return 'EMOTIONAL';
+    if (rand < 0.42) return 'GREEDY';
+    if (rand < 0.54) return 'LAZY';
+    if (rand < 0.66) return 'TIMID';
+    if (rand < 0.76) return 'COMPETITIVE';
+    if (rand < 0.86) return 'CALM';
+    return 'LOYAL';
   } else {
-    if (rand < 0.3) return 'REBELLIOUS';
-    if (rand < 0.55) return 'EMOTIONAL';
-    if (rand < 0.75) return 'COMPETITIVE';
-    if (rand < 0.9) return 'CALM';
-    return 'LEADER';
+    // 매우 저멘탈: 나쁜 성격 위주
+    if (rand < 0.25) return 'LAZY';
+    if (rand < 0.45) return 'REBELLIOUS';
+    if (rand < 0.60) return 'EMOTIONAL';
+    if (rand < 0.75) return 'GREEDY';
+    if (rand < 0.85) return 'TIMID';
+    if (rand < 0.95) return 'COMPETITIVE';
+    return 'CALM';
   }
 }
 
