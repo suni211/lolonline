@@ -461,9 +461,28 @@ async function simulateMatchProgress(match: any, io: Server) {
     const homePower = await calculateTeamOverall(match.home_team_id, gameTime);
     const awayPower = await calculateTeamOverall(match.away_team_id, gameTime);
 
-    // 실력 차이를 줄여서 역전 가능성 증가 (0.35 ~ 0.65 범위로 제한)
+    // 기본 승률 계산 (실력 기반)
     const baseChance = homePower / (homePower + awayPower);
-    const homeWinChance = 0.35 + (baseChance - 0.5) * 0.6 + 0.15; // 실력 영향력 60%로 감소
+
+    // 역전 시스템: 지고 있는 팀에게 보너스
+    const homeKills = matchData.home.kills;
+    const awayKills = matchData.away.kills;
+    const killDiff = homeKills - awayKills;
+
+    // 킬 차이에 따른 역전 보너스 (지고 있는 팀에게 유리)
+    // 킬 차이가 클수록 지는 팀에게 더 큰 보너스
+    let comebackBonus = 0;
+    if (killDiff > 3) {
+      // 홈팀이 이기고 있음 -> 어웨이팀에게 보너스
+      comebackBonus = -Math.min(0.15, killDiff * 0.02);
+    } else if (killDiff < -3) {
+      // 어웨이팀이 이기고 있음 -> 홈팀에게 보너스
+      comebackBonus = Math.min(0.15, Math.abs(killDiff) * 0.02);
+    }
+
+    // 최종 승률: 0.40 ~ 0.60 범위로 더 좁힘 + 역전 보너스
+    const adjustedChance = 0.40 + (baseChance - 0.5) * 0.4 + 0.10 + comebackBonus;
+    const homeWinChance = Math.max(0.35, Math.min(0.65, adjustedChance));
 
     // === 오브젝트 스폰 체크 ===
 
