@@ -459,6 +459,58 @@ KDA: ${kills}/${deaths}/${assists} (${kda})
   }
 }
 
+// 이적 거절 시 선수 불만 대사 생성
+export async function generateTransferBlockedDialogue(
+  playerName: string,
+  personality: PersonalityType,
+  offerPrice: number,
+  marketValue: number
+): Promise<string> {
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    const traits = personalityTraits[personality];
+    const ratio = Math.round((offerPrice / marketValue) * 100);
+
+    const prompt = `당신은 프로 LoL 선수 "${playerName}"입니다.
+성격: ${traits.name} - ${traits.description}
+
+상황: 다른 팀에서 당신에게 ${offerPrice.toLocaleString()}원의 이적료를 제안했습니다 (당신의 시장 가치 대비 ${ratio}%).
+하지만 현재 팀이 이 제안을 거절했습니다.
+
+당신은 적정한 대우를 받지 못하고 있다고 느끼며, 팀이 왜 당신의 이적을 막는지 불만을 표합니다.
+성격에 맞게 1-2문장으로 불만을 표현하세요.
+- 한국어로 작성
+- 프로게이머답게
+- 불만과 답답함을 담아서
+- 따옴표 없이 대사만 출력
+
+대사:`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text().trim();
+  } catch (error) {
+    console.error('Transfer blocked dialogue error:', error);
+
+    // 기본 대사
+    const defaultDialogues: Record<PersonalityType, string> = {
+      LEADER: '팀을 위해 참고 있지만... 왜 내 커리어를 막는 거죠?',
+      REBELLIOUS: '내 이적을 막을 권리가 있어요? 난 떠나고 싶어요.',
+      CALM: '이해가 안 되네요. 좋은 조건이었는데요.',
+      EMOTIONAL: '제가 뭘 잘못했길래 이적도 못하게 하는 거예요?!',
+      COMPETITIVE: '더 강한 팀에서 성장할 기회를 막지 마세요.',
+      TIMID: '저... 저도 의견이 있는데... 왜 거절하신 거예요?',
+      GREEDY: '돈도 좋은데 왜 막아요? 제 가치를 인정해주세요.',
+      LOYAL: '팀을 좋아하지만... 이건 좀 심하지 않나요?',
+      PERFECTIONIST: '더 나은 환경에서 성장할 기회를 놓쳤어요.',
+      LAZY: '거절은... 좀 그렇네요. 좋은 조건이었는데.'
+    };
+
+    return defaultDialogues[personality] || '왜 내 이적을 막는 거죠?';
+  }
+}
+
 export default {
   chatWithPlayer,
   generatePlayerEvent,
@@ -468,5 +520,6 @@ export default {
   generateContractNegotiationDialogue,
   generateScoutDialogue,
   generateTrainingComment,
-  generatePostMatchInterview
+  generatePostMatchInterview,
+  generateTransferBlockedDialogue
 };

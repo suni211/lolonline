@@ -1,7 +1,7 @@
 import express from 'express';
 import pool from '../database/db.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
-import { generatePersonality, generateContractNegotiationDialogue, personalityTraits, PersonalityType } from '../services/geminiService.js';
+import { generatePersonality, generateContractNegotiationDialogue, generateTransferBlockedDialogue, personalityTraits, PersonalityType } from '../services/geminiService.js';
 import { NewsService } from '../services/newsService.js';
 
 const router = express.Router();
@@ -1094,17 +1094,69 @@ router.post('/requests/:id/reject', authenticateToken, async (req: AuthRequest, 
     const requestId = parseInt(req.params.id);
     const { message } = req.body;
 
-    const result = await pool.query(`
-      UPDATE transfer_requests
-      SET status = 'REJECTED', response_message = ?, responded_at = NOW()
-      WHERE id = ? AND seller_team_id = ? AND status IN ('PENDING', 'COUNTER')
-    `, [message || null, requestId, req.teamId]);
+    // 요청 정보와 선수 카드 정보 가져오기
+    const requests = await pool.query(`
+      SELECT tr.*, pc.ovr, pc.personality, pc.id as card_id,
+             COALESCE(pp.name, pc.ai_player_name) as player_name
+      FROM transfer_requests tr
+      JOIN player_cards pc ON tr.card_id = pc.id
+      LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
+      WHERE tr.id = ? AND tr.seller_team_id = ? AND tr.status IN ('PENDING', 'COUNTER')
+    `, [requestId, req.teamId]);
 
-    if (result.affectedRows === 0) {
+    if (requests.length === 0) {
       return res.status(404).json({ error: '요청을 찾을 수 없습니다' });
     }
 
-    res.json({ success: true, message: '이적 요청을 거절했습니다' });
+    const request = requests[0];
+    const offerPrice = request.status === 'COUNTER' ? request.counter_price : request.offer_price;
+    const marketValue = request.ovr * 100000; // 시장 가치 = 오버롤 * 100000
+    const offerRatio = offerPrice / marketValue;
+
+    // 요청 거절 처리
+    await pool.query(`
+      UPDATE transfer_requests
+      SET status = 'REJECTED', response_message = ?, responded_at = NOW()
+      WHERE id = ?
+    `, [message || null, requestId]);
+
+    // 적정 제안(80% 이상)을 거절한 경우에만 선수에게 영향
+    let playerDialogue = null;
+    let moraleReduced = false;
+
+    if (offerRatio >= 0.8 && request.personality) {
+      // 선수 멘탈 감소 (3-8 정도)
+      const moralePenalty = Math.floor(3 + Math.random() * 6);
+      await pool.query(
+        'UPDATE player_cards SET mental = GREATEST(1, mental - ?) WHERE id = ?',
+        [moralePenalty, request.card_id]
+      );
+      moraleReduced = true;
+
+      // AI 불만 대사 생성
+      try {
+        playerDialogue = await generateTransferBlockedDialogue(
+          request.player_name,
+          request.personality as PersonalityType,
+          offerPrice,
+          marketValue
+        );
+      } catch (dialogueError) {
+        console.error('Failed to generate dialogue:', dialogueError);
+        playerDialogue = '왜 내 이적을 막는 거죠?';
+      }
+    }
+
+    res.json({
+      success: true,
+      message: '이적 요청을 거절했습니다',
+      playerReaction: moraleReduced ? {
+        playerName: request.player_name,
+        dialogue: playerDialogue,
+        moraleReduced: true,
+        reason: `적정 제안 (시장가치의 ${Math.round(offerRatio * 100)}%) 거절`
+      } : null
+    });
   } catch (error: any) {
     console.error('Reject request error:', error);
     res.status(500).json({ error: '요청 거절 실패' });
