@@ -75,7 +75,7 @@ router.get('/summary', authenticateToken, async (req: AuthRequest, res) => {
       monthlyIncome: {
         sponsors: parseInt(sponsorIncome[0]?.monthly_income) || 0,
         matches: parseInt(matchIncome[0]?.total_income) || 0,
-        streaming: parseInt(streamingIncome.total_income) || 0,
+        streaming: streamingIncome.total_income || 0,
         merchandise: merchandiseIncome
       },
       monthlyExpense: {
@@ -83,7 +83,7 @@ router.get('/summary', authenticateToken, async (req: AuthRequest, res) => {
       },
       stats: {
         matchCount: parseInt(matchIncome[0]?.match_count) || 0,
-        streamCount: parseInt(streamingIncome.stream_count) || 0,
+        streamCount: streamingIncome.stream_count || 0,
         fanCount: team.fan_count || 0
       }
     });
