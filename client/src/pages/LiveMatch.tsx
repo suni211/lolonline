@@ -110,7 +110,6 @@ export default function LiveMatch() {
     atakhan: { alive: false }
   });
   const [currentHighlight, setCurrentHighlight] = useState<Highlight | null>(null);
-  const [showMap, setShowMap] = useState(false);
 
   useEffect(() => {
     fetchMatchData();
@@ -484,50 +483,42 @@ export default function LiveMatch() {
           description: 'TEAM FIGHT!'
         };
 
-        // 한타 킬 처리 - 즉시 처리하되 누가 죽었는지 명확히
-        const winnerKills = event.data?.winner_kills || 2;
-        const loserKills = event.data?.loser_kills || 0;
+        // 서버에서 전달받은 희생자 이름 사용
+        const loserVictimNames: string[] = event.data?.loser_victims || [];
+        const winnerVictimNames: string[] = event.data?.winner_victims || [];
         const winningTeam = event.data?.team === 'home' ? 'blue' : 'red';
         const losingTeam = winningTeam === 'blue' ? 'red' : 'blue';
 
-        // 지는 팀 선수들 중 랜덤으로 킬 수만큼 죽음
-        const losingChamps = [...champions.filter(c => c.team === losingTeam && c.isAlive)];
-        const deadVictims: string[] = [];
+        // 희생자 ID 찾기
         const victimIds: number[] = [];
 
-        for (let i = 0; i < Math.min(winnerKills, losingChamps.length); i++) {
-          const victimIdx = Math.floor(Math.random() * losingChamps.length);
-          const victim = losingChamps.splice(victimIdx, 1)[0];
-          deadVictims.push(victim.playerName);
-          victimIds.push(victim.playerId);
-        }
+        // 지는 팀 희생자
+        loserVictimNames.forEach(name => {
+          const victim = champions.find(c => c.playerName === name && c.team === losingTeam);
+          if (victim) victimIds.push(victim.playerId);
+        });
 
-        // 이기는 팀도 킬 당함
-        const winningChamps = [...champions.filter(c => c.team === winningTeam && c.isAlive)];
-        const deadWinners: string[] = [];
-
-        for (let i = 0; i < Math.min(loserKills, winningChamps.length); i++) {
-          const victimIdx = Math.floor(Math.random() * winningChamps.length);
-          const victim = winningChamps.splice(victimIdx, 1)[0];
-          deadWinners.push(victim.playerName);
-          victimIds.push(victim.playerId);
-        }
+        // 이기는 팀 희생자
+        winnerVictimNames.forEach(name => {
+          const victim = champions.find(c => c.playerName === name && c.team === winningTeam);
+          if (victim) victimIds.push(victim.playerId);
+        });
 
         // 킬 로그 추가 (누가 죽었는지 명확히)
-        if (deadVictims.length > 0) {
+        if (loserVictimNames.length > 0) {
           setEvents(prev => [...prev.slice(-50), {
             type: 'KILL',
             time: gameTime,
-            description: `${losingTeam === 'blue' ? '블루' : '레드'}팀 ${deadVictims.join(', ')} 처치!`,
-            data: { victims: deadVictims }
+            description: `${losingTeam === 'blue' ? '블루' : '레드'}팀 ${loserVictimNames.join(', ')} 처치!`,
+            data: { victims: loserVictimNames }
           }]);
         }
-        if (deadWinners.length > 0) {
+        if (winnerVictimNames.length > 0) {
           setEvents(prev => [...prev.slice(-50), {
             type: 'KILL',
             time: gameTime,
-            description: `${winningTeam === 'blue' ? '블루' : '레드'}팀 ${deadWinners.join(', ')} 처치!`,
-            data: { victims: deadWinners }
+            description: `${winningTeam === 'blue' ? '블루' : '레드'}팀 ${winnerVictimNames.join(', ')} 처치!`,
+            data: { victims: winnerVictimNames }
           }]);
         }
 
@@ -538,19 +529,23 @@ export default function LiveMatch() {
             : champ
         ));
 
-        // 부활 처리
-        const gameMinutes = gameTime / 60;
-        const estimatedLevel = Math.min(18, Math.floor(1 + gameMinutes * 0.6));
-        const respawnTime = 6 + (estimatedLevel - 1) * (54 / 17);
+        // 부활 처리 - 리스폰 시간 동안 불리함 반영
+        const tfGameMinutes = gameTime / 60;
+        const tfEstimatedLevel = Math.min(18, Math.floor(1 + tfGameMinutes * 0.6));
+        const tfRespawnTime = 6 + (tfEstimatedLevel - 1) * (54 / 17);
+
+        // 리스폰 시간 동안 하이라이트 지속 (죽은 선수가 많을수록 오래)
+        const deadCount = victimIds.length;
+        const respawnAdvantage = Math.min(60000, tfRespawnTime * 1000 * deadCount / 3);
+        duration = Math.max(45000, respawnAdvantage);
+
         setTimeout(() => {
           setChampions(prev => prev.map(champ =>
             victimIds.includes(champ.playerId)
               ? { ...champ, isAlive: true }
               : champ
           ));
-        }, respawnTime * 1000);
-
-        duration = 45000;
+        }, tfRespawnTime * 1000);
         break;
 
       case 'DRAGON':
@@ -664,10 +659,8 @@ export default function LiveMatch() {
 
     if (highlight) {
       setCurrentHighlight(highlight);
-      setShowMap(true);
       setTimeout(() => {
         setCurrentHighlight(null);
-        setShowMap(false);
       }, duration);
     }
   };

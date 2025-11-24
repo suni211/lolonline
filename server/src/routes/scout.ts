@@ -98,15 +98,16 @@ const getScouterStarProbability = (cost: number): number[] => {
   }
 };
 
-// 스카우터 등급에 따른 선수 오버롤 범위 (현재 선수 오버롤 40~100 기준)
+// 스카우터 등급에 따른 선수 오버롤 범위 (현재 선수 오버롤 30~80 기준)
+// 범위를 넓게 잡고, 고등급일수록 높은 오버롤 선수가 나올 확률 증가
 const getOverallRangeByStarRating = (starRating: number): { min: number; max: number } => {
   switch (starRating) {
-    case 5: return { min: 80, max: 120 };   // 5성: 최상급 선수
-    case 4: return { min: 60, max: 100 };   // 4성: 상급 선수
-    case 3: return { min: 45, max: 80 };    // 3성: 중급 선수
-    case 2: return { min: 30, max: 60 };    // 2성: 하급 선수
-    case 1: return { min: 20, max: 45 };    // 1성: 최하급 선수
-    default: return { min: 20, max: 45 };
+    case 5: return { min: 30, max: 80 };   // 5성: 전체 범위 (고오버롤 확률 높음)
+    case 4: return { min: 30, max: 80 };   // 4성: 전체 범위
+    case 3: return { min: 30, max: 80 };   // 3성: 전체 범위
+    case 2: return { min: 30, max: 80 };   // 2성: 전체 범위
+    case 1: return { min: 30, max: 80 };   // 1성: 전체 범위
+    default: return { min: 30, max: 80 };
   }
 };
 
@@ -284,6 +285,19 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
     // 스카우터 등급에 따른 오버롤 범위
     const overallRange = getOverallRangeByStarRating(scouter.star_rating);
 
+    // 스카우터 등급에 따른 고오버롤 선수 확률 가중치
+    // 높은 등급일수록 높은 오버롤 선수에 가중치
+    const starWeightQuery = (() => {
+      switch (scouter.star_rating) {
+        case 5: return 'pp.base_ovr * pp.base_ovr * pp.base_ovr';  // 5성: 오버롤^3 가중치 (고오버롤 매우 유리)
+        case 4: return 'pp.base_ovr * pp.base_ovr';                // 4성: 오버롤^2 가중치
+        case 3: return 'pp.base_ovr';                              // 3성: 오버롤 가중치
+        case 2: return '1';                                        // 2성: 균등 확률
+        case 1: return '1 / (pp.base_ovr + 1)';                    // 1성: 낮은 오버롤 유리
+        default: return '1';
+      }
+    })();
+
     // 소유되지 않은 선수 중에서 오버롤 범위에 맞는 선수 찾기
     let query = `
       SELECT pp.*, pp.base_ovr as overall
@@ -300,12 +314,12 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
 
     const params: any[] = [overallRange.min, overallRange.max];
 
-    // 스카우터 전문 분야가 있으면 해당 포지션 우선
+    // 스카우터 전문 분야가 있으면 해당 포지션 우선, 등급에 따른 가중치 적용
     if (scouter.specialty) {
-      query += ' ORDER BY CASE WHEN pp.position = ? THEN 0 ELSE 1 END, RAND() LIMIT 1';
+      query += ` ORDER BY CASE WHEN pp.position = ? THEN 0 ELSE 1 END, RAND() * ${starWeightQuery} DESC LIMIT 1`;
       params.push(scouter.specialty);
     } else {
-      query += ' ORDER BY RAND() LIMIT 1';
+      query += ` ORDER BY RAND() * ${starWeightQuery} DESC LIMIT 1`;
     }
 
     const players = await pool.query(query, params);

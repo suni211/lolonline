@@ -28,6 +28,14 @@ interface TurretState {
   nexus: { twin1: boolean; twin2: boolean; nexus: boolean };
 }
 
+// 리스폰 정보 인터페이스
+interface RespawnInfo {
+  playerId: number;
+  playerName: string;
+  team: 'home' | 'away';
+  respawnAt: number;  // 부활할 게임 시간
+}
+
 // 경기 상태 인터페이스
 interface MatchState {
   game_time: number;
@@ -68,6 +76,9 @@ interface MatchState {
   herald_alive: boolean;
   herald_taken: boolean;
   elder_available: boolean;
+
+  // 리스폰 대기 중인 선수들
+  deadPlayers: RespawnInfo[];
 
   // 경기 종료 조건
   game_over: boolean;
@@ -305,6 +316,9 @@ async function startMatch(match: any, io: Server) {
       herald_taken: false,
       elder_available: false,
 
+      // 리스폰 대기 중인 선수들
+      deadPlayers: [],
+
       game_over: false,
       winner: null,
       max_game_time: maxGameTime,
@@ -388,6 +402,16 @@ async function simulateMatchProgress(match: any, io: Server) {
     matchData.game_time += 10;
     const gameTime = matchData.game_time;
     const gameMinutes = Math.floor(gameTime / 60);
+
+    // 리스폰 처리: 부활 시간이 된 선수들 제거
+    if (!matchData.deadPlayers) {
+      matchData.deadPlayers = [];
+    }
+    matchData.deadPlayers = matchData.deadPlayers.filter(dp => dp.respawnAt > gameTime);
+
+    // 각 팀의 죽은 선수 수 계산
+    const homeDeadCount = matchData.deadPlayers.filter(dp => dp.team === 'home').length;
+    const awayDeadCount = matchData.deadPlayers.filter(dp => dp.team === 'away').length;
 
     // 팀이 AI인지 확인 (user_id가 NULL이면 AI 팀)
     const homeTeamInfo = await pool.query('SELECT user_id FROM teams WHERE id = ?', [match.home_team_id]);
@@ -480,9 +504,13 @@ async function simulateMatchProgress(match: any, io: Server) {
       comebackBonus = Math.min(0.15, Math.abs(killDiff) * 0.02);
     }
 
-    // 최종 승률: 0.40 ~ 0.60 범위로 더 좁힘 + 역전 보너스
-    const adjustedChance = 0.40 + (baseChance - 0.5) * 0.4 + 0.10 + comebackBonus;
-    const homeWinChance = Math.max(0.35, Math.min(0.65, adjustedChance));
+    // 죽은 선수에 따른 보너스 (상대 팀에 죽은 선수가 많으면 유리)
+    // 한 명당 10% 보너스
+    const deathBonus = (awayDeadCount - homeDeadCount) * 0.10;
+
+    // 최종 승률: 0.40 ~ 0.60 범위로 더 좁힘 + 역전 보너스 + 죽은 선수 보너스
+    const adjustedChance = 0.40 + (baseChance - 0.5) * 0.4 + 0.10 + comebackBonus + deathBonus;
+    const homeWinChance = Math.max(0.20, Math.min(0.80, adjustedChance));
 
     // === 오브젝트 스폰 체크 ===
 
@@ -608,6 +636,13 @@ async function generateEvents(
   const events: any[] = [];
   const gameMinutes = Math.floor(gameTime / 60);
 
+  // 리스폰 시간 계산 함수
+  const calculateRespawnTime = (currentGameTime: number): number => {
+    const minutes = currentGameTime / 60;
+    const level = Math.min(18, Math.floor(1 + minutes * 0.6));
+    return 6 + (level - 1) * (54 / 17); // 6초 ~ 60초
+  };
+
   // 현실적인 이벤트 발생 확률
   // 30분 = 180번 호출, 목표: 킬 5-20개, 포탑 빠르게 파괴
   // 이벤트 확률 20%로 증가
@@ -666,6 +701,15 @@ async function generateEvents(
       // DB 업데이트
       await pool.query('UPDATE match_stats SET kills = kills + 1 WHERE match_id = ? AND player_id = ?', [match.id, killer.id]);
       await pool.query('UPDATE match_stats SET deaths = deaths + 1 WHERE match_id = ? AND player_id = ?', [match.id, victim.id]);
+
+      // 죽은 선수를 deadPlayers에 추가
+      const respawnSec = calculateRespawnTime(gameTime);
+      matchData.deadPlayers.push({
+        playerId: victim.id,
+        playerName: victim.name,
+        team: winningTeam === 'home' ? 'away' : 'home',
+        respawnAt: gameTime + respawnSec
+      });
       break;
 
     case 'DRAGON':
@@ -762,15 +806,73 @@ async function generateEvents(
       // 이기는 팀이 더 많은 킬을 얻지만, 지는 팀도 킬을 얻음
       const winnerKills = 1 + Math.floor(Math.random() * 3); // 1-3킬
       const loserKills = Math.floor(Math.random() * 2); // 0-1킬
-      event = createEvent(gameTime, 'TEAMFIGHT', `한타! ${winningTeam === 'home' ? '블루팀' : '레드팀'} ${winnerKills}킬 vs ${winningTeam === 'home' ? '레드팀' : '블루팀'} ${loserKills}킬`, {
+
+      // 죽은 선수 이름 선택
+      const loserVictims: string[] = [];
+      const winnerVictims: string[] = [];
+      const loserPlayersCopy = [...losingPlayers];
+      const winnerPlayersCopy = [...winningPlayers];
+
+      for (let i = 0; i < winnerKills && loserPlayersCopy.length > 0; i++) {
+        const idx = Math.floor(Math.random() * loserPlayersCopy.length);
+        loserVictims.push(loserPlayersCopy.splice(idx, 1)[0].name);
+      }
+      for (let i = 0; i < loserKills && winnerPlayersCopy.length > 0; i++) {
+        const idx = Math.floor(Math.random() * winnerPlayersCopy.length);
+        winnerVictims.push(winnerPlayersCopy.splice(idx, 1)[0].name);
+      }
+
+      const loserTeamName = winningTeam === 'home' ? '레드팀' : '블루팀';
+      const winnerTeamName = winningTeam === 'home' ? '블루팀' : '레드팀';
+
+      let teamfightDesc = `한타! ${winnerTeamName} 승리!`;
+      if (loserVictims.length > 0) {
+        teamfightDesc += ` ${loserTeamName} ${loserVictims.join(', ')} 처치`;
+      }
+      if (winnerVictims.length > 0) {
+        teamfightDesc += ` / ${winnerTeamName} ${winnerVictims.join(', ')} 처치`;
+      }
+
+      event = createEvent(gameTime, 'TEAMFIGHT', teamfightDesc, {
         team: winningTeam,
         winner_kills: winnerKills,
-        loser_kills: loserKills
+        loser_kills: loserKills,
+        loser_victims: loserVictims,
+        winner_victims: winnerVictims
       });
       winningState.kills += winnerKills;
       winningState.gold += winnerKills * 300;
       losingState.kills += loserKills;
       losingState.gold += loserKills * 300;
+
+      // 죽은 선수들을 deadPlayers에 추가
+      const tfRespawnSec = calculateRespawnTime(gameTime);
+
+      // 지는 팀 희생자들
+      for (const victimName of loserVictims) {
+        const victimPlayer = losingPlayers.find(p => p.name === victimName);
+        if (victimPlayer) {
+          matchData.deadPlayers.push({
+            playerId: victimPlayer.id,
+            playerName: victimName,
+            team: winningTeam === 'home' ? 'away' : 'home',
+            respawnAt: gameTime + tfRespawnSec
+          });
+        }
+      }
+
+      // 이기는 팀 희생자들
+      for (const victimName of winnerVictims) {
+        const victimPlayer = winningPlayers.find(p => p.name === victimName);
+        if (victimPlayer) {
+          matchData.deadPlayers.push({
+            playerId: victimPlayer.id,
+            playerName: victimName,
+            team: winningTeam,
+            respawnAt: gameTime + tfRespawnSec
+          });
+        }
+      }
       break;
 
     case 'GANK':
@@ -1076,6 +1178,9 @@ async function finishMatch(match: any, matchData: any, io: Server) {
     matchData.herald_alive = false;
     matchData.herald_taken = false;
     matchData.elder_available = false;
+
+    // 죽은 선수 초기화 (새 세트)
+    matchData.deadPlayers = [];
 
     // 이벤트 초기화 (새 세트)
     matchData.events = [];
