@@ -1111,7 +1111,7 @@ export default function Transfer() {
       {negotiation && (
         <div className="modal-overlay" onClick={closeNegotiation}>
           <div className="negotiation-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>연봉 협상</h2>
+            <h2>월급 협상</h2>
 
             <div className="negotiation-player">
               {negotiation.player.face_image && (
@@ -1142,7 +1142,7 @@ export default function Transfer() {
 
             <div className="negotiation-price">
               <div className="asking-price">
-                요구 연봉: <strong>{negotiation.asking_price.toLocaleString()}원</strong>
+                요구 월급: <strong>{negotiation.asking_price.toLocaleString()}원</strong>
               </div>
 
               {negotiationResult?.dialogue && (
@@ -1163,7 +1163,7 @@ export default function Transfer() {
                 </div>
               ) : (
                 <div className="offer-form">
-                  <label>제안 연봉:</label>
+                  <label>제안 월급:</label>
                   <input
                     type="number"
                     value={offerPrice}
