@@ -483,6 +483,82 @@ export default function LiveMatch() {
           y: teamfightY,
           description: 'TEAM FIGHT!'
         };
+
+        // 한타 킬 처리 - 차례대로 죽음
+        const winnerKills = event.data?.winner_kills || 2;
+        const loserKills = event.data?.loser_kills || 0;
+        const winningTeam = event.data?.team === 'home' ? 'blue' : 'red';
+        const losingTeam = winningTeam === 'blue' ? 'red' : 'blue';
+
+        // 지는 팀 선수들 중 랜덤으로 킬 수만큼 죽음 (1초 간격)
+        const losingChamps = champions.filter(c => c.team === losingTeam && c.isAlive);
+        for (let i = 0; i < Math.min(winnerKills, losingChamps.length); i++) {
+          const victimIdx = Math.floor(Math.random() * losingChamps.length);
+          const victim = losingChamps.splice(victimIdx, 1)[0];
+
+          setTimeout(() => {
+            // 킬 이벤트 추가
+            setEvents(prev => [...prev.slice(-50), {
+              type: 'KILL',
+              time: gameTime + i,
+              description: `${victim.playerName}(이)가 처치당했습니다!`,
+              data: { victim_id: victim.playerId, victim_name: victim.playerName }
+            }]);
+
+            // 죽음 처리
+            setChampions(prev => prev.map(champ =>
+              champ.playerId === victim.playerId
+                ? { ...champ, isAlive: false }
+                : champ
+            ));
+
+            // 부활 처리
+            const gameMinutes = gameTime / 60;
+            const estimatedLevel = Math.min(18, Math.floor(1 + gameMinutes * 0.6));
+            const respawnTime = 6 + (estimatedLevel - 1) * (54 / 17);
+            setTimeout(() => {
+              setChampions(prev => prev.map(champ =>
+                champ.playerId === victim.playerId
+                  ? { ...champ, isAlive: true }
+                  : champ
+              ));
+            }, respawnTime * 1000);
+          }, i * 1500); // 1.5초 간격으로 킬
+        }
+
+        // 이기는 팀도 킬 당함
+        const winningChamps = champions.filter(c => c.team === winningTeam && c.isAlive);
+        for (let i = 0; i < Math.min(loserKills, winningChamps.length); i++) {
+          const victimIdx = Math.floor(Math.random() * winningChamps.length);
+          const victim = winningChamps.splice(victimIdx, 1)[0];
+
+          setTimeout(() => {
+            setEvents(prev => [...prev.slice(-50), {
+              type: 'KILL',
+              time: gameTime + i + winnerKills,
+              description: `${victim.playerName}(이)가 처치당했습니다!`,
+              data: { victim_id: victim.playerId, victim_name: victim.playerName }
+            }]);
+
+            setChampions(prev => prev.map(champ =>
+              champ.playerId === victim.playerId
+                ? { ...champ, isAlive: false }
+                : champ
+            ));
+
+            const gameMinutes = gameTime / 60;
+            const estimatedLevel = Math.min(18, Math.floor(1 + gameMinutes * 0.6));
+            const respawnTime = 6 + (estimatedLevel - 1) * (54 / 17);
+            setTimeout(() => {
+              setChampions(prev => prev.map(champ =>
+                champ.playerId === victim.playerId
+                  ? { ...champ, isAlive: true }
+                  : champ
+              ));
+            }, respawnTime * 1000);
+          }, (i + winnerKills) * 1500);
+        }
+
         duration = 45000;
         break;
 
@@ -528,19 +604,53 @@ export default function LiveMatch() {
       case 'TURRET':
       case 'INHIBITOR':
       case 'NEXUS_TURRET':
-        // 포탑/억제기: 해당 위치로 이동
-        const turretPositions: {[key: string]: {x: number, y: number}} = {
-          'top': { x: 20, y: 25 },
-          'mid': { x: 50, y: 50 },
-          'bot': { x: 80, y: 75 }
+        // 포탑/억제기: 실제 맵 위치로 이동
+        // 공격하는 팀 기준으로 위치 결정 (적 타워 근처)
+        const attackingTeam = event.data?.team;
+        const turretPositions: {[key: string]: {blue: {x: number, y: number}, red: {x: number, y: number}}} = {
+          'top': {
+            // 블루팀이 공격 -> 레드 탑 타워 (왼쪽 위)
+            blue: { x: 30, y: 12 },
+            // 레드팀이 공격 -> 블루 탑 타워 (왼쪽)
+            red: { x: 14, y: 45 }
+          },
+          'mid': {
+            blue: { x: 60, y: 38 },
+            red: { x: 38, y: 62 }
+          },
+          'bot': {
+            blue: { x: 88, y: 50 },
+            red: { x: 55, y: 88 }
+          }
         };
         const lane = event.data?.lane || 'mid';
-        const pos = turretPositions[lane] || { x: 50, y: 50 };
-        moveChampionsToPosition(pos.x, pos.y, event.data?.team);
+        const towerPos = turretPositions[lane]?.[attackingTeam === 'home' ? 'blue' : 'red'] || { x: 50, y: 50 };
+
+        // 모든 살아있는 챔피언을 타워 위치로 이동
+        setChampions(prev => prev.map(champ => {
+          if (!champ.isAlive) {
+            const spawnPos = SPAWN_POSITIONS[champ.team][champ.position as keyof typeof SPAWN_POSITIONS.blue];
+            return {
+              ...champ,
+              x: spawnPos?.x || (champ.team === 'blue' ? 8.1 : 92),
+              y: spawnPos?.y || (champ.team === 'blue' ? 92.7 : 7.7)
+            };
+          }
+          // 공격팀은 타워 쪽, 수비팀은 약간 뒤
+          const isAttacker = (attackingTeam === 'home' && champ.team === 'blue') || (attackingTeam === 'away' && champ.team === 'red');
+          const offsetX = isAttacker ? (Math.random() - 0.5) * 8 : (champ.team === 'blue' ? -10 : 10) + (Math.random() - 0.5) * 6;
+          const offsetY = isAttacker ? (Math.random() - 0.5) * 8 : (champ.team === 'blue' ? 10 : -10) + (Math.random() - 0.5) * 6;
+          return {
+            ...champ,
+            x: Math.max(5, Math.min(95, towerPos.x + offsetX)),
+            y: Math.max(5, Math.min(95, towerPos.y + offsetY))
+          };
+        }));
+
         highlight = {
           type: 'objective',
-          x: pos.x,
-          y: pos.y,
+          x: towerPos.x,
+          y: towerPos.y,
           description: event.description
         };
         duration = 30000;
