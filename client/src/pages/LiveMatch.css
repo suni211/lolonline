@@ -522,6 +522,15 @@
   border-radius: 4px;
 }
 
+.dragon-icon-img {
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+  background: #2a2a3a;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
 /* 실시간 채팅 */
 .live-chat {
   background: #1e1e2e;

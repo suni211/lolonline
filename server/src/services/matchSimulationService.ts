@@ -703,10 +703,18 @@ async function generateEvents(
 
   // 승리 팀 결정
   const winningTeam = Math.random() < homeWinChance ? 'home' : 'away';
-  const winningPlayers = winningTeam === 'home' ? homePlayers : awayPlayers;
-  const losingPlayers = winningTeam === 'home' ? awayPlayers : homePlayers;
+  const allWinningPlayers = winningTeam === 'home' ? homePlayers : awayPlayers;
+  const allLosingPlayers = winningTeam === 'home' ? awayPlayers : homePlayers;
   const winningState = winningTeam === 'home' ? matchData.home : matchData.away;
   const losingState = winningTeam === 'home' ? matchData.away : matchData.home;
+
+  // 죽은 선수 제외 (리스폰 전까지 이벤트에 참여 불가)
+  const deadPlayerIds = matchData.deadPlayers
+    .filter(dp => dp.respawnAt > gameTime)
+    .map(dp => dp.playerId);
+
+  const winningPlayers = allWinningPlayers.filter(p => !deadPlayerIds.includes(p.id));
+  const losingPlayers = allLosingPlayers.filter(p => !deadPlayerIds.includes(p.id));
 
   if (winningPlayers.length === 0 || losingPlayers.length === 0) return events;
 
@@ -791,7 +799,7 @@ async function generateEvents(
 
     case 'DRAGON':
       if (matchData.dragon_alive) {
-        const dragonTypes = ['불', '바다', '바람', '대지', '구름', '화학공학'];
+        const dragonTypes = ['불', '바다', '바람', '대지', '마법공학', '화학공학'];
         const dragonType = dragonTypes[Math.floor(Math.random() * dragonTypes.length)];
         winningState.dragons.push(dragonType);
         winningState.gold += 200;

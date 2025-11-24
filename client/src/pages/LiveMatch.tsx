@@ -937,43 +937,49 @@ export default function LiveMatch() {
             <div className="dragons-display">
               <div className="dragons home-dragons">
                 {homeState.dragons.map((dragon, idx) => {
-                  const getDragonIcon = (type: string) => {
+                  const getDragonImage = (type: string) => {
                     switch (type) {
-                      case '불': return { icon: '🔥', color: '#ff4444' };
-                      case '바다': return { icon: '🌊', color: '#4444ff' };
-                      case '바람': return { icon: '💨', color: '#aaaaaa' };
-                      case '대지': return { icon: '🏔️', color: '#8b4513' };
-                      case '구름': return { icon: '⚡', color: '#9966ff' };
-                      case '화학공학': return { icon: '☢️', color: '#00ff00' };
-                      default: return { icon: '🐉', color: '#ffd700' };
+                      case '불': return '/dragons/fire.png';
+                      case '바다': return '/dragons/water.png';
+                      case '바람': return '/dragons/air.png';
+                      case '대지': return '/dragons/ddang.png';
+                      case '마법공학': return '/dragons/magong.png';
+                      case '화학공학': return '/dragons/hwagong.png';
+                      default: return '/dragons/fire.png';
                     }
                   };
-                  const { icon, color } = getDragonIcon(dragon);
                   return (
-                    <span key={idx} className="dragon-icon" title={dragon} style={{ color }}>
-                      {icon}
-                    </span>
+                    <img
+                      key={idx}
+                      src={getDragonImage(dragon)}
+                      alt={dragon}
+                      title={dragon}
+                      className="dragon-icon-img"
+                    />
                   );
                 })}
               </div>
               <div className="dragons away-dragons">
                 {awayState.dragons.map((dragon, idx) => {
-                  const getDragonIcon = (type: string) => {
+                  const getDragonImage = (type: string) => {
                     switch (type) {
-                      case '불': return { icon: '🔥', color: '#ff4444' };
-                      case '바다': return { icon: '🌊', color: '#4444ff' };
-                      case '바람': return { icon: '💨', color: '#aaaaaa' };
-                      case '대지': return { icon: '🏔️', color: '#8b4513' };
-                      case '구름': return { icon: '⚡', color: '#9966ff' };
-                      case '화학공학': return { icon: '☢️', color: '#00ff00' };
-                      default: return { icon: '🐉', color: '#ffd700' };
+                      case '불': return '/dragons/fire.png';
+                      case '바다': return '/dragons/water.png';
+                      case '바람': return '/dragons/air.png';
+                      case '대지': return '/dragons/ddang.png';
+                      case '마법공학': return '/dragons/magong.png';
+                      case '화학공학': return '/dragons/hwagong.png';
+                      default: return '/dragons/fire.png';
                     }
                   };
-                  const { icon, color } = getDragonIcon(dragon);
                   return (
-                    <span key={idx} className="dragon-icon" title={dragon} style={{ color }}>
-                      {icon}
-                    </span>
+                    <img
+                      key={idx}
+                      src={getDragonImage(dragon)}
+                      alt={dragon}
+                      title={dragon}
+                      className="dragon-icon-img"
+                    />
                   );
                 })}
               </div>
