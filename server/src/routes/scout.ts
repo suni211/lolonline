@@ -349,15 +349,15 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
     }
 
     // 스카우터 등급에 따른 가중치 기반 선택
-    // 높은 등급일수록 높은 오버롤 선수 확률 증가
+    // 오버롤에 비례하되 완만한 확률
     const getWeight = (ovr: number): number => {
       switch (scouter.star_rating) {
-        case 5: return Math.pow(ovr, 3);      // 5성: 오버롤^3 가중치
-        case 4: return Math.pow(ovr, 2);      // 4성: 오버롤^2 가중치
-        case 3: return ovr;                   // 3성: 오버롤 가중치
-        case 2: return 1;                     // 2성: 균등 확률
-        case 1: return 1 / (ovr + 1);         // 1성: 낮은 오버롤 유리
-        default: return 1;
+        case 5: return ovr * 1.5;             // 5성: 오버롤 x 1.5 (고오버롤 약간 유리)
+        case 4: return ovr * 1.2;             // 4성: 오버롤 x 1.2
+        case 3: return ovr;                   // 3성: 오버롤 비례
+        case 2: return 50;                    // 2성: 균등 확률
+        case 1: return 100 - ovr;             // 1성: 낮은 오버롤 유리
+        default: return 50;
       }
     };
 
