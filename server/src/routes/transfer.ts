@@ -11,40 +11,42 @@ router.get('/fa', authenticateToken, async (req: AuthRequest, res) => {
     const { position, league, minOvr, maxOvr, search, sort = 'ovr_desc', page = 1, limit = 20 } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
+    let whereClause = 'WHERE NOT EXISTS (SELECT 1 FROM player_cards pc WHERE pc.pro_player_id = pp.id)';
+    const params: any[] = [];
+
+    if (position && position !== 'all') {
+      whereClause += ' AND pp.position = ?';
+      params.push(position);
+    }
+    if (league && league !== 'all') {
+      whereClause += ' AND pp.league = ?';
+      params.push(league);
+    }
+    if (minOvr) {
+      whereClause += ' AND COALESCE(pp.base_ovr, 50) >= ?';
+      params.push(Number(minOvr));
+    }
+    if (maxOvr) {
+      whereClause += ' AND COALESCE(pp.base_ovr, 50) <= ?';
+      params.push(Number(maxOvr));
+    }
+    if (search) {
+      whereClause += ' AND pp.name LIKE ?';
+      params.push(`%${search}%`);
+    }
+
+    // 카운트 쿼리
+    const countQuery = `SELECT COUNT(*) as total FROM pro_players pp ${whereClause}`;
+    const countResult = await pool.query(countQuery, params);
+    const total = countResult[0]?.total || 0;
+
+    // 메인 쿼리
     let query = `
       SELECT pp.id, pp.name, pp.position, pp.nationality, pp.team as original_team,
              pp.league, pp.face_image, COALESCE(pp.base_ovr, 50) as overall
       FROM pro_players pp
-      WHERE NOT EXISTS (SELECT 1 FROM player_cards pc WHERE pc.pro_player_id = pp.id)
+      ${whereClause}
     `;
-    const params: any[] = [];
-
-    if (position && position !== 'all') {
-      query += ' AND pp.position = ?';
-      params.push(position);
-    }
-    if (league && league !== 'all') {
-      query += ' AND pp.league = ?';
-      params.push(league);
-    }
-    if (minOvr) {
-      query += ' AND COALESCE(pp.base_ovr, 50) >= ?';
-      params.push(Number(minOvr));
-    }
-    if (maxOvr) {
-      query += ' AND COALESCE(pp.base_ovr, 50) <= ?';
-      params.push(Number(maxOvr));
-    }
-    if (search) {
-      query += ' AND pp.name LIKE ?';
-      params.push(`%${search}%`);
-    }
-
-    const countResult = await pool.query(
-      query.replace(/SELECT .* FROM/, 'SELECT COUNT(*) as total FROM'),
-      params
-    );
-    const total = countResult[0].total;
 
     // 정렬
     if (sort === 'ovr_desc') {
