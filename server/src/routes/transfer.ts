@@ -11,8 +11,8 @@ router.get('/fa', authenticateToken, async (req: AuthRequest, res) => {
     const { position, league, minOvr, maxOvr, search, sort = 'ovr_desc', page = 1, limit = 20 } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
-    // 계약된 카드가 있는 선수만 제외 (미계약 카드는 FA로 표시)
-    let whereClause = 'WHERE NOT EXISTS (SELECT 1 FROM player_cards pc WHERE pc.pro_player_id = pp.id AND pc.is_contracted = true)';
+    // 모든 선수 표시 (계약 여부 상관없이)
+    let whereClause = 'WHERE 1=1';
     const params: any[] = [];
 
     if (position && position !== 'all') {
@@ -98,16 +98,22 @@ router.post('/fa/sign/:playerId', authenticateToken, async (req: AuthRequest, re
 
     const player = players[0];
 
+    // 이미 계약된 카드가 있는지 확인
     const existingCards = await pool.query(
-      'SELECT * FROM player_cards WHERE pro_player_id = ?',
+      'SELECT * FROM player_cards WHERE pro_player_id = ? AND is_contracted = true',
       [playerId]
     );
 
     if (existingCards.length > 0) {
-      return res.status(400).json({ error: '이미 계약된 선수입니다' });
+      const card = existingCards[0];
+      if (card.team_id === req.teamId) {
+        return res.status(400).json({ error: '이미 보유한 선수입니다' });
+      } else {
+        return res.status(400).json({ error: '다른 팀에 계약된 선수입니다' });
+      }
     }
 
-    const price = player.overall * 50000;
+    const price = player.overall * 10000;
 
     const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);
     if (teams[0].gold < price) {
@@ -200,7 +206,7 @@ router.get('/player/:playerId', async (req, res) => {
     const player = players[0];
 
     const cards = await pool.query(
-      `SELECT pc.*, t.name as team_name FROM player_cards pc JOIN teams t ON pc.team_id = t.id WHERE pc.pro_player_id = ?`,
+      `SELECT pc.*, t.name as team_name FROM player_cards pc LEFT JOIN teams t ON pc.team_id = t.id WHERE pc.pro_player_id = ? AND pc.is_contracted = true`,
       [playerId]
     );
 
@@ -222,28 +228,61 @@ router.get('/player/:playerId', async (req, res) => {
       personalityInfo = { type: card.personality, name: traits?.name, description: traits?.description };
     }
 
+    // 순위 계산
+    const allPlayers = await pool.query(
+      `SELECT pc.id, SUM(ms.damage_dealt) as total_damage, SUM(ms.kills) as total_kills,
+              CASE WHEN SUM(ms.deaths) > 0 THEN (SUM(ms.kills) + SUM(ms.assists)) / SUM(ms.deaths) ELSE 0 END as kda,
+              AVG(ms.damage_dealt) / 25 as dpm
+       FROM player_cards pc
+       LEFT JOIN match_stats ms ON pc.id = ms.player_id
+       GROUP BY pc.id
+       ORDER BY total_damage DESC`
+    );
+
+    let damageRank = 0, killsRank = 0, kdaRank = 0, dpmRank = 0;
+    const totalPlayers = allPlayers.length;
+
+    if (card) {
+      const sortedByDamage = [...allPlayers].sort((a: any, b: any) => (b.total_damage || 0) - (a.total_damage || 0));
+      const sortedByKills = [...allPlayers].sort((a: any, b: any) => (b.total_kills || 0) - (a.total_kills || 0));
+      const sortedByKda = [...allPlayers].sort((a: any, b: any) => (b.kda || 0) - (a.kda || 0));
+      const sortedByDpm = [...allPlayers].sort((a: any, b: any) => (b.dpm || 0) - (a.dpm || 0));
+
+      damageRank = sortedByDamage.findIndex((p: any) => p.id === card.id) + 1;
+      killsRank = sortedByKills.findIndex((p: any) => p.id === card.id) + 1;
+      kdaRank = sortedByKda.findIndex((p: any) => p.id === card.id) + 1;
+      dpmRank = sortedByDpm.findIndex((p: any) => p.id === card.id) + 1;
+    }
+
     res.json({
-      id: player.id,
-      name: player.name,
-      position: player.position,
-      nationality: player.nationality,
-      original_team: player.team,
-      league: player.league,
-      face_image: player.face_image,
-      overall: card?.ovr || player.overall,
+      player: {
+        id: player.id,
+        name: player.name,
+        position: player.position,
+        nationality: player.nationality,
+        team: player.team,
+        league: player.league,
+        face_image: player.face_image,
+        overall: card?.ovr || player.overall
+      },
       stats: card ? { mental: card.mental, teamfight: card.teamfight, focus: card.focus, laning: card.laning } : null,
-      contract: card ? { team_id: card.team_id, team_name: card.team_name, level: card.level, is_starter: card.is_starter } : null,
       personality: personalityInfo,
       salary: (card?.ovr || player.overall) * 10000,
-      price: player.overall * 50000,
       career_stats: {
         total_games: matchStats.total_games || 0,
         total_kills: matchStats.total_kills || 0,
         total_deaths: matchStats.total_deaths || 0,
         total_assists: matchStats.total_assists || 0,
         total_damage: matchStats.total_damage || 0,
-        dpm: dpm,
-        kda: matchStats.total_deaths > 0 ? ((matchStats.total_kills + matchStats.total_assists) / matchStats.total_deaths).toFixed(2) : '0'
+        avg_dpm: dpm,
+        kda: matchStats.total_deaths > 0 ? (matchStats.total_kills + matchStats.total_assists) / matchStats.total_deaths : 0
+      },
+      rankings: {
+        damage_rank: damageRank || totalPlayers,
+        kills_rank: killsRank || totalPlayers,
+        kda_rank: kdaRank || totalPlayers,
+        dpm_rank: dpmRank || totalPlayers,
+        total_players: totalPlayers
       }
     });
   } catch (error: any) {
