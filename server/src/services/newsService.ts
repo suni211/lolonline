@@ -1,6 +1,171 @@
 import pool from '../database/db.js';
 
+// 커뮤니티 닉네임 생성
+const COMMUNITY_NICKNAMES = [
+  '야구갤러', '롤갤러', '에펨갤러', '풋볼매니저', '게임러', '아재',
+  '찐팬', '안티팬', '관종', '아이언', '브론즈', '실버', '골드러',
+  '다이아', '마스터', '챌린저', '기자놀이', '분석가', '해설위원',
+  '전적검색러', '팀킬러', '피지컬', '멘탈', '롤창', '겜창', '통계충'
+];
+
+const getRandomNickname = () => {
+  const base = COMMUNITY_NICKNAMES[Math.floor(Math.random() * COMMUNITY_NICKNAMES.length)];
+  const num = Math.floor(Math.random() * 9999);
+  return `${base}${num}`;
+};
+
+const getRandomViews = () => Math.floor(Math.random() * 5000) + 100;
+const getRandomComments = () => Math.floor(Math.random() * 200);
+const getRandomLikes = () => Math.floor(Math.random() * 500);
+
 export class NewsService {
+  // 커뮤니티 스타일 글 생성 (모든 행동에 대해)
+  static async createCommunityPost(
+    teamId: number,
+    actionType: string,
+    details: any = {}
+  ) {
+    const team = await pool.query('SELECT name FROM teams WHERE id = ?', [teamId]);
+    const teamName = team[0]?.name || '어떤팀';
+
+    let title = '';
+    let content = '';
+    let newsType = 'COMMUNITY';
+
+    // 행동 유형별 커뮤니티 스타일 제목과 내용 생성
+    switch (actionType) {
+      case 'TRAINING':
+        const trainTitles = [
+          `${teamName} 훈련 ㅋㅋㅋ 이거 실화냐`,
+          `와 ${teamName} 진짜 열심히 하네`,
+          `${teamName} 선수들 훈련하는거 봄?`,
+          `[속보] ${teamName} 오늘도 훈련 중`,
+          `${teamName} 훈련 근황.jpg`,
+        ];
+        title = trainTitles[Math.floor(Math.random() * trainTitles.length)];
+        content = details.playerName
+          ? `${details.playerName} 선수가 ${details.statType} 훈련함 ㅋㅋ\n스탯 +${details.statIncrease || 1} 올랐다고 함\n\n진짜 노력하네 ㄷㄷ`
+          : `${teamName} 팀 전체 훈련 중임\n요즘 열심히 하는듯`;
+        break;
+
+      case 'STREAMING':
+        const streamTitles = [
+          `${details.playerName || '선수'} 방송 킴 ㅋㅋㅋ`,
+          `와 ${details.playerName} 스트리밍 레전드`,
+          `[실시간] ${teamName} ${details.playerName} 방송 중`,
+          `${details.playerName} 팬들 모여라`,
+          `${details.playerName} 오늘 방송 ${details.duration}시간 함`,
+        ];
+        title = streamTitles[Math.floor(Math.random() * streamTitles.length)];
+        content = `시청자 ${details.viewers?.toLocaleString() || '???'}명 모임\n수익 ${details.income?.toLocaleString() || '???'}원\n\n팬들 열광 중 ㅋㅋㅋ`;
+        break;
+
+      case 'FAN_EVENT':
+        const eventTitles = [
+          `${teamName} ${details.eventType} 개최함`,
+          `와 ${teamName} 팬 이벤트 ㄷㄷ`,
+          `${teamName} 팬미팅 후기`,
+          `[후기] ${teamName} 이벤트 다녀옴`,
+        ];
+        title = eventTitles[Math.floor(Math.random() * eventTitles.length)];
+        content = `비용: ${details.cost?.toLocaleString() || '???'}원\n남팬 +${details.maleFans || 0}, 여팬 +${details.femaleFans || 0}\n\n팬들 좋아 죽는다 ㅋㅋ`;
+        break;
+
+      case 'TRANSFER':
+        const transferTitles = [
+          `${teamName} ${details.playerName} 영입 ㄷㄷㄷ`,
+          `와 ${details.playerName} ${teamName} 감?`,
+          `[오피셜] ${details.playerName} → ${teamName}`,
+          `${teamName} 이적시장 열일 중`,
+          `${details.playerName} ${teamName} 오심 ㅋㅋ`,
+        ];
+        title = transferTitles[Math.floor(Math.random() * transferTitles.length)];
+        content = `연봉: ${details.salary?.toLocaleString() || '???'}원\n\n이거 잘한거임? 못한거임?\n댓글로 토론 ㄱㄱ`;
+        newsType = 'TRANSFER_OFFICIAL';
+        break;
+
+      case 'MATCH_WIN':
+        const winTitles = [
+          `${teamName} 이겼다 ㅋㅋㅋㅋ`,
+          `와 ${teamName} 존나 잘하네`,
+          `${teamName} vs ${details.opponent} 승리`,
+          `[경기결과] ${teamName} ${details.score}`,
+          `${teamName} 오늘 컨디션 ㄹㅇ 좋았음`,
+        ];
+        title = winTitles[Math.floor(Math.random() * winTitles.length)];
+        content = `상대: ${details.opponent || '상대팀'}\n스코어: ${details.score || '???'}\n\n오늘 개잘함 ㄹㅇ`;
+        newsType = 'MATCH_HIGHLIGHT';
+        break;
+
+      case 'MATCH_LOSE':
+        const loseTitles = [
+          `${teamName} 졌다...`,
+          `${teamName} 왜 이럼 ㅠㅠ`,
+          `[경기결과] ${teamName} 패배`,
+          `${teamName} 오늘 폼 최악`,
+          `${teamName} 팬들 멘탈 터짐`,
+        ];
+        title = loseTitles[Math.floor(Math.random() * loseTitles.length)];
+        content = `상대: ${details.opponent || '상대팀'}\n스코어: ${details.score || '???'}\n\n왜 졌냐고... 진짜...`;
+        newsType = 'MATCH_HIGHLIGHT';
+        break;
+
+      case 'CARD_PACK':
+        const packTitles = [
+          `${teamName} 카드팩 깜 ㅋㅋ`,
+          `와 이거 뭐가 나옴?`,
+          `[운빨] ${teamName} 카드팩 결과`,
+          `카드팩 개봉기`,
+        ];
+        title = packTitles[Math.floor(Math.random() * packTitles.length)];
+        content = details.playerName
+          ? `${details.playerName} 나옴!\n등급: ${details.grade || 'NORMAL'}\nOVR: ${details.ovr || '???'}\n\n${details.grade === 'LEGEND' ? '개쩐다 ㄷㄷ' : '음... 그럭저럭?'}`
+          : '카드팩 열어봄';
+        newsType = 'TEAM_NEWS';
+        break;
+
+      case 'SPONSOR':
+        const sponsorTitles = [
+          `${teamName} 스폰서 계약함`,
+          `와 ${teamName} 돈 벌었다`,
+          `[스폰서] ${teamName} ${details.sponsorName}과 계약`,
+          `${teamName} 스폰서 근황`,
+        ];
+        title = sponsorTitles[Math.floor(Math.random() * sponsorTitles.length)];
+        content = `스폰서: ${details.sponsorName || '???'}\n계약금: ${details.amount?.toLocaleString() || '???'}원\n\n돈 좀 버네 ㅋㅋ`;
+        newsType = 'TEAM_NEWS';
+        break;
+
+      case 'FACILITY':
+        const facilityTitles = [
+          `${teamName} 시설 업그레이드함`,
+          `${teamName} 돈 쓰는거 보소`,
+          `[시설] ${teamName} ${details.facilityName} 업그레이드`,
+        ];
+        title = facilityTitles[Math.floor(Math.random() * facilityTitles.length)];
+        content = `${details.facilityName || '시설'} Lv.${details.level || '???'}\n비용: ${details.cost?.toLocaleString() || '???'}원\n\n돈 많네 ㅋㅋ`;
+        newsType = 'TEAM_NEWS';
+        break;
+
+      default:
+        title = `${teamName} 근황`;
+        content = `${teamName}에서 뭔가 했음`;
+        newsType = 'TEAM_NEWS';
+    }
+
+    // 커뮤니티 메타데이터 추가
+    const author = getRandomNickname();
+    const views = getRandomViews();
+    const comments = getRandomComments();
+    const likes = getRandomLikes();
+
+    await pool.query(
+      `INSERT INTO news (news_type, title, content, team_id, author_nickname, view_count, comment_count, like_count)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [newsType, title, content, teamId, author, views, comments, likes]
+    );
+  }
+
   // 경기 하이라이트 뉴스 생성
   static async createMatchHighlight(
     matchId: number,

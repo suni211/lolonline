@@ -25,7 +25,7 @@ interface Player {
   id: number;
   name: string;
   position: string;
-  condition: number;
+  player_condition: number;
   overall: number;
 }
 
@@ -189,7 +189,7 @@ export default function FansStreaming() {
                 <option value="">선수 선택</option>
                 {players.map(p => (
                   <option key={p.id} value={p.id}>
-                    {p.name} ({p.position}) - 컨디션 {p.condition}%
+                    {p.name} ({p.position}) - 컨디션 {p.player_condition}%
                   </option>
                 ))}
               </select>

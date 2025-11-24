@@ -14,6 +14,10 @@ interface NewsItem {
   credibility: number;
   highlight_type: string | null;
   created_at: string;
+  author_nickname: string;
+  view_count: number;
+  comment_count: number;
+  like_count: number;
 }
 
 export default function News() {
@@ -85,8 +89,11 @@ export default function News() {
   };
 
   return (
-    <div className="news-page">
-      <h1>뉴스</h1>
+    <div className="news-page community-style">
+      <div className="community-header">
+        <h1>LPO 게시판</h1>
+        <p className="community-desc">리그 프로 온라인 커뮤니티</p>
+      </div>
 
       <div className="news-tabs">
         <button
@@ -127,34 +134,34 @@ export default function News() {
         <div className="no-news">뉴스가 없습니다</div>
       ) : (
         <>
-          <div className="news-list">
+          <div className="news-list community-list">
+            <div className="list-header">
+              <span className="col-type">말머리</span>
+              <span className="col-title">제목</span>
+              <span className="col-author">글쓴이</span>
+              <span className="col-date">날짜</span>
+              <span className="col-views">조회</span>
+              <span className="col-likes">추천</span>
+            </div>
             {news.map((item) => (
               <div
                 key={item.id}
-                className={`news-card ${getNewsTypeClass(item.news_type)}`}
+                className={`news-row ${getNewsTypeClass(item.news_type)}`}
                 onClick={() => setSelectedNews(item)}
               >
-                <div className="news-header">
-                  <span className={`news-type ${getNewsTypeClass(item.news_type)}`}>
-                    {getNewsTypeLabel(item.news_type)}
-                  </span>
-                  <span className="news-date">{formatDate(item.created_at)}</span>
-                </div>
-                <h3 className="news-title">{item.title}</h3>
-                {item.news_type === 'TRANSFER_RUMOR' && (
-                  <div className="credibility-bar">
-                    <div
-                      className="credibility-fill"
-                      style={{ width: `${item.credibility}%` }}
-                    />
-                    <span className="credibility-text">신뢰도 {item.credibility}%</span>
-                  </div>
-                )}
-                {item.team_name && (
-                  <div className="news-meta">
-                    <span className="team-tag">{item.team_name}</span>
-                  </div>
-                )}
+                <span className={`col-type news-type-badge ${getNewsTypeClass(item.news_type)}`}>
+                  {getNewsTypeLabel(item.news_type)}
+                </span>
+                <span className="col-title">
+                  <span className="title-text">{item.title}</span>
+                  {item.comment_count > 0 && (
+                    <span className="comment-count">[{item.comment_count}]</span>
+                  )}
+                </span>
+                <span className="col-author">{item.author_nickname || '익명'}</span>
+                <span className="col-date">{formatDate(item.created_at)}</span>
+                <span className="col-views">{item.view_count || 0}</span>
+                <span className="col-likes">{item.like_count || 0}</span>
               </div>
             ))}
           </div>
