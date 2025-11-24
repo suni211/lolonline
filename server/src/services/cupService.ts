@@ -146,24 +146,19 @@ export class CupService {
       const cup = cups[0];
       let currentRound = cup.status;
       let nextRound: string;
-      let matchDay: 'WEDNESDAY' | 'SATURDAY';
 
       switch (currentRound) {
         case 'ROUND_32':
           nextRound = 'ROUND_16';
-          matchDay = 'WEDNESDAY';
           break;
         case 'ROUND_16':
           nextRound = 'QUARTER';
-          matchDay = 'WEDNESDAY';
           break;
         case 'QUARTER':
           nextRound = 'SEMI';
-          matchDay = 'SATURDAY';
           break;
         case 'SEMI':
           nextRound = 'FINAL';
-          matchDay = 'SATURDAY';
           break;
         default:
           throw new Error('Cup is already completed');
@@ -197,14 +192,40 @@ export class CupService {
         }
       }
 
-      // 경기 일정 계산
-      let matchTime: Date;
-      if (matchDay === 'WEDNESDAY') {
-        matchTime = this.getNextWednesday(new Date());
+      // 32강 경기 일정을 기준으로 같은 수요일/토요일에 스케줄
+      const firstMatch = await pool.query(
+        `SELECT scheduled_at FROM cup_matches WHERE cup_id = ? AND round = 'ROUND_32' ORDER BY match_number LIMIT 1`,
+        [cupId]
+      );
+
+      let baseWednesday: Date;
+      if (firstMatch.length > 0) {
+        baseWednesday = new Date(firstMatch[0].scheduled_at);
       } else {
-        matchTime = this.getNextSaturday(new Date());
+        baseWednesday = this.getNextWednesday(new Date());
       }
-      matchTime.setUTCHours(8, 0, 0, 0); // 17:00 KST
+
+      // 수요일: 32강, 16강, 8강 / 토요일: 4강, 결승
+      let matchTime: Date;
+      if (nextRound === 'ROUND_16' || nextRound === 'QUARTER') {
+        // 같은 수요일, 시간대만 다르게
+        matchTime = new Date(baseWednesday);
+        if (nextRound === 'ROUND_16') {
+          matchTime.setUTCHours(10, 0, 0, 0); // 19:00 KST (16강)
+        } else {
+          matchTime.setUTCHours(12, 0, 0, 0); // 21:00 KST (8강)
+        }
+      } else {
+        // 4강, 결승은 그 주 토요일
+        matchTime = new Date(baseWednesday);
+        // 수요일 -> 토요일 (3일 후)
+        matchTime.setDate(matchTime.getDate() + 3);
+        if (nextRound === 'SEMI') {
+          matchTime.setUTCHours(8, 0, 0, 0); // 17:00 KST (4강)
+        } else {
+          matchTime.setUTCHours(10, 0, 0, 0); // 19:00 KST (결승)
+        }
+      }
 
       for (let i = 0; i < matches.length; i++) {
         const match = matches[i];

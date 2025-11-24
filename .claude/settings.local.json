@@ -14,7 +14,8 @@
       "Bash(magick identify:*)",
       "Bash(nul)",
       "Bash(git reset:*)",
-      "Bash(mariadb:*)"
+      "Bash(mariadb:*)",
+      "Bash(npx tsc)"
     ],
     "deny": [],
     "ask": []

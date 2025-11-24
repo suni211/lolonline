@@ -147,6 +147,7 @@
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.8);
   margin-bottom: 0.5rem;
+  text-align: center;
 }
 
 .stat-value {
@@ -158,11 +159,18 @@
   position: relative;
   z-index: 1;
   animation: pulse 2s ease-in-out infinite;
+  text-align: center;
 }
 
 .stat-label {
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+}
+
+.stat-card p {
+  text-align: center;
+  margin: 0;
 }
 
 .dashboard-sections {
