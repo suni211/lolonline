@@ -127,16 +127,14 @@ export default function Matches() {
 
   // 경기 분류
   const cupMatches = filteredMatches.filter(m => m.match_type === 'CUP');
-  const superLeagueMatches = filteredMatches.filter(m =>
-    m.league_name && (m.league_name.toUpperCase().includes('SUPER') || m.league_name.includes('슈퍼'))
+  const southLeagueMatches = filteredMatches.filter(m =>
+    m.league_name && m.league_name.toUpperCase().includes('SOUTH')
   );
-  const firstLeagueMatches = filteredMatches.filter(m =>
-    m.league_name && !m.league_name.toUpperCase().includes('SUPER') &&
-    (m.league_name.includes('1') || m.league_name.toUpperCase().includes('FIRST'))
+  const northLeagueMatches = filteredMatches.filter(m =>
+    m.league_name && m.league_name.toUpperCase().includes('NORTH')
   );
-  const secondLeagueMatches = filteredMatches.filter(m =>
-    m.league_name && !m.league_name.toUpperCase().includes('SUPER') &&
-    (m.league_name.includes('2') || m.league_name.toUpperCase().includes('SECOND'))
+  const amateurLeagueMatches = filteredMatches.filter(m =>
+    m.league_name && m.league_name.toUpperCase().includes('AMATEUR')
   );
   const friendlyMatches = filteredMatches.filter(m => m.match_type === 'FRIENDLY');
 
@@ -145,9 +143,9 @@ export default function Matches() {
     m.match_type !== 'CUP' &&
     m.match_type !== 'FRIENDLY' &&
     !cupMatches.includes(m) &&
-    !superLeagueMatches.includes(m) &&
-    !firstLeagueMatches.includes(m) &&
-    !secondLeagueMatches.includes(m)
+    !southLeagueMatches.includes(m) &&
+    !northLeagueMatches.includes(m) &&
+    !amateurLeagueMatches.includes(m)
   );
 
   const renderMatchList = (matchList: Match[], title: string) => {
@@ -233,9 +231,9 @@ export default function Matches() {
 
       <div className="matches-container">
         {renderMatchList(cupMatches, 'LPO 컵')}
-        {renderMatchList(superLeagueMatches, 'LPO SUPER LEAGUE')}
-        {renderMatchList(firstLeagueMatches, 'LPO 1 LEAGUE')}
-        {renderMatchList(secondLeagueMatches, 'LPO 2 LEAGUE')}
+        {renderMatchList(southLeagueMatches, 'LPO SOUTH (1부)')}
+        {renderMatchList(northLeagueMatches, 'LPO NORTH (1부)')}
+        {renderMatchList(amateurLeagueMatches, 'LPO AMATEUR (2부)')}
         {renderMatchList(otherLeagueMatches, '기타 리그')}
         {renderMatchList(friendlyMatches, '친선전')}
 

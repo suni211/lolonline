@@ -60,7 +60,7 @@ interface Standing {
 
 export default function Leagues() {
   const [leagues, setLeagues] = useState<League[]>([]);
-  const [selectedTier, setSelectedTier] = useState<'SOUTH' | 'NORTH'>('SOUTH');
+  const [selectedTier, setSelectedTier] = useState<'SOUTH' | 'NORTH' | 'AMATEUR'>('SOUTH');
   const [standings, setStandings] = useState<Standing[]>([]);
   const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
   const [playoffBracket, setPlayoffBracket] = useState<any[]>([]);
@@ -126,21 +126,29 @@ export default function Leagues() {
     switch (tier) {
       case 'SOUTH': return 'LPO SOUTH';
       case 'NORTH': return 'LPO NORTH';
+      case 'AMATEUR': return 'LPO AMATEUR';
       default: return tier;
     }
   };
 
   const getTierDescription = (tier: string) => {
     switch (tier) {
-      case 'SOUTH': return '남부 리그 - 10팀';
-      case 'NORTH': return '북부 리그 - 10팀';
+      case 'SOUTH': return '남부 1부 리그 - 10팀';
+      case 'NORTH': return '북부 1부 리그 - 10팀';
+      case 'AMATEUR': return '2부 리그 - 20팀';
       default: return '';
     }
   };
 
-  const getPromotionInfo = (_tier: string, rank: number, _totalTeams: number) => {
-    // SOUTH/NORTH는 상위 6팀이 플레이오프 진출
-    if (rank <= 6) return 'promotion'; // 상위 6팀 플레이오프
+  const getPromotionInfo = (tier: string, rank: number, totalTeams: number) => {
+    if (tier === 'AMATEUR') {
+      // AMATEUR: 상위 2팀 승격
+      if (rank <= 2) return 'promotion';
+      return '';
+    }
+    // SOUTH/NORTH: 상위 6팀 플레이오프, 하위 1팀 강등
+    if (rank <= 6) return 'promotion';
+    if (rank === totalTeams) return 'relegation';
     return '';
   };
 
@@ -154,14 +162,21 @@ export default function Leagues() {
           className={`tier-btn south ${selectedTier === 'SOUTH' ? 'active' : ''}`}
         >
           <div className="tier-name">SOUTH</div>
-          <div className="tier-sub">남부</div>
+          <div className="tier-sub">남부 1부</div>
         </button>
         <button
           onClick={() => setSelectedTier('NORTH')}
           className={`tier-btn north ${selectedTier === 'NORTH' ? 'active' : ''}`}
         >
           <div className="tier-name">NORTH</div>
-          <div className="tier-sub">북부</div>
+          <div className="tier-sub">북부 1부</div>
+        </button>
+        <button
+          onClick={() => setSelectedTier('AMATEUR')}
+          className={`tier-btn amateur ${selectedTier === 'AMATEUR' ? 'active' : ''}`}
+        >
+          <div className="tier-name">AMATEUR</div>
+          <div className="tier-sub">2부</div>
         </button>
       </div>
 
@@ -179,7 +194,14 @@ export default function Leagues() {
           </div>
 
           <div className="promotion-legend">
-            <span className="legend-item promotion">플레이오프 진출 (상위 6팀)</span>
+            {selectedTier === 'AMATEUR' ? (
+              <span className="legend-item promotion">1부 승격 (상위 2팀)</span>
+            ) : (
+              <>
+                <span className="legend-item promotion">플레이오프 진출 (상위 6팀)</span>
+                <span className="legend-item relegation">2부 강등 (하위 1팀)</span>
+              </>
+            )}
             <span className="legend-item ai-team">AI 팀</span>
           </div>
 
@@ -259,6 +281,7 @@ export default function Leagues() {
                         key={idx}
                         className={`
                           ${promoStatus === 'promotion' ? 'promotion-zone' : ''}
+                          ${promoStatus === 'relegation' ? 'relegation-zone' : ''}
                           ${standing.is_ai ? 'ai-team-row' : ''}
                         `}
                       >

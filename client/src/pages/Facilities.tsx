@@ -221,7 +221,7 @@ export default function Facilities() {
                   </div>
                   <div className="stat-row">
                     <span>시즌 유지비</span>
-                    <span className="cost">{formatCost(facility?.maintenance_cost ? facility.maintenance_cost * 100 : 0)}</span>
+                    <span className="cost">{formatCost(level * 1000000)}</span>
                   </div>
                 </div>
               )}
