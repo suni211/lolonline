@@ -114,8 +114,8 @@ export default function Leagues() {
 
   const getTierDescription = (tier: string) => {
     switch (tier) {
-      case 'SOUTH': return '남부 리그 - 16팀';
-      case 'NORTH': return '북부 리그 - 16팀';
+      case 'SOUTH': return '남부 리그 - 10팀';
+      case 'NORTH': return '북부 리그 - 10팀';
       default: return '';
     }
   };

@@ -855,46 +855,61 @@ export default function LiveMatch() {
         </div>
       </div>
 
-      {/* 오브젝트 현황 */}
-      {homeState && awayState && (
-        <div className="objectives-bar">
-          <div className="team-objectives home">
-            <span className="obj dragons">🐉 {homeState.dragons.length}</span>
-            <span className="obj barons">👿 {homeState.barons}</span>
-            <span className="obj heralds">👁️ {homeState.heralds}</span>
-            <span className="obj gold">💰 {formatGold(homeState.gold)}</span>
-          </div>
-          <div className="team-objectives away">
-            <span className="obj gold">💰 {formatGold(awayState.gold)}</span>
-            <span className="obj heralds">👁️ {awayState.heralds}</span>
-            <span className="obj barons">👿 {awayState.barons}</span>
-            <span className="obj dragons">🐉 {awayState.dragons.length}</span>
-          </div>
-        </div>
-      )}
-
       <div className="main-content with-map">
-        {/* 왼쪽: 블루팀(홈팀) 선수 통계 */}
-        <div className="team-stats home">
-          <h3>{match.home_team_name}</h3>
-          {homeStats.map(player => (
-            <div key={player.id} className="player-stat-row">
-              <div className="player-info">
+        {/* 왼쪽: 블루팀(홈팀) */}
+        <div className="team-panel home">
+          {/* 옵젝 상황 */}
+          <div className="panel-section objectives">
+            <h4>옵젝 상황</h4>
+            {homeState && (
+              <div className="obj-list">
+                <div className="obj-item">
+                  <span className="obj-icon">🐉</span>
+                  <span className="obj-count">{homeState.dragons.length}</span>
+                </div>
+                <div className="obj-item">
+                  <span className="obj-icon">👿</span>
+                  <span className="obj-count">{homeState.barons}</span>
+                </div>
+                <div className="obj-item">
+                  <span className="obj-icon">👁️</span>
+                  <span className="obj-count">{homeState.heralds}</span>
+                </div>
+                <div className="obj-item">
+                  <span className="obj-icon">💰</span>
+                  <span className="obj-count">{formatGold(homeState.gold)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 팀명 */}
+          <div className="panel-section team-name-section">
+            <h3>{match.home_team_name}</h3>
+          </div>
+
+          {/* 선수 */}
+          <div className="panel-section players">
+            <h4>선수</h4>
+            {homeStats.map(player => (
+              <div key={player.id} className="player-row">
                 <span className="position">{player.position}</span>
                 <span className="name">{player.player_name}</span>
               </div>
-              <div className="player-details">
-                <div className="stat-line">
-                  <span className="kda">{player.kills}/{player.deaths}/{player.assists}</span>
-                  <span className="cs">{player.cs} CS</span>
-                </div>
-                <div className="stat-line">
-                  <span className="gold">{(player.gold_earned / 1000).toFixed(1)}k</span>
-                  <span className="damage">{(player.damage_dealt / 1000).toFixed(1)}k</span>
-                </div>
+            ))}
+          </div>
+
+          {/* 통계 */}
+          <div className="panel-section stats">
+            <h4>통계</h4>
+            {homeStats.map(player => (
+              <div key={player.id} className="stat-row-compact">
+                <span className="kda">{player.kills}/{player.deaths}/{player.assists}</span>
+                <span className="cs">{player.cs}</span>
+                <span className="dmg">{(player.damage_dealt / 1000).toFixed(1)}k</span>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         {/* 중앙: 맵 + 이벤트 로그 */}
@@ -993,27 +1008,60 @@ export default function LiveMatch() {
           )}
         </div>
 
-        {/* 오른쪽: 레드팀(어웨이팀) 선수 통계 */}
-        <div className="team-stats away">
-          <h3>{match.away_team_name}</h3>
-          {awayStats.map(player => (
-            <div key={player.id} className="player-stat-row">
-              <div className="player-info">
+        {/* 오른쪽: 레드팀(어웨이팀) */}
+        <div className="team-panel away">
+          {/* 옵젝 상황 */}
+          <div className="panel-section objectives">
+            <h4>옵젝상황</h4>
+            {awayState && (
+              <div className="obj-list">
+                <div className="obj-item">
+                  <span className="obj-icon">🐉</span>
+                  <span className="obj-count">{awayState.dragons.length}</span>
+                </div>
+                <div className="obj-item">
+                  <span className="obj-icon">👿</span>
+                  <span className="obj-count">{awayState.barons}</span>
+                </div>
+                <div className="obj-item">
+                  <span className="obj-icon">👁️</span>
+                  <span className="obj-count">{awayState.heralds}</span>
+                </div>
+                <div className="obj-item">
+                  <span className="obj-icon">💰</span>
+                  <span className="obj-count">{formatGold(awayState.gold)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 팀명 */}
+          <div className="panel-section team-name-section">
+            <h3>{match.away_team_name}</h3>
+          </div>
+
+          {/* 선수 */}
+          <div className="panel-section players">
+            <h4>선수</h4>
+            {awayStats.map(player => (
+              <div key={player.id} className="player-row">
                 <span className="position">{player.position}</span>
                 <span className="name">{player.player_name}</span>
               </div>
-              <div className="player-details">
-                <div className="stat-line">
-                  <span className="kda">{player.kills}/{player.deaths}/{player.assists}</span>
-                  <span className="cs">{player.cs} CS</span>
-                </div>
-                <div className="stat-line">
-                  <span className="gold">{(player.gold_earned / 1000).toFixed(1)}k</span>
-                  <span className="damage">{(player.damage_dealt / 1000).toFixed(1)}k</span>
-                </div>
+            ))}
+          </div>
+
+          {/* 통계 */}
+          <div className="panel-section stats">
+            <h4>통계</h4>
+            {awayStats.map(player => (
+              <div key={player.id} className="stat-row-compact">
+                <span className="kda">{player.kills}/{player.deaths}/{player.assists}</span>
+                <span className="cs">{player.cs}</span>
+                <span className="dmg">{(player.damage_dealt / 1000).toFixed(1)}k</span>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 

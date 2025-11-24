@@ -3,6 +3,9 @@
 -- 0. 외래 키 체크 비활성화
 SET FOREIGN_KEY_CHECKS = 0;
 
+-- 리그 테이블 region 컬럼 업데이트 (SOUTH/NORTH만 사용)
+ALTER TABLE leagues MODIFY COLUMN region ENUM('SOUTH', 'NORTH') NOT NULL;
+
 -- 기존 테이블 삭제
 DROP TABLE IF EXISTS team_coaches;
 DROP TABLE IF EXISTS coaches;
