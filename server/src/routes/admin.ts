@@ -10,6 +10,7 @@ import LPOLeagueService from '../services/lpoLeagueService.js';
 import { CupService } from '../services/cupService.js';
 import { startMatchById } from '../services/matchSimulationService.js';
 import { io } from '../index.js';
+import { getPlayersForDB } from '../database/playerRosters.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1280,6 +1281,65 @@ router.get('/players/list', authenticateToken, adminMiddleware, async (req: Auth
     res.json(players);
   } catch (error: any) {
     res.status(500).json({ error: '선수 목록 조회 실패' });
+  }
+});
+
+// 2025 시즌 선수 데이터 DB 동기화
+router.post('/players/sync-roster', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const players = getPlayersForDB();
+
+    let inserted = 0;
+    let updated = 0;
+    const errors: string[] = [];
+
+    for (const player of players) {
+      try {
+        // 이름으로 기존 선수 확인
+        const existing = await pool.query(
+          'SELECT id FROM pro_players WHERE name = ?',
+          [player.name]
+        );
+
+        if (existing.length > 0) {
+          // 기존 선수 업데이트
+          await pool.query(
+            `UPDATE pro_players SET
+              position = ?,
+              nationality = ?,
+              team = ?,
+              league = ?,
+              base_ovr = ?,
+              is_active = true
+            WHERE name = ?`,
+            [player.position, player.nationality, player.team, player.league, player.base_ovr, player.name]
+          );
+          updated++;
+        } else {
+          // 새 선수 추가
+          await pool.query(
+            `INSERT INTO pro_players (name, position, nationality, team, league, base_ovr, is_active)
+             VALUES (?, ?, ?, ?, ?, ?, true)`,
+            [player.name, player.position, player.nationality, player.team, player.league, player.base_ovr]
+          );
+          inserted++;
+        }
+      } catch (err: any) {
+        errors.push(`${player.name}: ${err.message}`);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `선수 동기화 완료`,
+      total: players.length,
+      inserted,
+      updated,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error: any) {
+    console.error('Sync roster error:', error);
+    res.status(500).json({ error: '선수 동기화 실패: ' + error.message });
   }
 });
 

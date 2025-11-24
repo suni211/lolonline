@@ -159,6 +159,20 @@ export default function Admin() {
     }
   };
 
+  const syncRoster = async () => {
+    if (!confirm('2025 시즌 선수 데이터를 DB에 동기화하시겠습니까?')) return;
+    try {
+      setLoading(true);
+      const res = await axios.post('/api/admin/players/sync-roster');
+      setMessage(`선수 동기화 완료: 총 ${res.data.total}명 (신규 ${res.data.inserted}, 업데이트 ${res.data.updated})`);
+      fetchData();
+    } catch (error: any) {
+      setMessage(error.response?.data?.error || '선수 동기화 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const startNextSeason = async () => {
     if (!confirm('다음 시즌을 시작하시겠습니까? 승강 결과가 반영됩니다.')) return;
     try {
@@ -422,6 +436,9 @@ export default function Admin() {
             )}
             <button onClick={generateAICards} disabled={loading} className="primary">
               AI 팀 카드 생성
+            </button>
+            <button onClick={syncRoster} disabled={loading} className="primary">
+              2025 선수 DB 동기화
             </button>
             <button onClick={resetGameTime} className="secondary">
               게임 시간 초기화
