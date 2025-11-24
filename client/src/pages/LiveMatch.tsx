@@ -110,7 +110,8 @@ export default function LiveMatch() {
     atakhan: { alive: false }
   });
   const [currentHighlight, setCurrentHighlight] = useState<Highlight | null>(null);
-  const [showMap, setShowMap] = useState(false); // 하이라이트 때만 맵 표시
+  const [showMap, setShowMap] = useState(false);
+  const [deathEffects, setDeathEffects] = useState<{playerId: number, x: number, y: number}[]>([]);
 
   useEffect(() => {
     fetchMatchData();
@@ -389,7 +390,7 @@ export default function LiveMatch() {
   // 이벤트에서 하이라이트 감지
   const detectHighlight = (event: MatchEvent) => {
     let highlight: Highlight | null = null;
-    let duration = 8000; // 기본 8초
+    let duration = 30000; // 기본 30초
 
     switch (event.type) {
       case 'KILL':
@@ -399,7 +400,23 @@ export default function LiveMatch() {
           y: 50,
           description: `${event.data?.killer_name || event.data?.killer || '???'} → ${event.data?.victim_name || event.data?.victim || '???'}`
         };
-        duration = 6000;
+        // 킬 발생 시 죽은 선수 표시
+        if (event.data?.victim_id) {
+          setChampions(prev => prev.map(champ =>
+            champ.playerId === event.data.victim_id
+              ? { ...champ, isAlive: false }
+              : champ
+          ));
+          // 10초 후 부활
+          setTimeout(() => {
+            setChampions(prev => prev.map(champ =>
+              champ.playerId === event.data.victim_id
+                ? { ...champ, isAlive: true }
+                : champ
+            ));
+          }, 10000);
+        }
+        duration = 30000;
         break;
 
       case 'TEAMFIGHT':
@@ -409,7 +426,7 @@ export default function LiveMatch() {
           y: 50,
           description: 'TEAM FIGHT!'
         };
-        duration = 15000;
+        duration = 45000;
         break;
 
       case 'DRAGON':
@@ -420,7 +437,7 @@ export default function LiveMatch() {
           description: `${event.data?.team === 'home' ? '블루' : '레드'} 드래곤`
         };
         setObjectives(prev => ({ ...prev, dragon: { alive: false } }));
-        duration = 8000;
+        duration = 30000;
         break;
 
       case 'BARON':
@@ -431,7 +448,7 @@ export default function LiveMatch() {
           description: `${event.data?.team === 'home' ? '블루' : '레드'} 바론`
         };
         setObjectives(prev => ({ ...prev, baron: { alive: false } }));
-        duration = 10000;
+        duration = 40000;
         break;
 
       case 'HERALD':
@@ -442,7 +459,19 @@ export default function LiveMatch() {
           description: `${event.data?.team === 'home' ? '블루' : '레드'} 전령`
         };
         setObjectives(prev => ({ ...prev, herald: { alive: false, taken: true } }));
-        duration = 8000;
+        duration = 30000;
+        break;
+
+      case 'TURRET':
+      case 'INHIBITOR':
+      case 'NEXUS_TURRET':
+        highlight = {
+          type: 'objective',
+          x: 50,
+          y: 50,
+          description: event.description
+        };
+        duration = 30000;
         break;
 
       case 'NEXUS_DESTROYED':
@@ -452,7 +481,7 @@ export default function LiveMatch() {
           y: event.data?.team === 'away' ? 85.7 : 13.7,
           description: 'VICTORY!'
         };
-        duration = 15000;
+        duration = 60000;
         break;
     }
 
