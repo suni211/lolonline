@@ -1161,4 +1161,126 @@ router.post('/test-match', authenticateToken, adminMiddleware, async (req: AuthR
   }
 });
 
+// 선수 오버롤 일괄 업데이트
+router.post('/players/sync-ovr', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const { players } = req.body;
+    // players: [{ name: 'Faker', ovr: 98 }, ...]
+
+    if (!players || !Array.isArray(players)) {
+      return res.status(400).json({ error: '선수 데이터가 필요합니다' });
+    }
+
+    let updated = 0;
+    let notFound: string[] = [];
+
+    for (const player of players) {
+      const result = await pool.query(
+        'UPDATE pro_players SET base_ovr = ? WHERE name = ?',
+        [player.ovr, player.name]
+      );
+
+      if (result.affectedRows > 0) {
+        updated++;
+      } else {
+        notFound.push(player.name);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `${updated}명의 선수 오버롤이 업데이트되었습니다`,
+      not_found: notFound
+    });
+  } catch (error: any) {
+    console.error('Sync players error:', error);
+    res.status(500).json({ error: '선수 동기화 실패: ' + error.message });
+  }
+});
+
+// 월급 지급 (게임 시간 1개월 경과)
+router.post('/salary/pay-monthly', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    // 모든 팀의 계약된 선수들의 월급 차감
+    const teams = await pool.query('SELECT id, name, gold FROM teams');
+
+    const results: any[] = [];
+
+    for (const team of teams) {
+      // 해당 팀의 계약된 선수들
+      const cards = await pool.query(
+        'SELECT pc.id, pc.ovr, pp.name FROM player_cards pc JOIN pro_players pp ON pc.pro_player_id = pp.id WHERE pc.team_id = ? AND pc.is_contracted = true',
+        [team.id]
+      );
+
+      if (cards.length === 0) continue;
+
+      // 총 월급 계산 (OVR * 10만원)
+      const totalSalary = cards.reduce((sum: number, card: any) => sum + (card.ovr * 100000), 0);
+
+      if (team.gold >= totalSalary) {
+        // 골드 차감
+        await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [totalSalary, team.id]);
+        results.push({
+          team: team.name,
+          salary_paid: totalSalary,
+          remaining_gold: team.gold - totalSalary,
+          players: cards.length
+        });
+      } else {
+        // 골드 부족 - 가장 높은 연봉 선수부터 방출
+        let remaining = team.gold;
+        const released: string[] = [];
+
+        // OVR 높은 순으로 정렬
+        const sortedCards = [...cards].sort((a: any, b: any) => b.ovr - a.ovr);
+
+        for (const card of sortedCards) {
+          const salary = card.ovr * 100000;
+          if (remaining < salary) {
+            // 이 선수 방출
+            await pool.query('UPDATE player_cards SET is_contracted = false, team_id = NULL, is_starter = false WHERE id = ?', [card.id]);
+            released.push(card.name);
+          } else {
+            remaining -= salary;
+          }
+        }
+
+        // 남은 골드로 지불
+        const paidSalary = team.gold - remaining;
+        await pool.query('UPDATE teams SET gold = ? WHERE id = ?', [remaining, team.id]);
+
+        results.push({
+          team: team.name,
+          salary_paid: paidSalary,
+          remaining_gold: remaining,
+          players: cards.length - released.length,
+          released: released
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: '월급이 지급되었습니다',
+      results
+    });
+  } catch (error: any) {
+    console.error('Pay salary error:', error);
+    res.status(500).json({ error: '월급 지급 실패: ' + error.message });
+  }
+});
+
+// 선수 전체 목록 확인 (오버롤 포함)
+router.get('/players/list', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const players = await pool.query(
+      'SELECT id, name, position, team, league, COALESCE(base_ovr, 50) as ovr FROM pro_players ORDER BY base_ovr DESC, name ASC'
+    );
+    res.json(players);
+  } catch (error: any) {
+    res.status(500).json({ error: '선수 목록 조회 실패' });
+  }
+});
+
 export default router;
