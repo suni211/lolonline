@@ -111,7 +111,6 @@ export default function LiveMatch() {
   });
   const [currentHighlight, setCurrentHighlight] = useState<Highlight | null>(null);
   const [showMap, setShowMap] = useState(false);
-  const [deathEffects, setDeathEffects] = useState<{playerId: number, x: number, y: number}[]>([]);
 
   useEffect(() => {
     fetchMatchData();
