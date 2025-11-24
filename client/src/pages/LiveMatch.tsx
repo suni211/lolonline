@@ -447,14 +447,19 @@ export default function LiveMatch() {
               ? { ...champ, isAlive: false }
               : champ
           ));
-          // 15초 후 부활 (부활 시간 증가)
+          // 레벨에 따른 부활 시간 (게임 시간으로 레벨 추정)
+          // 1레벨: 6초, 18레벨(30분+): 60초
+          const gameMinutes = gameTime / 60;
+          const estimatedLevel = Math.min(18, Math.floor(1 + gameMinutes * 0.6));
+          const respawnTime = 6 + (estimatedLevel - 1) * (54 / 17); // 6초 ~ 60초
+
           setTimeout(() => {
             setChampions(prev => prev.map(champ =>
               champ.playerId === event.data.victim_id
                 ? { ...champ, isAlive: true }
                 : champ
             ));
-          }, 15000);
+          }, respawnTime * 1000);
         }
         duration = 30000;
         break;
