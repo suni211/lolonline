@@ -735,7 +735,31 @@ async function generateEvents(
 
   const eventType = eventPool[Math.floor(Math.random() * eventPool.length)];
 
-  const killer = winningPlayers[Math.floor(Math.random() * winningPlayers.length)];
+  // 포지션별 킬 가중치 (ADC/MID가 가장 많이 킬을 먹음)
+  const getPositionWeight = (position: string): number => {
+    switch (position?.toUpperCase()) {
+      case 'ADC': return 35;
+      case 'MID': return 30;
+      case 'JUNGLE': return 20;
+      case 'TOP': return 10;
+      case 'SUPPORT': return 5;
+      default: return 10;
+    }
+  };
+
+  // 가중치 기반 랜덤 선택
+  const selectWeightedPlayer = (players: any[]): any => {
+    const totalWeight = players.reduce((sum, p) => sum + getPositionWeight(p.position), 0);
+    let random = Math.random() * totalWeight;
+
+    for (const player of players) {
+      random -= getPositionWeight(player.position);
+      if (random <= 0) return player;
+    }
+    return players[players.length - 1];
+  };
+
+  const killer = selectWeightedPlayer(winningPlayers);
   const victim = losingPlayers[Math.floor(Math.random() * losingPlayers.length)];
 
   let event: any = null;

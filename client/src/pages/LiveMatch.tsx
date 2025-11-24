@@ -936,14 +936,46 @@ export default function LiveMatch() {
           {homeState && awayState && (homeState.dragons.length > 0 || awayState.dragons.length > 0) && (
             <div className="dragons-display">
               <div className="dragons home-dragons">
-                {homeState.dragons.map((dragon, idx) => (
-                  <span key={idx} className="dragon-icon" title={dragon}>🐉</span>
-                ))}
+                {homeState.dragons.map((dragon, idx) => {
+                  const getDragonIcon = (type: string) => {
+                    switch (type) {
+                      case '불': return { icon: '🔥', color: '#ff4444' };
+                      case '바다': return { icon: '🌊', color: '#4444ff' };
+                      case '바람': return { icon: '💨', color: '#aaaaaa' };
+                      case '대지': return { icon: '🏔️', color: '#8b4513' };
+                      case '구름': return { icon: '⚡', color: '#9966ff' };
+                      case '화학공학': return { icon: '☢️', color: '#00ff00' };
+                      default: return { icon: '🐉', color: '#ffd700' };
+                    }
+                  };
+                  const { icon, color } = getDragonIcon(dragon);
+                  return (
+                    <span key={idx} className="dragon-icon" title={dragon} style={{ color }}>
+                      {icon}
+                    </span>
+                  );
+                })}
               </div>
               <div className="dragons away-dragons">
-                {awayState.dragons.map((dragon, idx) => (
-                  <span key={idx} className="dragon-icon" title={dragon}>🐉</span>
-                ))}
+                {awayState.dragons.map((dragon, idx) => {
+                  const getDragonIcon = (type: string) => {
+                    switch (type) {
+                      case '불': return { icon: '🔥', color: '#ff4444' };
+                      case '바다': return { icon: '🌊', color: '#4444ff' };
+                      case '바람': return { icon: '💨', color: '#aaaaaa' };
+                      case '대지': return { icon: '🏔️', color: '#8b4513' };
+                      case '구름': return { icon: '⚡', color: '#9966ff' };
+                      case '화학공학': return { icon: '☢️', color: '#00ff00' };
+                      default: return { icon: '🐉', color: '#ffd700' };
+                    }
+                  };
+                  const { icon, color } = getDragonIcon(dragon);
+                  return (
+                    <span key={idx} className="dragon-icon" title={dragon} style={{ color }}>
+                      {icon}
+                    </span>
+                  );
+                })}
               </div>
             </div>
           )}
