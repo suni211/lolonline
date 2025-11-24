@@ -4,13 +4,16 @@
 CREATE TABLE IF NOT EXISTS users (
     id INT PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(50) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255),
     email VARCHAR(100) UNIQUE,
+    google_id VARCHAR(255) UNIQUE,
+    profile_picture VARCHAR(500),
     registration_ip VARCHAR(45),
     is_admin BOOLEAN DEFAULT FALSE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_login DATETIME,
-    INDEX idx_registration_ip (registration_ip, created_at)
+    INDEX idx_registration_ip (registration_ip, created_at),
+    INDEX idx_google_id (google_id)
 );
 
 -- 팀 테이블

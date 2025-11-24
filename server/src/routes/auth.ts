@@ -3,8 +3,12 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import pool from '../database/db.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { OAuth2Client } from 'google-auth-library';
 
 const router = express.Router();
+
+// Google OAuth 클라이언트
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // 회원가입
 router.post('/register', async (req, res) => {
@@ -164,6 +168,146 @@ router.post('/login', async (req, res) => {
   } catch (error: any) {
     console.error('Login error:', error);
     res.status(500).json({ error: '로그인에 실패했습니다: ' + (error.message || '알 수 없는 오류') });
+  }
+});
+
+// Google 로그인
+router.post('/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({ error: 'Google credential이 필요합니다' });
+    }
+
+    // Google 토큰 검증
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload) {
+      return res.status(400).json({ error: 'Invalid Google token' });
+    }
+
+    const { sub: googleId, email, name, picture } = payload;
+
+    // 기존 유저 확인 (google_id로)
+    let users = await pool.query(
+      'SELECT * FROM users WHERE google_id = ?',
+      [googleId]
+    );
+
+    let userId: number;
+    let isNewUser = false;
+
+    if (users.length === 0) {
+      // 이메일로 기존 계정 확인
+      if (email) {
+        const emailUsers = await pool.query(
+          'SELECT * FROM users WHERE email = ?',
+          [email]
+        );
+
+        if (emailUsers.length > 0) {
+          // 기존 이메일 계정에 Google 연동
+          userId = emailUsers[0].id;
+          await pool.query(
+            'UPDATE users SET google_id = ?, profile_picture = ? WHERE id = ?',
+            [googleId, picture || null, userId]
+          );
+        } else {
+          // 새 유저 생성
+          isNewUser = true;
+          const username = name || email?.split('@')[0] || `user_${googleId.slice(-8)}`;
+
+          // 유저네임 중복 체크
+          let finalUsername = username;
+          let counter = 1;
+          while (true) {
+            const existing = await pool.query(
+              'SELECT id FROM users WHERE username = ?',
+              [finalUsername]
+            );
+            if (existing.length === 0) break;
+            finalUsername = `${username}_${counter}`;
+            counter++;
+          }
+
+          const result = await pool.query(
+            `INSERT INTO users (username, email, google_id, profile_picture)
+             VALUES (?, ?, ?, ?)`,
+            [finalUsername, email, googleId, picture || null]
+          );
+          userId = result.insertId;
+        }
+      } else {
+        // 이메일 없는 경우 새 유저 생성
+        isNewUser = true;
+        const username = name || `user_${googleId.slice(-8)}`;
+
+        let finalUsername = username;
+        let counter = 1;
+        while (true) {
+          const existing = await pool.query(
+            'SELECT id FROM users WHERE username = ?',
+            [finalUsername]
+          );
+          if (existing.length === 0) break;
+          finalUsername = `${username}_${counter}`;
+          counter++;
+        }
+
+        const result = await pool.query(
+          `INSERT INTO users (username, google_id, profile_picture)
+           VALUES (?, ?, ?)`,
+          [finalUsername, googleId, picture || null]
+        );
+        userId = result.insertId;
+      }
+    } else {
+      userId = users[0].id;
+      // 프로필 사진 업데이트
+      if (picture) {
+        await pool.query(
+          'UPDATE users SET profile_picture = ? WHERE id = ?',
+          [picture, userId]
+        );
+      }
+    }
+
+    // 팀 정보 가져오기
+    const teams = await pool.query(
+      'SELECT id FROM teams WHERE user_id = ?',
+      [userId]
+    );
+
+    const teamId = teams.length > 0 ? teams[0].id : null;
+
+    // 마지막 로그인 업데이트
+    await pool.query(
+      'UPDATE users SET last_login = NOW() WHERE id = ?',
+      [userId]
+    );
+
+    // JWT 토큰 생성
+    const token = jwt.sign(
+      { userId, teamId },
+      process.env.JWT_SECRET || 'secret',
+      { expiresIn: '30d' }
+    );
+
+    res.json({
+      token,
+      userId,
+      teamId,
+      isNewUser,
+      needsTeam: !teamId
+    });
+  } catch (error: any) {
+    console.error('Google login error:', error);
+    res.status(500).json({ error: '구글 로그인에 실패했습니다: ' + (error.message || '알 수 없는 오류') });
   }
 });
 

@@ -405,9 +405,18 @@ export default function LiveMatch() {
     }));
   };
 
-  // 양팀이 대치하는 형태로 이동 (한타용)
+  // 양팀이 대치하는 형태로 이동 (한타용) - 죽은 챔피언은 스폰 위치
   const moveChampionsToFight = (centerX: number, centerY: number) => {
     setChampions(prev => prev.map(champ => {
+      // 죽은 챔피언은 스폰 위치에 있음
+      if (!champ.isAlive) {
+        const spawnPos = SPAWN_POSITIONS[champ.team][champ.position as keyof typeof SPAWN_POSITIONS.blue];
+        return {
+          ...champ,
+          x: spawnPos?.x || (champ.team === 'blue' ? 8.1 : 92),
+          y: spawnPos?.y || (champ.team === 'blue' ? 92.7 : 7.7)
+        };
+      }
       // 블루팀은 중심 기준 좌하단, 레드팀은 우상단
       const teamOffsetX = champ.team === 'blue' ? -6 : 6;
       const teamOffsetY = champ.team === 'blue' ? 4 : -4;
@@ -564,57 +573,63 @@ export default function LiveMatch() {
 
   // 포지션별 라인 위치 (실제 롤 맵 기준)
   const getLanePosition = (position: string, team: 'blue' | 'red', gameMinutes: number) => {
-    // 게임 시간에 따라 라인 위치 조정 (초반: 타워 근처, 후반: 중앙)
-    const laneProgress = Math.min(1, gameMinutes / 15); // 0~1 (15분까지)
+    // 게임 시간에 따라 라인 위치 조정
+    const laneProgress = Math.min(1, gameMinutes / 20); // 0~1 (20분까지)
 
+    // 실제 롤 맵 좌표 (좌하단이 블루, 우상단이 레드)
     const lanePositions = {
       blue: {
         TOP: {
-          // 탑 라인: 좌상단에서 우하단으로
-          baseX: 12, baseY: 30,
-          pushX: 25, pushY: 18
+          // 탑 라인: 왼쪽 위 (14, 50) → (30, 15)
+          baseX: 14, baseY: 50,
+          pushX: 30, pushY: 15
         },
         JUNGLE: {
-          // 정글: 블루 정글 영역
-          baseX: 28, baseY: 55,
-          pushX: 40, pushY: 45
+          // 정글: 블루팀 정글 순환
+          baseX: 30, baseY: 60,
+          pushX: 45, pushY: 45
         },
         MID: {
-          // 미드 라인: 대각선
-          baseX: 35, baseY: 65,
+          // 미드 라인: 대각선 (30, 70) → (50, 50)
+          baseX: 30, baseY: 70,
           pushX: 50, pushY: 50
         },
         ADC: {
-          // 봇 라인: 좌하단에서 우상단으로
-          baseX: 70, baseY: 88,
-          pushX: 82, pushY: 75
+          // 봇 라인: 아래쪽 (50, 88) → (75, 85)
+          baseX: 50, baseY: 88,
+          pushX: 75, pushY: 85
         },
         SUPPORT: {
-          // 서포터: ADC 근처
-          baseX: 65, baseY: 85,
-          pushX: 78, pushY: 72
+          // 서포터: ADC 약간 앞
+          baseX: 45, baseY: 86,
+          pushX: 70, pushY: 82
         }
       },
       red: {
         TOP: {
-          baseX: 88, baseY: 70,
-          pushX: 75, pushY: 82
+          // 탑 라인: 왼쪽 위에서 대치 (35, 12) → (18, 45)
+          baseX: 35, baseY: 12,
+          pushX: 18, pushY: 45
         },
         JUNGLE: {
-          baseX: 72, baseY: 45,
-          pushX: 60, pushY: 55
+          // 정글: 레드팀 정글 순환
+          baseX: 70, baseY: 40,
+          pushX: 55, pushY: 55
         },
         MID: {
-          baseX: 65, baseY: 35,
+          // 미드 라인: 대각선 (70, 30) → (50, 50)
+          baseX: 70, baseY: 30,
           pushX: 50, pushY: 50
         },
         ADC: {
-          baseX: 30, baseY: 12,
-          pushX: 18, pushY: 25
+          // 봇 라인: 위쪽에서 대치 (50, 12) → (25, 15)
+          baseX: 50, baseY: 12,
+          pushX: 25, pushY: 15
         },
         SUPPORT: {
-          baseX: 35, baseY: 15,
-          pushX: 22, pushY: 28
+          // 서포터: ADC 약간 앞
+          baseX: 55, baseY: 14,
+          pushX: 30, pushY: 18
         }
       }
     };
@@ -637,20 +652,43 @@ export default function LiveMatch() {
       const gameMinutes = gameTime / 60;
 
       setChampions(prev => prev.map(champ => {
-        if (!champ.isAlive) return champ;
+        // 죽은 챔피언은 스폰 위치로 이동
+        if (!champ.isAlive) {
+          const spawnPos = SPAWN_POSITIONS[champ.team][champ.position as keyof typeof SPAWN_POSITIONS.blue];
+          const targetX = spawnPos?.x || (champ.team === 'blue' ? 8.1 : 92);
+          const targetY = spawnPos?.y || (champ.team === 'blue' ? 92.7 : 7.7);
 
-        // 하이라이트 중이면 현재 위치 유지
-        if (currentHighlight) return champ;
+          // 빠르게 스폰으로 이동
+          const dx = (targetX - champ.x) * 0.3;
+          const dy = (targetY - champ.y) * 0.3;
+
+          return {
+            ...champ,
+            x: champ.x + dx,
+            y: champ.y + dy
+          };
+        }
+
+        // 하이라이트 중에는 약간의 움직임만 (제자리에서 흔들림)
+        if (currentHighlight) {
+          const jitterX = (Math.random() - 0.5) * 2;
+          const jitterY = (Math.random() - 0.5) * 2;
+          return {
+            ...champ,
+            x: Math.max(5, Math.min(95, champ.x + jitterX)),
+            y: Math.max(5, Math.min(95, champ.y + jitterY))
+          };
+        }
 
         // 목표 라인 위치
         const targetPos = getLanePosition(champ.position, champ.team, gameMinutes);
 
         // 약간의 랜덤 움직임 (CS 파밍, 라인 관리)
-        const randomX = (Math.random() - 0.5) * 4;
-        const randomY = (Math.random() - 0.5) * 4;
+        const randomX = (Math.random() - 0.5) * 3;
+        const randomY = (Math.random() - 0.5) * 3;
 
-        // 부드러운 이동 (현재 위치에서 목표로 천천히)
-        const moveSpeed = 0.08; // 더 느리게
+        // 부드러운 이동 (현재 위치에서 목표로)
+        const moveSpeed = 0.15; // 조금 더 빠르게
         const dx = (targetPos.x + randomX - champ.x) * moveSpeed;
         const dy = (targetPos.y + randomY - champ.y) * moveSpeed;
 
@@ -660,7 +698,7 @@ export default function LiveMatch() {
           y: Math.max(5, Math.min(95, champ.y + dy))
         };
       }));
-    }, 500); // 0.5초마다 업데이트
+    }, 200); // 0.2초마다 업데이트 (더 부드럽게)
 
     return () => clearInterval(interval);
   }, [isLive, champions.length, gameTime, currentHighlight]);
