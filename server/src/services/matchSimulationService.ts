@@ -448,58 +448,58 @@ async function simulateMatchProgress(match: any, io: Server) {
     const isHomeAI = !homeTeamInfo[0]?.user_id;
     const isAwayAI = !awayTeamInfo[0]?.user_id;
 
-    // 홈팀 선수 가져오기
+    // 홈팀 선수 가져오기 (AI 가상 선수 포함)
     let homePlayers;
     if (isHomeAI) {
-      // AI 팀: 포지션별 OVR 가장 높은 선수 1명씩 (총 5명)
+      // AI 팀: is_starter = true인 선수 (가상 선수 포함)
       homePlayers = await pool.query(
-        `SELECT pc.id, pp.name, pp.position FROM player_cards pc
-         JOIN pro_players pp ON pc.pro_player_id = pp.id
-         WHERE pc.team_id = ? AND pc.is_contracted = true
-           AND pc.id = (
-             SELECT pc2.id FROM player_cards pc2
-             JOIN pro_players pp2 ON pc2.pro_player_id = pp2.id
-             WHERE pc2.team_id = ? AND pp2.position = pp.position AND pc2.is_contracted = true
-             ORDER BY pc2.ovr DESC LIMIT 1
-           )
-         ORDER BY FIELD(pp.position, 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
-        [match.home_team_id, match.home_team_id]
+        `SELECT pc.id,
+                COALESCE(pp.name, pc.ai_player_name) as name,
+                COALESCE(pp.position, pc.ai_position) as position
+         FROM player_cards pc
+         LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
+         WHERE pc.team_id = ? AND pc.is_contracted = true AND pc.is_starter = true
+         ORDER BY FIELD(COALESCE(pp.position, pc.ai_position), 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
+        [match.home_team_id]
       );
     } else {
       // 유저 팀: is_starter = true인 선수만
       homePlayers = await pool.query(
-        `SELECT pc.id, pp.name, pp.position FROM player_cards pc
-         JOIN pro_players pp ON pc.pro_player_id = pp.id
+        `SELECT pc.id,
+                COALESCE(pp.name, pc.ai_player_name) as name,
+                COALESCE(pp.position, pc.ai_position) as position
+         FROM player_cards pc
+         LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
          WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true
-         ORDER BY FIELD(pp.position, 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
+         ORDER BY FIELD(COALESCE(pp.position, pc.ai_position), 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
         [match.home_team_id]
       );
     }
 
-    // 어웨이팀 선수 가져오기
+    // 어웨이팀 선수 가져오기 (AI 가상 선수 포함)
     let awayPlayers;
     if (isAwayAI) {
-      // AI 팀: 포지션별 OVR 가장 높은 선수 1명씩 (총 5명)
+      // AI 팀: is_starter = true인 선수 (가상 선수 포함)
       awayPlayers = await pool.query(
-        `SELECT pc.id, pp.name, pp.position FROM player_cards pc
-         JOIN pro_players pp ON pc.pro_player_id = pp.id
-         WHERE pc.team_id = ? AND pc.is_contracted = true
-           AND pc.id = (
-             SELECT pc2.id FROM player_cards pc2
-             JOIN pro_players pp2 ON pc2.pro_player_id = pp2.id
-             WHERE pc2.team_id = ? AND pp2.position = pp.position AND pc2.is_contracted = true
-             ORDER BY pc2.ovr DESC LIMIT 1
-           )
-         ORDER BY FIELD(pp.position, 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
-        [match.away_team_id, match.away_team_id]
+        `SELECT pc.id,
+                COALESCE(pp.name, pc.ai_player_name) as name,
+                COALESCE(pp.position, pc.ai_position) as position
+         FROM player_cards pc
+         LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
+         WHERE pc.team_id = ? AND pc.is_contracted = true AND pc.is_starter = true
+         ORDER BY FIELD(COALESCE(pp.position, pc.ai_position), 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
+        [match.away_team_id]
       );
     } else {
       // 유저 팀: is_starter = true인 선수만
       awayPlayers = await pool.query(
-        `SELECT pc.id, pp.name, pp.position FROM player_cards pc
-         JOIN pro_players pp ON pc.pro_player_id = pp.id
+        `SELECT pc.id,
+                COALESCE(pp.name, pc.ai_player_name) as name,
+                COALESCE(pp.position, pc.ai_position) as position
+         FROM player_cards pc
+         LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
          WHERE pc.team_id = ? AND pc.is_starter = true AND pc.is_contracted = true
-         ORDER BY FIELD(pp.position, 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
+         ORDER BY FIELD(COALESCE(pp.position, pc.ai_position), 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT')`,
         [match.away_team_id]
       );
     }
