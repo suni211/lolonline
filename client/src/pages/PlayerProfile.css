@@ -1,7 +1,7 @@
 .player-profile-page {
-  padding: 2rem;
+  padding: 1.5rem;
   width: 100%;
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
 }
 
@@ -40,9 +40,9 @@
 /* 프로필 헤더 */
 .profile-header {
   display: flex;
-  gap: 2rem;
+  gap: 1.5rem;
   align-items: center;
-  padding: 2rem;
+  padding: 1.5rem;
   background-color: var(--primary-blue);
   border-radius: 12px;
   margin-bottom: 1.5rem;
@@ -103,6 +103,16 @@
   font-weight: 700;
 }
 
+.level-badge {
+  padding: 0.3rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--white);
+  background-color: rgba(255, 215, 0, 0.3);
+  border: 1px solid rgba(255, 215, 0, 0.6);
+}
+
 .player-details {
   display: flex;
   gap: 1rem;
@@ -144,6 +154,78 @@
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.5);
   font-weight: normal;
+}
+
+/* 레벨/경험 진행도 */
+.level-progress-section {
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.level-progress-container {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.level-info {
+  flex: 1;
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+}
+
+.level-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 80px;
+  padding: 1rem;
+  background-color: rgba(255, 215, 0, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.level-number {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ffd43b;
+}
+
+.level-label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.experience-bar-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.experience-bar {
+  height: 24px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+.experience-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #51cf66 0%, #ffd43b 100%);
+  border-radius: 12px;
+  transition: width 0.3s ease;
+}
+
+.experience-text {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
 }
 
 /* 프로필 콘텐츠 */
@@ -348,6 +430,19 @@
   .player-details {
     justify-content: center;
     flex-wrap: wrap;
+  }
+
+  .level-progress-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .level-info {
+    flex-direction: column;
+  }
+
+  .experience-bar-wrapper {
+    width: 100%;
   }
 
   .career-stats {

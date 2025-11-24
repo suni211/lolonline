@@ -58,6 +58,8 @@ interface ProfileData {
   personality: PersonalityInfo | null;
   monthly_salary: number;  // 월급
   annual_salary: number;   // 연봉
+  level: number;           // 경기 경험 레벨
+  experience: number;      // 현재 경험치 (0-99)
   career_stats: CareerStats;
   rankings: Rankings | null;
 }
@@ -132,7 +134,7 @@ export default function PlayerProfile() {
     );
   }
 
-  const { player, contract, stats, personality, monthly_salary, annual_salary, career_stats, rankings } = profile;
+  const { player, contract, stats, personality, monthly_salary, annual_salary, level, experience, career_stats, rankings } = profile;
 
   return (
     <div className="player-profile-page page-wrapper">
@@ -163,6 +165,7 @@ export default function PlayerProfile() {
             >
               OVR {player.overall}
             </span>
+            <span className="level-badge">LV {level}</span>
           </div>
           <div className="player-details">
             <span className="team-color">{player.original_team}</span>
@@ -177,6 +180,27 @@ export default function PlayerProfile() {
             ) : (
               <span className="fa-status">FA (미계약)</span>
             )}
+          </div>
+        </div>
+      </div>
+
+      <div className="profile-section level-progress-section">
+        <h2>경험 진행도</h2>
+        <div className="level-progress-container">
+          <div className="level-info">
+            <div className="level-display">
+              <span className="level-number">{level}</span>
+              <span className="level-label">LEVEL</span>
+            </div>
+            <div className="experience-bar-wrapper">
+              <div className="experience-bar">
+                <div
+                  className="experience-fill"
+                  style={{ width: `${experience}%` }}
+                />
+              </div>
+              <span className="experience-text">{experience} / 100 EXP</span>
+            </div>
           </div>
         </div>
       </div>

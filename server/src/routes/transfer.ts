@@ -435,7 +435,7 @@ router.get('/player/:playerId', async (req, res) => {
     const card = cards.length > 0 ? cards[0] : null;
 
     // 스탯 계산 (카드가 없으면 base_ovr 기반으로 추정)
-    let mental, teamfight, focus, laning, ovr;
+    let mental, teamfight, focus, laning, ovr, level = 0, experience = 0;
 
     if (card) {
       mental = card.mental;
@@ -443,6 +443,8 @@ router.get('/player/:playerId', async (req, res) => {
       focus = card.focus;
       laning = card.laning;
       ovr = card.ovr;
+      level = card.level || 0;
+      experience = card.experience || 0;
     } else {
       // 계약되지 않은 선수는 base_ovr 기반 추정 스탯
       const baseOvr = player.overall;
@@ -515,6 +517,8 @@ router.get('/player/:playerId', async (req, res) => {
       personality: personalityInfo,
       monthly_salary: ovr * 100000,  // 월급
       annual_salary: ovr * 100000 * 12,  // 연봉 = 월급 × 12
+      level,
+      experience,
       career_stats: {
         total_games: matchStats.total_games || 0,
         total_kills: matchStats.total_kills || 0,
