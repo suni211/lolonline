@@ -376,7 +376,30 @@
   font-size: 11px;
 }
 
+.recharts-pie-label-line {
+  stroke: #fff !important;
+}
+
+/* 모든 차트 텍스트 흰색 */
+.recharts-text {
+  fill: #fff !important;
+}
+
+.recharts-cartesian-axis-tick-value {
+  fill: #fff !important;
+}
+
+.recharts-legend-item-text {
+  color: #fff !important;
+}
+
 /* 바 차트 라벨 색상 */
 .recharts-bar-rectangle text {
+  fill: #fff !important;
+}
+
+/* 차트 라벨 전체 */
+.chart-card text,
+.chart-card tspan {
   fill: #fff !important;
 }
