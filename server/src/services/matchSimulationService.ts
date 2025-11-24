@@ -741,31 +741,36 @@ async function generateEvents(
     return 6 + (level - 1) * (54 / 17); // 6초 ~ 60초
   };
 
-  // 실제 프로 경기 기반 이벤트 발생 확률
-  // 목표: 양팀 합산 15-25킬 (30-35분 경기)
+  // 게임 진행 속도 개선: 이벤트 발생 확률 대폭 증가
+  // 목표: 빠른 경기 진행 (15-30분 내 종료)
   let eventChance: number;
   let currentPhase: 'EARLY' | 'MID' | 'LATE';
 
   if (gameMinutes < GAME_CONSTANTS.EARLY_GAME_END) {
     currentPhase = 'EARLY';
-    eventChance = GAME_PHASES.EARLY.killChance; // 3%
+    eventChance = 0.25; // 25% (3% → 25%)
   } else if (gameMinutes < GAME_CONSTANTS.MID_GAME_END) {
     currentPhase = 'MID';
-    eventChance = GAME_PHASES.MID.killChance; // 8%
+    eventChance = 0.35; // 35% (8% → 35%)
   } else {
     currentPhase = 'LATE';
-    eventChance = GAME_PHASES.LATE.killChance; // 12%
+    eventChance = 0.45; // 45% (12% → 45%)
   }
 
   // 현재 총 킬 수
   const totalKills = matchData.home.kills + matchData.away.kills;
 
-  // 킬 수가 너무 적으면 확률 증가, 너무 많으면 감소
-  if (totalKills < 10 && gameMinutes > 15) {
-    eventChance *= 1.5; // 킬이 적으면 확률 증가
-  } else if (totalKills > 20) {
-    eventChance *= 0.7; // 킬이 많으면 확률 감소
+  // 킬 수가 적으면 더 빠르게 진행, 많으면 약간 늦춤
+  if (totalKills < 5) {
+    eventChance *= 1.8; // 초반부 킬 부족 시 크게 증가
+  } else if (totalKills < 10) {
+    eventChance *= 1.5; // 중간 킬 부족
+  } else if (totalKills > 25) {
+    eventChance *= 0.8; // 너무 많은 킬 (약간만 감소)
   }
+
+  // 최대 80% 확률로 제한
+  eventChance = Math.min(eventChance, 0.8);
 
   if (Math.random() > eventChance) return events;
 
@@ -777,8 +782,18 @@ async function generateEvents(
     matchData.elder_buff_team = null;
   }
 
-  // 버프에 따른 승리 확률 조정
+  // 한쪽이 우위면 더 강하게 반영되도록 수정
+  // 원래 homeWinChance가 이미 팀 파워를 반영하므로, 이를 더 극대화
   let adjustedHomeWinChance = homeWinChance;
+
+  // 우위 팀의 장점 증폭: 0.6 이상이면 더 높게, 0.4 이하면 더 낮게
+  if (homeWinChance > 0.6) {
+    adjustedHomeWinChance += (homeWinChance - 0.5) * 0.3; // 우위 팀 강화
+  } else if (homeWinChance < 0.4) {
+    adjustedHomeWinChance -= (0.5 - homeWinChance) * 0.3; // 약팀 약화
+  }
+
+  // 버프에 따른 승리 확률 조정
   if (matchData.baron_buff_team === 'home') {
     adjustedHomeWinChance += 0.25; // 바론 버프: +25% 승률
   } else if (matchData.baron_buff_team === 'away') {
@@ -789,7 +804,7 @@ async function generateEvents(
   } else if (matchData.elder_buff_team === 'away') {
     adjustedHomeWinChance -= 0.35;
   }
-  adjustedHomeWinChance = Math.max(0.1, Math.min(0.9, adjustedHomeWinChance));
+  adjustedHomeWinChance = Math.max(0.15, Math.min(0.85, adjustedHomeWinChance));
 
   // 승리 팀 결정
   const winningTeam = Math.random() < adjustedHomeWinChance ? 'home' : 'away';
@@ -1324,7 +1339,7 @@ async function generateEvents(
 
   // 넥서스 공격 (쌍둥이 타워가 모두 파괴된 경우)
   if (!enemyNexusTurrets.twin1 && !enemyNexusTurrets.twin2 && enemyNexusTurrets.nexus) {
-    if (Math.random() < 0.6) {  // 60% 확률로 증가
+    if (Math.random() < 0.85) {  // 85% 확률로 증가 (60% → 85%)
       enemyNexusTurrets.nexus = false;
       event = createEvent(gameTime, 'NEXUS_DESTROYED', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 넥서스를 파괴했습니다! 게임 종료!`, {
         team: winningTeam
