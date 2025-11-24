@@ -527,6 +527,8 @@ CREATE TABLE IF NOT EXISTS player_cards (
     match_win_bonus BIGINT DEFAULT 0,     -- 경기당 승리 보너스
     relegation_clause BOOLEAN DEFAULT FALSE,  -- 강등 시 계약 해지
     contract_expires_at DATETIME NULL,
+    -- 선수 역할 등급
+    player_role ENUM('KEY', 'REGULAR', 'BACKUP', 'RESERVE') DEFAULT 'REGULAR',  -- 중요/일반/후보/2군
     -- 성장
     level INT DEFAULT 1,
     exp INT DEFAULT 0,
@@ -555,6 +557,7 @@ CREATE TABLE IF NOT EXISTS player_cards (
 -- ALTER TABLE player_cards ADD COLUMN match_win_bonus BIGINT DEFAULT 0;
 -- ALTER TABLE player_cards ADD COLUMN relegation_clause BOOLEAN DEFAULT FALSE;
 -- ALTER TABLE player_cards ADD COLUMN contract_expires_at DATETIME NULL;
+-- ALTER TABLE player_cards ADD COLUMN player_role ENUM('KEY', 'REGULAR', 'BACKUP', 'RESERVE') DEFAULT 'REGULAR';
 
 -- 선수팩 테이블
 CREATE TABLE IF NOT EXISTS player_packs (

@@ -15,7 +15,8 @@
       "Bash(nul)",
       "Bash(git reset:*)",
       "Bash(mariadb:*)",
-      "Bash(npx tsc)"
+      "Bash(npx tsc)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

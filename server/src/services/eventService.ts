@@ -282,7 +282,7 @@ export class EventService {
       const benchedPlayers = await pool.query(
         `SELECT pc.id,
                 COALESCE(pp.name, pc.ai_player_name) as name,
-                pc.ovr, pc.personality
+                pc.ovr, pc.personality, pc.player_role
          FROM player_cards pc
          LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
          WHERE pc.team_id = ? AND pc.is_contracted = true AND pc.is_starter = false`,
@@ -298,12 +298,21 @@ export class EventService {
       const starterAvgOvr = starters[0]?.avg_ovr || 50;
 
       for (const player of benchedPlayers) {
+        // 후보(BACKUP)나 2군(RESERVE) 선수는 벤치에 있어도 불만이 적음
+        const playerRole = player.player_role || 'REGULAR';
+        if (playerRole === 'BACKUP' || playerRole === 'RESERVE') {
+          // 후보/2군은 10% 확률로만 불만
+          if (Math.random() > 0.1) continue;
+        }
+
         // 벤치 선수가 스타터 평균보다 높은 OVR을 가진 경우
         if (player.ovr > starterAvgOvr) {
           const ovrDiff = player.ovr - starterAvgOvr;
 
           // OVR 차이에 따른 갈등 확률 (차이 10당 10%)
-          const conflictChance = Math.min(0.5, ovrDiff * 0.01);
+          // 중요 선수(KEY)는 2배, 일반(REGULAR)은 1배
+          const roleMultiplier = playerRole === 'KEY' ? 2.0 : 1.0;
+          const conflictChance = Math.min(0.5, ovrDiff * 0.01 * roleMultiplier);
 
           if (Math.random() < conflictChance) {
             // 성격에 따른 갈등 유형 결정
