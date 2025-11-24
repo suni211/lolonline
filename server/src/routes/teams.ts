@@ -278,6 +278,15 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: '지역을 선택해주세요 (SOUTH 또는 NORTH)' });
     }
 
+    // 팀 이름 중복 확인
+    const duplicateName = await pool.query(
+      'SELECT id FROM teams WHERE name = ?',
+      [name]
+    );
+    if (duplicateName.length > 0) {
+      return res.status(400).json({ error: '이미 사용 중인 팀 이름입니다' });
+    }
+
     // 약자 생성 (입력값 또는 팀 이름 앞 3글자)
     const teamAbbr = abbreviation?.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 3) ||
                      name.replace(/[^A-Za-z0-9]/g, '').substring(0, 3).toUpperCase();

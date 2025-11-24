@@ -97,8 +97,13 @@ export default function Leagues() {
         axios.get(`/api/leagues/${leagueId}/playoff`)
       ]);
 
+      console.log('League response:', leagueRes.data);
       setStandings(leagueRes.data.standings || []);
       setUpcomingMatches(leagueRes.data.upcomingMatches || []);
+
+      if (!leagueRes.data.standings || leagueRes.data.standings.length === 0) {
+        console.warn('No standings data returned for league:', leagueId);
+      }
 
       // 새로운 플레이오프 형식 처리
       const playoffData = playoffRes.data;
@@ -239,37 +244,45 @@ export default function Leagues() {
                 </tr>
               </thead>
               <tbody>
-                {standings.map((standing, idx) => {
-                  const rank = standing.rank || idx + 1;
-                  const promoStatus = getPromotionInfo(selectedTier, rank, standings.length);
-                  return (
-                    <tr
-                      key={idx}
-                      className={`
-                        ${promoStatus === 'promotion' ? 'promotion-zone' : ''}
-                        ${standing.is_ai ? 'ai-team-row' : ''}
-                      `}
-                    >
-                      <td>{rank}</td>
-                      <td className="team-cell">
-                        {standing.logo_url ? (
-                          <img src={standing.logo_url} alt="" className="team-logo-small" />
-                        ) : (
-                          <div className="team-logo-placeholder" />
-                        )}
-                        <span className="team-name">
-                          {standing.team_name}
-                          {standing.is_ai ? <span className="ai-badge">AI</span> : null}
-                        </span>
-                      </td>
-                      <td>{standing.wins}</td>
-                      <td>{standing.draws}</td>
-                      <td>{standing.losses}</td>
-                      <td>{standing.goal_difference > 0 ? '+' : ''}{standing.goal_difference}</td>
-                      <td className="points">{standing.total_points}</td>
-                    </tr>
-                  );
-                })}
+                {standings.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
+                      리그에 등록된 팀이 없습니다. Admin에서 LPO 리그 초기화를 실행해주세요.
+                    </td>
+                  </tr>
+                ) : (
+                  standings.map((standing, idx) => {
+                    const rank = standing.rank || idx + 1;
+                    const promoStatus = getPromotionInfo(selectedTier, rank, standings.length);
+                    return (
+                      <tr
+                        key={idx}
+                        className={`
+                          ${promoStatus === 'promotion' ? 'promotion-zone' : ''}
+                          ${standing.is_ai ? 'ai-team-row' : ''}
+                        `}
+                      >
+                        <td>{rank}</td>
+                        <td className="team-cell">
+                          {standing.logo_url ? (
+                            <img src={standing.logo_url} alt="" className="team-logo-small" />
+                          ) : (
+                            <div className="team-logo-placeholder" />
+                          )}
+                          <span className="team-name">
+                            {standing.team_name}
+                            {standing.is_ai ? <span className="ai-badge">AI</span> : null}
+                          </span>
+                        </td>
+                        <td>{standing.wins}</td>
+                        <td>{standing.draws}</td>
+                        <td>{standing.losses}</td>
+                        <td>{standing.goal_difference > 0 ? '+' : ''}{standing.goal_difference}</td>
+                        <td className="points">{standing.total_points}</td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

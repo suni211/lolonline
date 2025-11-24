@@ -93,9 +93,9 @@ export default function Training() {
     }
   };
 
-  // 계약된 카드만 훈련 가능 (MySQL은 boolean을 0/1로 반환)
-  const contractedCards = cards.filter(c => c.is_contracted === true || c.is_contracted === 1);
-  const starterCards = contractedCards.filter(c => c.is_starter === true || c.is_starter === 1);
+  // /api/players/my는 이미 팀 선수만 반환
+  const contractedCards = cards;
+  const starterCards = cards.filter(c => c.is_starter === true || c.is_starter === 1);
 
   return (
     <div className="training-page page-wrapper">
