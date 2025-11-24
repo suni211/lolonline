@@ -331,17 +331,28 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
     const player = players[0];
 
     // 스탯 및 성격 미리 생성 (협상에 사용)
+    // 총합이 baseOvr * 4가 되도록 스탯 분배
     const baseOvr = player.overall;
-    const variance = 5;
-    const generateStat = () => {
-      const baseStat = Math.floor(baseOvr / 4);
-      return Math.max(1, Math.min(200, baseStat + Math.floor(Math.random() * variance * 2) - variance));
-    };
+    const totalStats = baseOvr * 4;
 
-    const mental = generateStat();
-    const teamfight = generateStat();
-    const focus = generateStat();
-    const laning = generateStat();
+    // 4개 스탯을 랜덤하게 분배하되 총합 유지
+    let remaining = totalStats;
+    const baseStat = Math.floor(totalStats / 4);
+    const variance = 10; // 스탯 간 편차
+
+    // 먼저 3개 스탯을 랜덤하게 생성
+    const mental = Math.max(1, Math.min(200, baseStat + Math.floor(Math.random() * variance * 2) - variance));
+    remaining -= mental;
+
+    const teamfight = Math.max(1, Math.min(200, baseStat + Math.floor(Math.random() * variance * 2) - variance));
+    remaining -= teamfight;
+
+    const focus = Math.max(1, Math.min(200, baseStat + Math.floor(Math.random() * variance * 2) - variance));
+    remaining -= focus;
+
+    // 마지막 스탯은 나머지로 설정하여 총합 보장
+    const laning = Math.max(1, Math.min(200, remaining));
+
     const personality = generatePersonality(mental);
 
     // 발굴 기록 저장 (스카우터 정보 및 성격/스탯 저장)
