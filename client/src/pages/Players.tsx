@@ -25,7 +25,7 @@ interface Player {
   uniform_level: number;
   injury_status: string;
   injury_recovery_days: number;
-  is_starter: boolean;
+  is_starter: boolean | number;
   is_benched: boolean;
   overall: number;
   personality?: string;
