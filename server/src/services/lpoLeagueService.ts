@@ -462,8 +462,8 @@ export class LPOLeagueService {
         `INSERT INTO player_cards (
           pro_player_id, team_id, mental, teamfight, focus, laning, ovr,
           card_type, ai_player_name, ai_position, personality,
-          is_starter, is_contracted, player_role
-        ) VALUES (NULL, ?, ?, ?, ?, ?, ?, 'NORMAL', ?, ?, ?, true, true, 'REGULAR')`,
+          is_starter, is_contracted
+        ) VALUES (NULL, ?, ?, ?, ?, ?, ?, 'NORMAL', ?, ?, ?, true, true)`,
         [teamId, mental, teamfight, focus, laning, ovr, name, position, personality]
       );
     }
