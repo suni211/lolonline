@@ -466,7 +466,7 @@ router.get('/player/:playerId', async (req, res) => {
       } : null,  // 계약 정보 (없으면 FA)
       stats: { mental, teamfight, focus, laning },
       personality: personalityInfo,
-      salary: ovr * 100000,
+      salary: ovr * 100000 * 12,  // 연봉 = 월급 × 12
       career_stats: {
         total_games: matchStats.total_games || 0,
         total_kills: matchStats.total_kills || 0,
