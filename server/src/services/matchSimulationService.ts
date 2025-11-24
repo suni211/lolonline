@@ -886,6 +886,23 @@ async function generateEvents(
         matchData.dragon_alive = false;
         matchData.dragon_respawn_at = gameTime + GAME_CONSTANTS.DRAGON_RESPAWN;
 
+        // 드래곤 싸움에서 킬 발생 (1-2킬)
+        const dragonKills = 1 + Math.floor(Math.random() * 2);
+        for (let i = 0; i < dragonKills && losingPlayers.length > i; i++) {
+          const dKiller = winningPlayers[Math.floor(Math.random() * winningPlayers.length)];
+          const dVictim = losingPlayers[i];
+          winningState.kills++;
+          winningState.gold += 300;
+          await pool.query('UPDATE match_stats SET kills = kills + 1 WHERE match_id = ? AND player_id = ?', [match.id, dKiller.id]);
+          await pool.query('UPDATE match_stats SET deaths = deaths + 1 WHERE match_id = ? AND player_id = ?', [match.id, dVictim.id]);
+
+          const killEvent = createEvent(gameTime - 5, 'KILL', `${dKiller.name}(이)가 ${dVictim.name}(을)를 처치했습니다!`, {
+            team: winningTeam, killer_id: dKiller.id, killer_name: dKiller.name, victim_id: dVictim.id, victim_name: dVictim.name
+          });
+          matchData.events.push(killEvent);
+          io.to(`match_${match.id}`).emit('match_event', killEvent);
+        }
+
         // 4번째 드래곤이면 소울 획득
         if (winningState.dragons.length === 4) {
           event = createEvent(gameTime, 'DRAGON_SOUL', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 ${dragonType} 드래곤 소울을 획득했습니다!`, {
@@ -940,6 +957,23 @@ async function generateEvents(
 
     case 'BARON':
       if (matchData.baron_alive) {
+        // 바론 싸움에서 킬 발생 (2-4킬)
+        const baronKills = 2 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < baronKills && losingPlayers.length > i; i++) {
+          const bKiller = winningPlayers[Math.floor(Math.random() * winningPlayers.length)];
+          const bVictim = losingPlayers[i];
+          winningState.kills++;
+          winningState.gold += 300;
+          await pool.query('UPDATE match_stats SET kills = kills + 1 WHERE match_id = ? AND player_id = ?', [match.id, bKiller.id]);
+          await pool.query('UPDATE match_stats SET deaths = deaths + 1 WHERE match_id = ? AND player_id = ?', [match.id, bVictim.id]);
+
+          const killEvent = createEvent(gameTime - 5, 'KILL', `${bKiller.name}(이)가 ${bVictim.name}(을)를 처치했습니다!`, {
+            team: winningTeam, killer_id: bKiller.id, killer_name: bKiller.name, victim_id: bVictim.id, victim_name: bVictim.name
+          });
+          matchData.events.push(killEvent);
+          io.to(`match_${match.id}`).emit('match_event', killEvent);
+        }
+
         event = createEvent(gameTime, 'BARON', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 바론 내셔를 처치했습니다!`, {
           team: winningTeam
         });
@@ -955,6 +989,23 @@ async function generateEvents(
 
     case 'ELDER_DRAGON':
       if (matchData.elder_available && matchData.dragon_alive) {
+        // 장로 드래곤 싸움에서 킬 발생 (2-4킬)
+        const elderKills = 2 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < elderKills && losingPlayers.length > i; i++) {
+          const eKiller = winningPlayers[Math.floor(Math.random() * winningPlayers.length)];
+          const eVictim = losingPlayers[i];
+          winningState.kills++;
+          winningState.gold += 300;
+          await pool.query('UPDATE match_stats SET kills = kills + 1 WHERE match_id = ? AND player_id = ?', [match.id, eKiller.id]);
+          await pool.query('UPDATE match_stats SET deaths = deaths + 1 WHERE match_id = ? AND player_id = ?', [match.id, eVictim.id]);
+
+          const killEvent = createEvent(gameTime - 5, 'KILL', `${eKiller.name}(이)가 ${eVictim.name}(을)를 처치했습니다!`, {
+            team: winningTeam, killer_id: eKiller.id, killer_name: eKiller.name, victim_id: eVictim.id, victim_name: eVictim.name
+          });
+          matchData.events.push(killEvent);
+          io.to(`match_${match.id}`).emit('match_event', killEvent);
+        }
+
         event = createEvent(gameTime, 'ELDER_DRAGON', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 장로 드래곤을 처치했습니다!`, {
           team: winningTeam
         });
