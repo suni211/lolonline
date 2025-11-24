@@ -722,18 +722,19 @@ async function generateEvents(
   };
 
   // 시간대별 이벤트 발생 확률
+  // 총 킬 10-25개 목표로 조정
   // 초반 15분: 매우 낮은 확률 (라인전, CS 파밍)
   // 중반 15-25분: 중간 확률 (스커미시, 오브젝트 싸움)
   // 후반 25분+: 높은 확률 (팀파이트, 포탑 푸시)
   let eventChance: number;
   if (gameMinutes < 10) {
-    eventChance = 0.08; // 10분 전: 8% (거의 이벤트 없음)
+    eventChance = 0.04; // 10분 전: 4% (거의 이벤트 없음)
   } else if (gameMinutes < 15) {
-    eventChance = 0.15; // 10-15분: 15% (가끔 킬)
+    eventChance = 0.08; // 10-15분: 8% (가끔 킬)
   } else if (gameMinutes < 25) {
-    eventChance = 0.30; // 15-25분: 30% (활발한 교전)
+    eventChance = 0.15; // 15-25분: 15% (활발한 교전)
   } else {
-    eventChance = 0.40; // 25분+: 40% (치열한 팀파이트)
+    eventChance = 0.20; // 25분+: 20% (치열한 팀파이트)
   }
 
   if (Math.random() > eventChance) return events;
@@ -778,21 +779,22 @@ async function generateEvents(
   if (winningPlayers.length === 0 || losingPlayers.length === 0) return events;
 
   // 이벤트 타입 선택 (시간대별 현실적 진행)
+  // 총 킬 10-25개 목표
   const eventPool: string[] = [];
 
   // 시간대별 이벤트
   if (gameMinutes < 10) {
-    // 극초반 (0~10분): 라인전, 가끔 정글 갱킹
-    eventPool.push('KILL', 'NOTHING', 'NOTHING', 'NOTHING');
+    // 극초반 (0~10분): 라인전, 가끔 정글 갱킹 (0-3킬)
+    eventPool.push('KILL', 'NOTHING', 'NOTHING', 'NOTHING', 'NOTHING', 'NOTHING');
   } else if (gameMinutes < 15) {
-    // 초반 (10~15분): 1차 포탑 공략 시작
-    eventPool.push('KILL', 'KILL', 'NOTHING');
+    // 초반 (10~15분): 1차 포탑 공략 시작 (3-6킬)
+    eventPool.push('KILL', 'NOTHING', 'NOTHING', 'NOTHING');
   } else if (gameMinutes < 25) {
-    // 중반 (15~25분): 본격적인 교전과 포탑 파괴
-    eventPool.push('KILL', 'KILL', 'TURRET', 'TURRET');
+    // 중반 (15~25분): 본격적인 교전과 포탑 파괴 (5-12킬)
+    eventPool.push('KILL', 'KILL', 'TURRET', 'NOTHING', 'NOTHING');
   } else {
-    // 후반 (25분+): 억제기/넥서스 집중
-    eventPool.push('TURRET', 'TURRET', 'INHIBITOR', 'TEAMFIGHT');
+    // 후반 (25분+): 억제기/넥서스 집중 (5-10킬)
+    eventPool.push('KILL', 'TURRET', 'TURRET', 'INHIBITOR', 'TEAMFIGHT');
   }
 
   // 오브젝트 이벤트

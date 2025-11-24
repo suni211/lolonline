@@ -23,7 +23,7 @@ router.get('/my', authenticateToken, async (req: AuthRequest, res) => {
              pc.ovr as overall, pc.level, pc.exp, pc.is_starter, pc.is_contracted,
              pc.personality, pc.card_type,
              CASE WHEN pc.is_starter = true THEN false ELSE true END as is_benched,
-             COALESCE(pc.player_condition, 100) as player_condition, 0 as exp_to_next, 0 as stat_points,
+             100 as player_condition, 0 as exp_to_next, 0 as stat_points,
              'NONE' as injury_status, 0 as injury_recovery_days, pc.level as uniform_level
       FROM player_cards pc
       LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
