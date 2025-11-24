@@ -666,38 +666,9 @@ async function simulateMatchProgress(match: any, io: Server) {
       matchData.winner = 'home';
       matchData.home_score = 1;
     }
-    // 2. 45분 시간제한 (넥서스 아직 안 파괴 시)
-    else if (gameTime >= 2700) {
-      matchData.game_over = true;
-      // 최종 우위: 골드 차이 (3000골드 = 게임 우위)
-      const goldDifference = matchData.home.gold - matchData.away.gold;
-      if (goldDifference > 3000) {
-        matchData.winner = 'home';
-        matchData.home_score = 1;
-      } else if (goldDifference < -3000) {
-        matchData.winner = 'away';
-        matchData.away_score = 1;
-      } else {
-        // 3000골드 이내면 킬 수로 결정
-        if (matchData.home.kills > matchData.away.kills) {
-          matchData.winner = 'home';
-          matchData.home_score = 1;
-        } else if (matchData.away.kills > matchData.home.kills) {
-          matchData.winner = 'away';
-          matchData.away_score = 1;
-        } else {
-          // 킬도 동점이면 골드로 최종 결정
-          matchData.winner = matchData.home.gold >= matchData.away.gold ? 'home' : 'away';
-          if (matchData.winner === 'home') matchData.home_score = 1;
-          else matchData.away_score = 1;
-        }
-      }
-      matchData.events.push({
-        type: 'GAME_END',
-        time: gameTime,
-        description: '45분 시간제한으로 경기 종료 (골드 차이로 승자 결정)'
-      });
-    }
+    // 2. 45분 이상이면 우위팀이 더 적극적으로 공격하여 빨리 끝내기 (강제 아님)
+    // matchData.isLateGame = gameTime >= 2700 (45분 이상)
+    // 이는 이벤트 생성 시 공격 빈도 증가에 사용됨
 
     // 경기 종료 처리
     if (matchData.game_over) {
