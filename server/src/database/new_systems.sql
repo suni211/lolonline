@@ -77,23 +77,13 @@ CREATE TABLE IF NOT EXISTS player_loans (
 CREATE TABLE IF NOT EXISTS team_tactics (
     id INT PRIMARY KEY AUTO_INCREMENT,
     team_id INT NOT NULL UNIQUE,
-    -- 플레이스타일 (1-100 스케일)
-    aggression INT DEFAULT 50,          -- 공격성 (낮음=후반 스케일, 높음=초반 공격)
-    teamfight_focus INT DEFAULT 50,     -- 한타 집중도
-    objective_priority INT DEFAULT 50,   -- 오브젝트 우선순위
-    vision_control INT DEFAULT 50,       -- 시야 장악
 
-    -- 라인별 전략
-    top_style ENUM('TANK', 'CARRY', 'SPLIT') DEFAULT 'TANK',
-    jungle_style ENUM('GANKER', 'FARMER', 'INVADER') DEFAULT 'GANKER',
-    mid_style ENUM('ROAM', 'LANE', 'ASSASSIN') DEFAULT 'LANE',
-    adc_style ENUM('EARLY', 'LATE', 'UTILITY') DEFAULT 'LATE',
-    support_style ENUM('ENGAGE', 'ENCHANTER', 'ROAM') DEFAULT 'ENGAGE',
-
-    -- 특수 전술
-    first_blood_priority BOOLEAN DEFAULT FALSE,
-    dragon_priority BOOLEAN DEFAULT TRUE,
-    baron_priority BOOLEAN DEFAULT TRUE,
+    -- 팀 전술 설정
+    teamfight_style ENUM('FIGHT_FIRST', 'OBJECTIVE_FIRST') DEFAULT 'FIGHT_FIRST',
+    split_formation ENUM('STANDARD', '1-3-1', '1-4', '4-1') DEFAULT 'STANDARD',
+    aggression_level ENUM('PASSIVE', 'BALANCED', 'AGGRESSIVE') DEFAULT 'BALANCED',
+    priority_objective ENUM('DRAGON', 'BARON', 'TOWER') DEFAULT 'DRAGON',
+    early_game_strategy ENUM('FARM', 'GANK', 'INVADE') DEFAULT 'FARM',
 
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
