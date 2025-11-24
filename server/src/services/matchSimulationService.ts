@@ -1124,8 +1124,8 @@ async function updatePlayerStatsLOL(matchId: number, homePlayers: any[], awayPla
         goldPerMin = 340 + Math.random() * 100;
         break;
       case 'SUPPORT':
-        // 서폿은 30% 확률로만 CS 획득
-        csPerMin = Math.random() < 0.3 ? (0.5 + Math.random() * 0.5) : 0;  // 0-1/분
+        // 서폿은 낮은 CS (게임 끝나면 10-50 CS)
+        csPerMin = 0.4 + Math.random() * 1.2;  // 0.4-1.6/분 (30분=12-48 CS)
         goldPerMin = 200 + Math.random() * 50;
         break;
       default:
@@ -1133,19 +1133,19 @@ async function updatePlayerStatsLOL(matchId: number, homePlayers: any[], awayPla
         goldPerMin = 350 + Math.random() * 100;
     }
 
-    // 10초마다 호출되므로 분당 CS / 6
-    const csIncrease = Math.floor(csPerMin / 6 + Math.random() * 0.5);
-    const goldIncrease = Math.floor(goldPerMin / 6);
+    // 6초마다 호출되므로 분당 값 / 10
+    const csIncrease = Math.floor(csPerMin / 10 + Math.random() * 0.5);
+    const goldIncrease = Math.floor(goldPerMin / 10);
 
     // 딜량 (경기 끝날 때 2만~6만, 서포터는 1만 이하)
     // 30분 경기 기준 분당 ~1500-2000 딜
     const isSupport = position === 'SUPPORT';
     const damagePerMin = isSupport ? (200 + Math.random() * 100) : (600 + Math.random() * 800);
-    const damageIncrease = Math.floor(damagePerMin / 6);
+    const damageIncrease = Math.floor(damagePerMin / 10);
 
     // 받은 딜량
     const damageTakenPerMin = 400 + Math.random() * 400;
-    const damageTakenIncrease = Math.floor(damageTakenPerMin / 6);
+    const damageTakenIncrease = Math.floor(damageTakenPerMin / 10);
 
     await pool.query(
       `UPDATE match_stats
