@@ -294,7 +294,7 @@ export default function Transfer() {
   };
 
   const releasePlayer = async (cardId: number, ovr: number, name: string) => {
-    const refund = Math.floor(ovr * 10000 * 0.5);
+    const refund = Math.floor(ovr * 100000 * 0.5);
     if (!confirm(`${name} 선수를 방출하시겠습니까? (환불금: ${refund.toLocaleString()}원)`)) {
       return;
     }
@@ -492,7 +492,7 @@ export default function Transfer() {
                 <div className="player-name">{player.name}</div>
                 <div className="player-team">{player.original_team}</div>
                 <div className="player-info">{player.league} | {player.nationality}</div>
-                <div className="price">{(player.overall * 10000).toLocaleString()}원</div>
+                <div className="price">{(player.overall * 100000).toLocaleString()}원</div>
                 <div className="button-group">
                   <button
                     className="buy-btn"
@@ -720,7 +720,7 @@ export default function Transfer() {
                     {card.is_starter && <span className="starter-badge">주전</span>}
                   </div>
                   <div className="release-actions">
-                    <span className="refund">환불: {Math.floor(card.ovr * 10000 * 0.5).toLocaleString()}원</span>
+                    <span className="refund">환불: {Math.floor(card.ovr * 100000 * 0.5).toLocaleString()}원</span>
                     <button
                       className="release-btn"
                       onClick={() => releasePlayer(card.card_id, card.ovr, card.name)}

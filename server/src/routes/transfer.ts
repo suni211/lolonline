@@ -131,7 +131,7 @@ router.get('/fa', authenticateToken, async (req: AuthRequest, res) => {
 
     const playersWithPrice = players.map((p: any) => ({
       ...p,
-      price: p.overall * 10000
+      price: p.overall * 100000
     }));
 
     res.json({
@@ -192,7 +192,7 @@ router.get('/fa/negotiate/:playerId', authenticateToken, async (req: AuthRequest
     const ovr = Math.round((mental + teamfight + focus + laning) / 4);
 
     // 요구 연봉 계산
-    const baseCost = ovr * 10000;
+    const baseCost = ovr * 100000;
     const modifier = personalityContractModifiers[personality];
     const askingPrice = Math.floor(baseCost * modifier);
 
@@ -260,7 +260,7 @@ router.post('/fa/sign/:playerId', authenticateToken, async (req: AuthRequest, re
     }
 
     const ovr = Math.round((mental + teamfight + focus + laning) / 4);
-    const baseCost = ovr * 10000;
+    const baseCost = ovr * 100000;
     const modifier = personalityContractModifiers[personality as PersonalityType];
     const askingPrice = Math.floor(baseCost * modifier);
 
@@ -439,7 +439,7 @@ router.get('/player/:playerId', async (req, res) => {
       },
       stats: card ? { mental: card.mental, teamfight: card.teamfight, focus: card.focus, laning: card.laning } : null,
       personality: personalityInfo,
-      salary: (card?.ovr || player.overall) * 10000,
+      salary: (card?.ovr || player.overall) * 100000,
       career_stats: {
         total_games: matchStats.total_games || 0,
         total_kills: matchStats.total_kills || 0,
