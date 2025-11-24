@@ -588,6 +588,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
         tm.seller_team_id,
         t.name as seller_team_name,
         pc.id as card_id,
+        pc.pro_player_id,
         pc.ovr,
         pc.mental,
         pc.teamfight,
@@ -907,6 +908,7 @@ router.get('/teams/:teamId/players', authenticateToken, async (req: AuthRequest,
     const players = await pool.query(`
       SELECT
         pc.id as card_id,
+        pc.pro_player_id,
         pc.ovr,
         pc.mental,
         pc.teamfight,

@@ -11,6 +11,7 @@ interface TransferListing {
   seller_team_id: number;
   seller_team_name: string;
   card_id: number;
+  pro_player_id: number;
   ovr: number;
   mental: number;
   teamfight: number;
@@ -100,6 +101,7 @@ interface TransferRequest {
 
 interface TeamPlayer {
   card_id: number;
+  pro_player_id: number;
   ovr: number;
   mental: number;
   teamfight: number;
@@ -851,13 +853,22 @@ export default function Transfer() {
                 </div>
                 <div className="price">{listing.asking_price.toLocaleString()}원</div>
                 <div className="seller">판매자: {listing.seller_team_name}</div>
-                <button
-                  className="buy-btn"
-                  onClick={() => buyCard(listing.listing_id, listing.asking_price)}
-                  disabled={loading || !team || team.gold < listing.asking_price}
-                >
-                  구매하기
-                </button>
+                <div className="button-group">
+                  <button
+                    className="buy-btn"
+                    onClick={() => buyCard(listing.listing_id, listing.asking_price)}
+                    disabled={loading || !team || team.gold < listing.asking_price}
+                  >
+                    구매하기
+                  </button>
+                  <button
+                    className="profile-btn"
+                    onClick={() => listing.pro_player_id && navigate(`/player/${listing.pro_player_id}`)}
+                    disabled={!listing.pro_player_id}
+                  >
+                    프로필
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -1088,15 +1099,24 @@ export default function Transfer() {
                       <span>라인 {player.laning}</span>
                     </div>
                     {player.is_starter && <span className="starter-badge">주전</span>}
-                    <button
-                      className="request-btn"
-                      onClick={() => {
-                        setRequestModal({ cardId: player.card_id, playerName: player.name, ovr: player.ovr });
-                        setRequestOfferPrice((player.ovr * 150000).toString());
-                      }}
-                    >
-                      이적 요청
-                    </button>
+                    <div className="button-group">
+                      <button
+                        className="request-btn"
+                        onClick={() => {
+                          setRequestModal({ cardId: player.card_id, playerName: player.name, ovr: player.ovr });
+                          setRequestOfferPrice((player.ovr * 150000).toString());
+                        }}
+                      >
+                        이적 요청
+                      </button>
+                      <button
+                        className="profile-btn"
+                        onClick={() => player.pro_player_id && navigate(`/player/${player.pro_player_id}`)}
+                        disabled={!player.pro_player_id}
+                      >
+                        프로필
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
