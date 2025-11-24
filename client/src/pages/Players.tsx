@@ -146,7 +146,7 @@ export default function Players() {
                     handleLineup(player.id, true);
                   }}
                   className="btn-small btn-starter"
-                  disabled={players.filter(p => p.is_starter).length >= 5}
+                  disabled={players.filter(p => p.is_starter === true || p.is_starter === 1).length >= 5}
                 >
                   주전
                 </button>

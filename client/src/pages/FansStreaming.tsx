@@ -74,7 +74,8 @@ export default function FansStreaming() {
       setFanStatus(fanRes.data);
       setStreamHistory(historyRes.data);
       setStreamStats(statsRes.data);
-      setPlayers(playersRes.data.filter((p: any) => p.is_contracted));
+      // MySQL은 boolean을 0/1로 반환
+      setPlayers(playersRes.data.filter((p: any) => p.is_contracted === true || p.is_contracted === 1));
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {

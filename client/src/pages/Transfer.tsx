@@ -213,7 +213,8 @@ export default function Transfer() {
   const fetchContractedCards = async () => {
     try {
       const response = await axios.get('/api/packs/my-cards');
-      const cards = response.data.filter((c: any) => c.is_contracted);
+      // MySQL은 boolean을 0/1로 반환
+      const cards = response.data.filter((c: any) => c.is_contracted === true || c.is_contracted === 1);
       setContractedCards(cards.map((c: any) => ({
         card_id: c.id,
         name: c.name,
@@ -253,7 +254,11 @@ export default function Transfer() {
   const fetchMyCards = async () => {
     try {
       const response = await axios.get('/api/packs/my-cards');
-      setMyCards(response.data.filter((c: any) => c.is_contracted && !c.is_starter));
+      // MySQL은 boolean을 0/1로 반환
+      setMyCards(response.data.filter((c: any) =>
+        (c.is_contracted === true || c.is_contracted === 1) &&
+        !(c.is_starter === true || c.is_starter === 1)
+      ));
     } catch (error) {
       console.error('Failed to fetch my cards:', error);
     }
