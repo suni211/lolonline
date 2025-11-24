@@ -278,6 +278,17 @@ async function startMatch(match: any, io: Server) {
         [homeScore, awayScore, match.id]
       );
 
+      // 리그 순위 업데이트 (기권패)
+      if (match.league_id) {
+        if (homeScore > awayScore) {
+          await pool.query('UPDATE league_participants SET wins = wins + 1, points = points + 3 WHERE league_id = ? AND team_id = ?', [match.league_id, match.home_team_id]);
+          await pool.query('UPDATE league_participants SET losses = losses + 1 WHERE league_id = ? AND team_id = ?', [match.league_id, match.away_team_id]);
+        } else if (awayScore > homeScore) {
+          await pool.query('UPDATE league_participants SET wins = wins + 1, points = points + 3 WHERE league_id = ? AND team_id = ?', [match.league_id, match.away_team_id]);
+          await pool.query('UPDATE league_participants SET losses = losses + 1 WHERE league_id = ? AND team_id = ?', [match.league_id, match.home_team_id]);
+        }
+      }
+
       io.to(`match_${match.id}`).emit('match_finished', {
         match_id: match.id,
         home_score: homeScore,
@@ -826,9 +837,17 @@ async function generateEvents(
       });
       winningState.kills++;
       winningState.gold += 300;
-      // DB 업데이트
+      // DB 업데이트 - 킬
       await pool.query('UPDATE match_stats SET kills = kills + 1 WHERE match_id = ? AND player_id = ?', [match.id, killer.id]);
       await pool.query('UPDATE match_stats SET deaths = deaths + 1 WHERE match_id = ? AND player_id = ?', [match.id, victim.id]);
+
+      // 어시스트 (킬러 제외 1-2명에게 랜덤 부여)
+      const assistCandidates = winningPlayers.filter(p => p.id !== killer.id);
+      const assistCount = Math.min(assistCandidates.length, 1 + Math.floor(Math.random() * 2)); // 1-2명
+      const shuffled = assistCandidates.sort(() => Math.random() - 0.5);
+      for (let i = 0; i < assistCount; i++) {
+        await pool.query('UPDATE match_stats SET assists = assists + 1 WHERE match_id = ? AND player_id = ?', [match.id, shuffled[i].id]);
+      }
 
       // 죽은 선수를 deadPlayers에 추가
       const respawnSec = calculateRespawnTime(gameTime);
