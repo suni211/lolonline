@@ -396,11 +396,11 @@ export default function PlayerDetailModal({ player, onClose, onUpdate }: PlayerD
             <div className="abilities-section">
               <h3>능력치 레이더 차트</h3>
               <div className="chart-container">
-                <ResponsiveContainer width="100%" height={400}>
+                <ResponsiveContainer width="100%" height={220}>
                   <RadarChart data={radarData}>
                     <PolarGrid />
-                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#fff' }} />
-                    <PolarRadiusAxis angle={90} domain={[0, 300]} tick={{ fill: '#fff' }} />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#fff', fontSize: 10 }} />
+                    <PolarRadiusAxis angle={90} domain={[0, 300]} tick={{ fill: '#fff', fontSize: 8 }} />
                     <Radar
                       name="능력치"
                       dataKey="A"
@@ -434,7 +434,7 @@ export default function PlayerDetailModal({ player, onClose, onUpdate }: PlayerD
               <h3>최근 컨디션 변화</h3>
               {conditionChartData.length > 0 ? (
                 <div className="chart-container">
-                  <ResponsiveContainer width="100%" height={300}>
+                  <ResponsiveContainer width="100%" height={150}>
                     <AreaChart data={conditionChartData}>
                       <defs>
                         <linearGradient id="colorCondition" x1="0" y1="0" x2="0" y2="1">
@@ -442,10 +442,10 @@ export default function PlayerDetailModal({ player, onClose, onUpdate }: PlayerD
                           <stop offset="95%" stopColor="#60a5fa" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <XAxis dataKey="date" tick={{ fill: '#fff' }} />
-                      <YAxis domain={[0, 100]} tick={{ fill: '#fff' }} />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #1e3a8a', color: '#fff' }}
+                      <XAxis dataKey="date" tick={{ fill: '#fff', fontSize: 8 }} />
+                      <YAxis domain={[0, 100]} tick={{ fill: '#fff', fontSize: 8 }} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #1e3a8a', color: '#fff', fontSize: 10 }}
                       />
                       <Area
                         type="monotone"

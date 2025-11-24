@@ -69,43 +69,84 @@ router.post('/individual', authenticateToken, async (req: AuthRequest, res) => {
     // 골드 차감
     await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [cost, req.teamId]);
 
-    // 훈련 효과 계산
-    const baseStatIncrease = 1 + Math.floor(trainingLevel / 2); // 시설 레벨 2당 +1
+    // 훈련 효과 계산 - 경험치 기반
+    const baseExpGain = 20 + (trainingLevel * 5); // 시설 레벨당 +5 경험치
+    const currentExp = card.exp || 0;
+    const newExp = currentExp + baseExpGain;
 
-    // 스탯 증가 (한계 확인)
-    const statField = stat_type.toLowerCase();
-    const currentStat = card[statField as keyof typeof card] as number;
+    // 선호 스탯 가져오기 (없으면 훈련하는 스탯으로 설정)
+    let preferredStat = card.preferred_stat || stat_type;
+
+    // 레벨업 확인 (경험치 100당 레벨업)
+    let levelUps = 0;
+    let remainingExp = newExp;
+    while (remainingExp >= 100) {
+      levelUps++;
+      remainingExp -= 100;
+    }
+
+    // 스탯 증가 (레벨업 시 선호 스탯 자동 증가)
+    let actualStatIncrease = 0;
+    const statField = preferredStat.toLowerCase();
+    const currentStat = card[statField as keyof typeof card] as number || 50;
     const maxStat = 200;
-    const actualStatIncrease = Math.min(baseStatIncrease, maxStat - currentStat);
 
-    if (actualStatIncrease > 0) {
-      // 스탯 증가 및 OVR 재계산
-      await pool.query(
-        `UPDATE player_cards
-         SET ${statField} = LEAST(${statField} + ?, 200),
-             ovr = ROUND((mental + teamfight + focus + laning + ?) / 4)
-         WHERE id = ?`,
-        [actualStatIncrease, statField === 'mental' ? actualStatIncrease : (statField === 'teamfight' ? actualStatIncrease : (statField === 'focus' ? actualStatIncrease : actualStatIncrease)), player_id]
-      );
+    if (levelUps > 0) {
+      actualStatIncrease = Math.min(levelUps, maxStat - currentStat);
 
-      // OVR 정확히 재계산
-      const newStats = await pool.query('SELECT mental, teamfight, focus, laning FROM player_cards WHERE id = ?', [player_id]);
-      if (newStats.length > 0) {
-        const newOvr = Math.round((newStats[0].mental + newStats[0].teamfight + newStats[0].focus + newStats[0].laning) / 4);
-        await pool.query('UPDATE player_cards SET ovr = ? WHERE id = ?', [newOvr, player_id]);
+      if (actualStatIncrease > 0) {
+        // 스탯 증가 및 레벨, 경험치 업데이트
+        await pool.query(
+          `UPDATE player_cards
+           SET ${statField} = LEAST(${statField} + ?, 200),
+               exp = ?,
+               level = COALESCE(level, 1) + ?,
+               preferred_stat = ?
+           WHERE id = ?`,
+          [actualStatIncrease, remainingExp, levelUps, preferredStat, player_id]
+        );
+
+        // OVR 정확히 재계산
+        const newStats = await pool.query('SELECT mental, teamfight, focus, laning FROM player_cards WHERE id = ?', [player_id]);
+        if (newStats.length > 0) {
+          const newOvr = Math.round((newStats[0].mental + newStats[0].teamfight + newStats[0].focus + newStats[0].laning) / 4);
+          await pool.query('UPDATE player_cards SET ovr = ? WHERE id = ?', [newOvr, player_id]);
+        }
       }
+    } else {
+      // 경험치만 업데이트, 선호 스탯 저장
+      await pool.query(
+        `UPDATE player_cards SET exp = ?, preferred_stat = ? WHERE id = ?`,
+        [remainingExp, preferredStat, player_id]
+      );
     }
 
     // 훈련 기록
     await pool.query(
       `INSERT INTO player_training (player_id, team_id, training_type, stat_type, exp_gained, stat_increase)
-       VALUES (?, ?, 'INDIVIDUAL', ?, 0, ?)`,
-      [player_id, req.teamId, stat_type, actualStatIncrease]
+       VALUES (?, ?, 'INDIVIDUAL', ?, ?, ?)`,
+      [player_id, req.teamId, preferredStat, baseExpGain, actualStatIncrease]
     );
 
+    // 응답 메시지 생성
+    let message = `훈련 완료! 경험치 +${baseExpGain}`;
+    if (levelUps > 0) {
+      const statNames: Record<string, string> = {
+        MENTAL: '멘탈',
+        TEAMFIGHT: '팀파이트',
+        FOCUS: '집중력',
+        LANING: '라인전'
+      };
+      message += `, 레벨업 x${levelUps}! ${statNames[preferredStat] || preferredStat} +${actualStatIncrease}`;
+    }
+
     res.json({
-      message: 'Training completed',
+      message,
+      exp_gained: baseExpGain,
+      current_exp: remainingExp,
+      level_ups: levelUps,
       stat_increase: actualStatIncrease,
+      preferred_stat: preferredStat,
       cost
     });
   } catch (error: any) {

@@ -16,7 +16,12 @@
       "Bash(git reset:*)",
       "Bash(mariadb:*)",
       "Bash(npx tsc)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(dir \"C:\\Users\\hisam\\Downloads\\icon\")",
+      "Bash(copy \"C:\\Users\\hisam\\Downloads\\icon\\fire.png\" \"C:\\Users\\hisam\\OneDrive\\바탕 화면\\LOLONLINE\\client\\public\\dragons\"\" && copy \"C:UsershisamDownloadsiconwater.png\" \"C:UsershisamOneDrive바탕 화면LOLONLINEclientpublicdragons\"\")",
+      "Bash(copy \"C:\\Users\\hisam\\Downloads\\icon\\air.png\" \"C:\\Users\\hisam\\OneDrive\\바탕 화면\\LOLONLINE\\client\\public\\dragons\"\" && copy \"C:UsershisamDownloadsiconddang.png\" \"C:UsershisamOneDrive바탕 화면LOLONLINEclientpublicdragons\"\")",
+      "Bash(copy \"C:\\Users\\hisam\\Downloads\\icon\\magong.png\" \"C:\\Users\\hisam\\OneDrive\\바탕 화면\\LOLONLINE\\client\\public\\dragons\"\" && copy \"C:UsershisamDownloadsiconhwagong.png\" \"C:UsershisamOneDrive바탕 화면LOLONLINEclientpublicdragons\"\")",
+      "Bash(powershell -Command:*)"
     ],
     "deny": [],
     "ask": []

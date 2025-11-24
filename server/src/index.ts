@@ -38,6 +38,7 @@ import mentalRoutes from './routes/mental.js';
 import loansRoutes from './routes/loans.js';
 import awardsRoutes from './routes/awards.js';
 import leagueStructureRoutes from './routes/leagueStructure.js';
+import financeRoutes from './routes/finance.js';
 import { initializeDatabase } from './database/init.js';
 import { ProPlayerService } from './services/proPlayerService.js';
 import { initializeSeasonSystem } from './services/seasonService.js';
@@ -98,6 +99,7 @@ app.use('/api/mental', mentalRoutes);
 app.use('/api/loans', loansRoutes);
 app.use('/api/awards', awardsRoutes);
 app.use('/api/league-structure', leagueStructureRoutes);
+app.use('/api/finance', financeRoutes);
 
 // 경기별 접속자 관리
 const matchViewers: Map<number, Map<string, string>> = new Map();

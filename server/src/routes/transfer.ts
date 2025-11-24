@@ -241,11 +241,18 @@ router.get('/fa/negotiate/:playerId', authenticateToken, async (req: AuthRequest
 router.post('/fa/sign/:playerId', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const playerId = parseInt(req.params.playerId);
-    const { offered_price, mental, teamfight, focus, laning, personality } = req.body;
+    const { offered_price, mental, teamfight, focus, laning, personality, contract_years = 1, contract_role = 'REGULAR' } = req.body;
 
     if (!offered_price || !mental || !teamfight || !focus || !laning || !personality) {
       return res.status(400).json({ error: '협상 정보가 필요합니다' });
     }
+
+    // 계약 기간 검증 (1-5 시즌)
+    const years = Math.min(5, Math.max(1, parseInt(contract_years) || 1));
+
+    // 계약 등급 검증
+    const validRoles = ['KEY', 'REGULAR', 'BACKUP', 'RESERVE'];
+    const role = validRoles.includes(contract_role) ? contract_role : 'REGULAR';
 
     const players = await pool.query(
       `SELECT pp.*, COALESCE(pp.base_ovr, 50) as overall FROM pro_players pp WHERE pp.id = ?`,
@@ -314,19 +321,29 @@ router.post('/fa/sign/:playerId', authenticateToken, async (req: AuthRequest, re
       });
     }
 
+    // 총 계약금 계산 (연봉 * 계약 기간)
+    const totalCost = offered_price * years;
+
     // 수락 - 골드 확인
     const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);
-    if (teams[0].gold < offered_price) {
-      return res.status(400).json({ error: '골드 부족. 필요: ' + offered_price.toLocaleString() });
+    if (teams[0].gold < totalCost) {
+      return res.status(400).json({ error: '골드 부족. 필요: ' + totalCost.toLocaleString() });
     }
 
+    // 현재 시즌 조회
+    const seasonResult = await pool.query(
+      `SELECT MAX(season) as current_season FROM leagues WHERE status != 'OFFSEASON'`
+    );
+    const currentSeason = seasonResult[0]?.current_season || 1;
+    const contractEndSeason = currentSeason + years;
+
     // 골드 차감 및 카드 생성
-    await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [offered_price, req.teamId]);
+    await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [totalCost, req.teamId]);
 
     const result = await pool.query(
-      `INSERT INTO player_cards (pro_player_id, team_id, mental, teamfight, focus, laning, ovr, card_type, personality, is_starter, is_contracted)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'NORMAL', ?, false, true)`,
-      [playerId, req.teamId, mental, teamfight, focus, laning, ovr, personality]
+      `INSERT INTO player_cards (pro_player_id, team_id, mental, teamfight, focus, laning, ovr, card_type, personality, is_starter, is_contracted, contract_season, contract_end_season, contract_role)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'NORMAL', ?, false, true, ?, ?, ?)`,
+      [playerId, req.teamId, mental, teamfight, focus, laning, ovr, personality, currentSeason, contractEndSeason, role]
     );
 
     // 오피셜 뉴스 생성 (FA 영입)
@@ -336,13 +353,22 @@ router.post('/fa/sign/:playerId', authenticateToken, async (req: AuthRequest, re
       console.error('Failed to create transfer news:', newsError);
     }
 
+    const roleNames: Record<string, string> = {
+      KEY: '중요 선수',
+      REGULAR: '일반 선수',
+      BACKUP: '후보',
+      RESERVE: '2군'
+    };
+
     res.json({
       success: true,
       result: 'ACCEPT',
-      message: player.name + ' 선수와 계약 완료!',
+      message: `${player.name} 선수와 ${years}시즌 ${roleNames[role]} 계약 완료!`,
       dialogue,
       player_card_id: result.insertId,
-      cost: offered_price
+      cost: totalCost,
+      contract_years: years,
+      contract_role: role
     });
   } catch (error: any) {
     console.error('Sign FA error:', error);

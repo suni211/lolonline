@@ -301,9 +301,13 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
     const teamId = teamResult.insertId;
 
     // AI 팀 대체 (해당 리그에서 AI 팀 하나를 대체)
+    let actualRegion = region;
+    let redirected = false;
     try {
       const replacement = await LPOLeagueService.replaceAITeam(teamId, region);
-      console.log(`Team ${name} replaced AI team: ${replacement.replacedTeam} in ${region}`);
+      actualRegion = replacement.actualRegion || region;
+      redirected = replacement.redirected || false;
+      console.log(`Team ${name} replaced AI team: ${replacement.replacedTeam} in ${actualRegion}`);
     } catch (replaceError: any) {
       console.error('AI team replacement failed:', replaceError.message);
       // 대체 실패 시 직접 리그에 등록
@@ -327,8 +331,13 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
       { expiresIn: '30d' }
     );
 
-    const regionName = region === 'SOUTH' ? 'LPO SOUTH' : 'LPO NORTH';
-    res.json({ teamId, token: newToken, message: `팀이 생성되었습니다. ${regionName} 1부 리그에 배정되었습니다.` });
+    const regionName = actualRegion === 'SOUTH' ? 'LPO SOUTH' : 'LPO NORTH';
+    let message = `팀이 생성되었습니다. ${regionName} 1부 리그에 배정되었습니다.`;
+    if (redirected) {
+      const originalRegionName = region === 'SOUTH' ? 'LPO SOUTH' : 'LPO NORTH';
+      message = `${originalRegionName}가 꽉 차서 ${regionName} 리그에 배정되었습니다.`;
+    }
+    res.json({ teamId, token: newToken, message, actualRegion });
   } catch (error: any) {
     console.error('Create team error:', error);
     res.status(500).json({ error: '팀 생성에 실패했습니다: ' + (error.message || '알 수 없는 오류') });

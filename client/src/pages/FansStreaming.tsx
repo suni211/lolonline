@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import './FansStreaming.css';
 
 interface FanStatus {
@@ -130,24 +131,73 @@ export default function FansStreaming() {
 
       {activeTab === 'fans' && fanStatus && (
         <div className="fans-section">
-          <div className="fan-stats">
-            <div className="stat-card">
-              <h3>남성 팬</h3>
-              <div className="value">{fanStatus.maleFans.toLocaleString()}</div>
-              <div className="desc">경기 관중 수입</div>
+          <div className="fan-overview">
+            <div className="fan-chart-section">
+              <h3>팬 비율</h3>
+              <div className="pie-chart-container">
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: '남성', value: fanStatus.maleFans, color: '#4a9eff' },
+                        { name: '여성', value: fanStatus.femaleFans, color: '#ff6b9d' }
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={40}
+                      outerRadius={70}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                    >
+                      <Cell fill="#4a9eff" />
+                      <Cell fill="#ff6b9d" />
+                    </Pie>
+                    <Tooltip formatter={(value: number) => value.toLocaleString()} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="fan-ratio-legend">
+                <span className="male">남성: {fanStatus.maleFans.toLocaleString()}</span>
+                <span className="female">여성: {fanStatus.femaleFans.toLocaleString()}</span>
+              </div>
             </div>
-            <div className="stat-card">
-              <h3>여성 팬</h3>
-              <div className="value">{fanStatus.femaleFans.toLocaleString()}</div>
-              <div className="desc">굿즈 판매 수입</div>
+
+            <div className="fan-stats-compact">
+              <div className="stat-item">
+                <span className="label">총 팬</span>
+                <span className="value">{fanStatus.totalFans.toLocaleString()}</span>
+              </div>
+              <div className="stat-item">
+                <span className="label">굿즈 총 판매</span>
+                <span className="value">{fanStatus.merchandiseSales.toLocaleString()}원</span>
+              </div>
+              <div className="stat-item">
+                <span className="label">예상 월 관중 수입</span>
+                <span className="value">{Math.floor(fanStatus.maleFans * 0.05 * 10000).toLocaleString()}원</span>
+              </div>
+              <div className="stat-item">
+                <span className="label">예상 월 굿즈 수입</span>
+                <span className="value">{Math.floor(fanStatus.femaleFans * 0.03 * 25000).toLocaleString()}원</span>
+              </div>
             </div>
-            <div className="stat-card">
-              <h3>총 팬</h3>
-              <div className="value">{fanStatus.totalFans.toLocaleString()}</div>
-            </div>
-            <div className="stat-card">
-              <h3>굿즈 총 판매</h3>
-              <div className="value">{fanStatus.merchandiseSales.toLocaleString()}</div>
+          </div>
+
+          <div className="fan-info-section">
+            <h3>팬 수입 시스템</h3>
+            <div className="info-grid">
+              <div className="info-card">
+                <h4>남성 팬</h4>
+                <p>경기 시 관중 수입 발생</p>
+                <p className="formula">관중 = 남성팬 × 5%</p>
+                <p className="formula">수입 = 관중 × 티켓가</p>
+              </div>
+              <div className="info-card">
+                <h4>여성 팬</h4>
+                <p>월간 굿즈 판매 수입 발생</p>
+                <p className="formula">구매자 = 여성팬 × 3%</p>
+                <p className="formula">수입 = 구매자 × 평균구매액</p>
+              </div>
             </div>
           </div>
 

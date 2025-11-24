@@ -748,6 +748,86 @@
   background-color: #4b5563;
 }
 
+/* Contract Role Buttons */
+.contract-role-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.role-btn {
+  padding: 0.5rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.role-btn:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #fff;
+}
+
+.role-btn.active {
+  color: #fff;
+  font-weight: 600;
+}
+
+.role-btn.active.key {
+  border-color: #ffd700;
+  background: rgba(255, 215, 0, 0.2);
+  color: #ffd700;
+}
+
+.role-btn.active.regular {
+  border-color: #4a9eff;
+  background: rgba(74, 158, 255, 0.2);
+  color: #4a9eff;
+}
+
+.role-btn.active.backup {
+  border-color: #9b59b6;
+  background: rgba(155, 89, 182, 0.2);
+  color: #9b59b6;
+}
+
+.role-btn.active.reserve {
+  border-color: #888;
+  background: rgba(136, 136, 136, 0.2);
+  color: #888;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.contract-summary {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.75rem;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.contract-summary p {
+  margin: 0.25rem 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.85rem;
+}
+
+.contract-cost-info {
+  font-weight: 600;
+  color: #4a9eff !important;
+}
+
+.search-input {
+  min-width: 150px;
+}
+
 /* 이적 요청 섹션 */
 .requests-section {
   display: flex;

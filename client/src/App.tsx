@@ -31,6 +31,7 @@ import MentalChemistry from './pages/MentalChemistry';
 import LoanMarket from './pages/LoanMarket';
 import Awards from './pages/Awards';
 import Worlds from './pages/Worlds';
+import Finance from './pages/Finance';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import GlobalChat from './components/GlobalChat';
@@ -89,6 +90,7 @@ function App() {
             <Route path="loans" element={<LoanMarket />} />
             <Route path="awards" element={<Awards />} />
             <Route path="worlds" element={<Worlds />} />
+            <Route path="finance" element={<Finance />} />
           </Route>
         </Routes>
       </Router>

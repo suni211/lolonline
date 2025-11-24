@@ -154,6 +154,7 @@ export default function Transfer() {
     maxOvr: '',
     minPrice: '',
     maxPrice: '',
+    name: '',
     sort: 'newest'
   });
 
@@ -163,6 +164,7 @@ export default function Transfer() {
     league: 'all',
     minOvr: '',
     maxOvr: '',
+    name: '',
     sort: 'ovr_desc'
   });
 
@@ -173,7 +175,17 @@ export default function Transfer() {
   // 협상 상태
   const [negotiation, setNegotiation] = useState<NegotiationInfo | null>(null);
   const [offerPrice, setOfferPrice] = useState('');
+  const [contractYears, setContractYears] = useState(1);
+  const [contractRole, setContractRole] = useState<'KEY' | 'REGULAR' | 'BACKUP' | 'RESERVE'>('REGULAR');
   const [negotiationResult, setNegotiationResult] = useState<any>(null);
+
+  // 계약 등급별 연봉 배수
+  const contractRoleMultipliers = {
+    KEY: 1.5,      // 중요 선수: 150%
+    REGULAR: 1.0,  // 일반 선수: 100%
+    BACKUP: 0.7,   // 후보: 70%
+    RESERVE: 0.4   // 2군: 40%
+  };
 
   useEffect(() => {
     fetchFaPlayers();
@@ -455,13 +467,18 @@ export default function Transfer() {
 
     setLoading(true);
     try {
+      // 계약 등급에 따른 실제 연봉 계산
+      const adjustedPrice = Math.floor(price * contractRoleMultipliers[contractRole]);
+
       const response = await axios.post(`/api/transfer/fa/sign/${negotiation.player.id}`, {
-        offered_price: price,
+        offered_price: adjustedPrice,
         mental: negotiation.stats.mental,
         teamfight: negotiation.stats.teamfight,
         focus: negotiation.stats.focus,
         laning: negotiation.stats.laning,
-        personality: negotiation.personality.type
+        personality: negotiation.personality.type,
+        contract_years: contractYears,
+        contract_role: contractRole
       });
 
       setNegotiationResult(response.data);
@@ -484,6 +501,8 @@ export default function Transfer() {
     setNegotiation(null);
     setNegotiationResult(null);
     setOfferPrice('');
+    setContractYears(1);
+    setContractRole('REGULAR');
   };
 
   const releasePlayer = async (cardId: number, ovr: number, name: string) => {
@@ -624,6 +643,14 @@ export default function Transfer() {
       {activeTab === 'fa' && (
         <div className="fa-section">
           <div className="filter-bar">
+            <input
+              type="text"
+              placeholder="선수 이름 검색"
+              value={faFilters.name}
+              onChange={(e) => setFaFilters({ ...faFilters, name: e.target.value })}
+              className="search-input"
+            />
+
             <select
               value={faFilters.position}
               onChange={(e) => setFaFilters({ ...faFilters, position: e.target.value })}
@@ -725,6 +752,14 @@ export default function Transfer() {
       {activeTab === 'market' && (
         <div className="market-section">
           <div className="filter-bar">
+            <input
+              type="text"
+              placeholder="선수 이름 검색"
+              value={filters.name}
+              onChange={(e) => setFilters({ ...filters, name: e.target.value })}
+              className="search-input"
+            />
+
             <select
               value={filters.position}
               onChange={(e) => setFilters({ ...filters, position: e.target.value })}
@@ -1168,12 +1203,63 @@ export default function Transfer() {
                 </div>
               ) : (
                 <div className="offer-form">
-                  <label>제안 월급:</label>
-                  <input
-                    type="number"
-                    value={offerPrice}
-                    onChange={(e) => setOfferPrice(e.target.value)}
-                  />
+                  <div className="form-row">
+                    <label>계약 등급:</label>
+                    <div className="contract-role-buttons">
+                      <button
+                        className={`role-btn ${contractRole === 'KEY' ? 'active key' : ''}`}
+                        onClick={() => setContractRole('KEY')}
+                      >
+                        중요 선수
+                      </button>
+                      <button
+                        className={`role-btn ${contractRole === 'REGULAR' ? 'active regular' : ''}`}
+                        onClick={() => setContractRole('REGULAR')}
+                      >
+                        일반 선수
+                      </button>
+                      <button
+                        className={`role-btn ${contractRole === 'BACKUP' ? 'active backup' : ''}`}
+                        onClick={() => setContractRole('BACKUP')}
+                      >
+                        후보
+                      </button>
+                      <button
+                        className={`role-btn ${contractRole === 'RESERVE' ? 'active reserve' : ''}`}
+                        onClick={() => setContractRole('RESERVE')}
+                      >
+                        2군
+                      </button>
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <label>기본 월급:</label>
+                    <input
+                      type="number"
+                      value={offerPrice}
+                      onChange={(e) => setOfferPrice(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-row">
+                    <label>계약 기간:</label>
+                    <select
+                      value={contractYears}
+                      onChange={(e) => setContractYears(parseInt(e.target.value))}
+                      className="contract-years-select"
+                    >
+                      <option value={1}>1시즌</option>
+                      <option value={2}>2시즌</option>
+                      <option value={3}>3시즌</option>
+                      <option value={4}>4시즌</option>
+                      <option value={5}>5시즌</option>
+                    </select>
+                  </div>
+                  <div className="contract-summary">
+                    <p>등급 적용 월급: {Math.floor(parseInt(offerPrice || '0') * contractRoleMultipliers[contractRole]).toLocaleString()}원</p>
+                    <p className="contract-cost-info">
+                      총 계약금: {Math.floor(parseInt(offerPrice || '0') * contractRoleMultipliers[contractRole] * contractYears).toLocaleString()}원
+                    </p>
+                  </div>
                   <div className="offer-buttons">
                     <button onClick={submitOffer} disabled={loading}>
                       {loading ? '처리중...' : '제안하기'}

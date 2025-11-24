@@ -721,10 +721,22 @@ async function generateEvents(
     return 6 + (level - 1) * (54 / 17); // 6초 ~ 60초
   };
 
-  // 현실적인 이벤트 발생 확률
-  // 25분 = 150번 호출, 목표: 킬 10-25개, 포탑 빠르게 파괴
-  // 이벤트 확률 35%로 증가 (게임 빠르게 진행)
-  if (Math.random() > 0.35) return events;
+  // 시간대별 이벤트 발생 확률
+  // 초반 15분: 매우 낮은 확률 (라인전, CS 파밍)
+  // 중반 15-25분: 중간 확률 (스커미시, 오브젝트 싸움)
+  // 후반 25분+: 높은 확률 (팀파이트, 포탑 푸시)
+  let eventChance: number;
+  if (gameMinutes < 10) {
+    eventChance = 0.08; // 10분 전: 8% (거의 이벤트 없음)
+  } else if (gameMinutes < 15) {
+    eventChance = 0.15; // 10-15분: 15% (가끔 킬)
+  } else if (gameMinutes < 25) {
+    eventChance = 0.30; // 15-25분: 30% (활발한 교전)
+  } else {
+    eventChance = 0.40; // 25분+: 40% (치열한 팀파이트)
+  }
+
+  if (Math.random() > eventChance) return events;
 
   // 버프 만료 체크
   if (matchData.baron_buff_team && gameTime > matchData.baron_buff_until) {
@@ -765,16 +777,19 @@ async function generateEvents(
 
   if (winningPlayers.length === 0 || losingPlayers.length === 0) return events;
 
-  // 이벤트 타입 선택 (포탑 파괴 중심으로 빠른 진행)
+  // 이벤트 타입 선택 (시간대별 현실적 진행)
   const eventPool: string[] = [];
 
   // 시간대별 이벤트
-  if (gameMinutes < 15) {
-    // 초반 (0~15분): 킬 위주
+  if (gameMinutes < 10) {
+    // 극초반 (0~10분): 라인전, 가끔 정글 갱킹
+    eventPool.push('KILL', 'NOTHING', 'NOTHING', 'NOTHING');
+  } else if (gameMinutes < 15) {
+    // 초반 (10~15분): 1차 포탑 공략 시작
     eventPool.push('KILL', 'KILL', 'NOTHING');
   } else if (gameMinutes < 25) {
-    // 중반 (15~25분): 포탑 파괴 시작
-    eventPool.push('KILL', 'TURRET', 'TURRET');
+    // 중반 (15~25분): 본격적인 교전과 포탑 파괴
+    eventPool.push('KILL', 'KILL', 'TURRET', 'TURRET');
   } else {
     // 후반 (25분+): 억제기/넥서스 집중
     eventPool.push('TURRET', 'TURRET', 'INHIBITOR', 'TEAMFIGHT');
@@ -893,6 +908,31 @@ async function generateEvents(
         winningState.heralds++;
         matchData.herald_alive = false;
         matchData.herald_taken = true;
+
+        // 전령으로 90% 확률로 포탑 파괴
+        if (Math.random() < 0.9) {
+          const heraldLanes = ['top', 'mid', 'bot'] as const;
+          const heraldLane = heraldLanes[Math.floor(Math.random() * heraldLanes.length)];
+          const enemyTurretsHerald = losingState.turrets[heraldLane];
+
+          if (enemyTurretsHerald.t1) {
+            enemyTurretsHerald.t1 = false;
+            const turretEvent = createEvent(gameTime + 1, 'TURRET', `전령이 ${heraldLane} 1차 타워를 파괴했습니다!`, {
+              team: winningTeam, lane: heraldLane, tier: 1
+            });
+            matchData.events.push(turretEvent);
+            io.to(`match_${match.id}`).emit('match_event', turretEvent);
+            winningState.gold += 250;
+          } else if (enemyTurretsHerald.t2) {
+            enemyTurretsHerald.t2 = false;
+            const turretEvent = createEvent(gameTime + 1, 'TURRET', `전령이 ${heraldLane} 2차 타워를 파괴했습니다!`, {
+              team: winningTeam, lane: heraldLane, tier: 2
+            });
+            matchData.events.push(turretEvent);
+            io.to(`match_${match.id}`).emit('match_event', turretEvent);
+            winningState.gold += 250;
+          }
+        }
       }
       break;
 

@@ -471,7 +471,7 @@ export class LPOLeagueService {
       }
 
       // 해당 리전에서 가장 낮은 순위의 AI 팀 찾기
-      const aiTeam = await pool.query(
+      let aiTeam = await pool.query(
         `SELECT t.id, t.name, lp.league_id, lp.wins, lp.losses, lp.draws, lp.points, lp.goal_difference
          FROM teams t
          JOIN league_participants lp ON t.id = lp.team_id
@@ -482,8 +482,29 @@ export class LPOLeagueService {
         [region]
       );
 
+      // 선택한 리전에 AI 팀이 없으면 다른 리전에서 찾기
+      let actualRegion = region;
       if (aiTeam.length === 0) {
-        throw new Error(`No AI team available in LPO ${region}`);
+        const otherRegion = region === 'SOUTH' ? 'NORTH' : 'SOUTH';
+        aiTeam = await pool.query(
+          `SELECT t.id, t.name, lp.league_id, lp.wins, lp.losses, lp.draws, lp.points, lp.goal_difference
+           FROM teams t
+           JOIN league_participants lp ON t.id = lp.team_id
+           JOIN leagues l ON lp.league_id = l.id
+           WHERE t.is_ai = true AND l.region = ?
+           ORDER BY lp.points ASC, lp.goal_difference ASC
+           LIMIT 1`,
+          [otherRegion]
+        );
+
+        if (aiTeam.length > 0) {
+          actualRegion = otherRegion;
+          console.log(`${region} is full, redirecting team to ${otherRegion}`);
+        }
+      }
+
+      if (aiTeam.length === 0) {
+        throw new Error(`No AI team available in any LPO league`);
       }
 
       const targetAI = aiTeam[0];
@@ -497,8 +518,8 @@ export class LPOLeagueService {
          targetAI.wins, targetAI.losses, targetAI.draws, targetAI.points, targetAI.goal_difference]
       );
 
-      // 플레이어 팀의 tier를 해당 리전으로 변경
-      await pool.query('UPDATE teams SET league = ? WHERE id = ?', [region, playerTeamId]);
+      // 플레이어 팀의 tier를 실제 배정된 리전으로 변경
+      await pool.query('UPDATE teams SET league = ?, region = ? WHERE id = ?', [actualRegion, actualRegion, playerTeamId]);
 
       // AI 팀을 리그에서 제거
       await pool.query('DELETE FROM league_participants WHERE team_id = ?', [targetAI.id]);
@@ -511,11 +532,14 @@ export class LPOLeagueService {
          targetAI.wins, targetAI.losses, targetAI.draws, targetAI.points, targetAI.goal_difference]
       );
 
-      console.log(`Player team ${playerTeamId} replaced AI team ${targetAI.name} in LPO SOUTH`);
+      const redirected = actualRegion !== region;
+      console.log(`Player team ${playerTeamId} replaced AI team ${targetAI.name} in LPO ${actualRegion}${redirected ? ' (redirected)' : ''}`);
 
       return {
         success: true,
         replacedTeam: targetAI.name,
+        actualRegion: actualRegion,
+        redirected: redirected,
         inheritedStats: {
           wins: targetAI.wins,
           losses: targetAI.losses,
