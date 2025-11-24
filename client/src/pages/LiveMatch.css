@@ -146,7 +146,23 @@
 }
 
 .main-content.with-map {
-  grid-template-columns: 200px 1fr 200px;
+  grid-template-columns: 180px 1fr 180px;
+}
+
+/* 중앙 콘텐츠 (로그 + 맵) */
+.center-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.center-content .event-log {
+  max-height: 150px;
+  margin-bottom: 0;
+}
+
+.center-content .dragons-display {
+  margin-top: 10px;
 }
 
 /* 맵 컨테이너 */

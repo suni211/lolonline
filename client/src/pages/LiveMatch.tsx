@@ -562,45 +562,97 @@ export default function LiveMatch() {
     }
   };
 
-  // 포지션별 주요 활동 영역 정의
-  const getLaneArea = (position: string, team: 'blue' | 'red') => {
-    const areas = {
+  // 포지션별 라인 위치 (실제 롤 맵 기준)
+  const getLanePosition = (position: string, team: 'blue' | 'red', gameMinutes: number) => {
+    // 게임 시간에 따라 라인 위치 조정 (초반: 타워 근처, 후반: 중앙)
+    const laneProgress = Math.min(1, gameMinutes / 15); // 0~1 (15분까지)
+
+    const lanePositions = {
       blue: {
-        TOP: { centerX: 14, centerY: 45, rangeX: 8, rangeY: 25 }, // 탑 라인
-        JGL: { centerX: 35, centerY: 55, rangeX: 20, rangeY: 25 }, // 정글
-        MID: { centerX: 40, centerY: 60, rangeX: 15, rangeY: 15 }, // 미드
-        ADC: { centerX: 55, centerY: 88, rangeX: 20, rangeY: 8 }, // 봇 라인
-        SUP: { centerX: 50, centerY: 85, rangeX: 20, rangeY: 10 }  // 서포터
+        TOP: {
+          // 탑 라인: 좌상단에서 우하단으로
+          baseX: 12, baseY: 30,
+          pushX: 25, pushY: 18
+        },
+        JUNGLE: {
+          // 정글: 블루 정글 영역
+          baseX: 28, baseY: 55,
+          pushX: 40, pushY: 45
+        },
+        MID: {
+          // 미드 라인: 대각선
+          baseX: 35, baseY: 65,
+          pushX: 50, pushY: 50
+        },
+        ADC: {
+          // 봇 라인: 좌하단에서 우상단으로
+          baseX: 70, baseY: 88,
+          pushX: 82, pushY: 75
+        },
+        SUPPORT: {
+          // 서포터: ADC 근처
+          baseX: 65, baseY: 85,
+          pushX: 78, pushY: 72
+        }
       },
       red: {
-        TOP: { centerX: 45, centerY: 12, rangeX: 25, rangeY: 8 },
-        JGL: { centerX: 65, centerY: 45, rangeX: 20, rangeY: 25 },
-        MID: { centerX: 60, centerY: 40, rangeX: 15, rangeY: 15 },
-        ADC: { centerX: 88, centerY: 55, rangeX: 8, rangeY: 20 },
-        SUP: { centerX: 85, centerY: 50, rangeX: 10, rangeY: 20 }
+        TOP: {
+          baseX: 88, baseY: 70,
+          pushX: 75, pushY: 82
+        },
+        JUNGLE: {
+          baseX: 72, baseY: 45,
+          pushX: 60, pushY: 55
+        },
+        MID: {
+          baseX: 65, baseY: 35,
+          pushX: 50, pushY: 50
+        },
+        ADC: {
+          baseX: 30, baseY: 12,
+          pushX: 18, pushY: 25
+        },
+        SUPPORT: {
+          baseX: 35, baseY: 15,
+          pushX: 22, pushY: 28
+        }
       }
     };
-    return areas[team][position as keyof typeof areas.blue] || { centerX: 50, centerY: 50, rangeX: 30, rangeY: 30 };
+
+    const pos = lanePositions[team][position as keyof typeof lanePositions.blue];
+    if (!pos) return { x: 50, y: 50 };
+
+    // 게임 진행에 따라 라인 중앙으로 이동
+    return {
+      x: pos.baseX + (pos.pushX - pos.baseX) * laneProgress,
+      y: pos.baseY + (pos.pushY - pos.baseY) * laneProgress
+    };
   };
 
-  // 챔피언 위치 업데이트 (포지션별 현실적 이동)
+  // 챔피언 위치 업데이트 (부드러운 이동)
   useEffect(() => {
     if (!isLive || champions.length === 0) return;
 
     const interval = setInterval(() => {
+      const gameMinutes = gameTime / 60;
+
       setChampions(prev => prev.map(champ => {
         if (!champ.isAlive) return champ;
 
-        const area = getLaneArea(champ.position, champ.team);
+        // 하이라이트 중이면 현재 위치 유지
+        if (currentHighlight) return champ;
 
-        // 자신의 라인 영역 내에서 이동
-        let targetX = area.centerX + (Math.random() - 0.5) * area.rangeX * 2;
-        let targetY = area.centerY + (Math.random() - 0.5) * area.rangeY * 2;
+        // 목표 라인 위치
+        const targetPos = getLanePosition(champ.position, champ.team, gameMinutes);
 
-        // 부드러운 이동 (현재 위치에서 목표 방향으로 조금씩)
-        const moveSpeed = 2;
-        const dx = (targetX - champ.x) * 0.1 + (Math.random() - 0.5) * moveSpeed;
-        const dy = (targetY - champ.y) * 0.1 + (Math.random() - 0.5) * moveSpeed;
+        // 약간의 랜덤 움직임 (CS 파밍, 라인 관리)
+        const randomX = (Math.random() - 0.5) * 4;
+        const randomY = (Math.random() - 0.5) * 4;
+
+        // 부드러운 이동 (현재 위치에서 목표로 천천히)
+        const moveSpeed = 0.08; // 더 느리게
+        const dx = (targetPos.x + randomX - champ.x) * moveSpeed;
+        const dy = (targetPos.y + randomY - champ.y) * moveSpeed;
 
         return {
           ...champ,
@@ -608,10 +660,10 @@ export default function LiveMatch() {
           y: Math.max(5, Math.min(95, champ.y + dy))
         };
       }));
-    }, 1000);
+    }, 500); // 0.5초마다 업데이트
 
     return () => clearInterval(interval);
-  }, [isLive, champions.length]);
+  }, [isLive, champions.length, gameTime, currentHighlight]);
 
   if (loading) {
     return <div className="live-match loading">로딩 중...</div>;
@@ -684,7 +736,7 @@ export default function LiveMatch() {
       )}
 
       <div className="main-content with-map">
-        {/* 왼쪽: 홈팀 선수 통계 */}
+        {/* 왼쪽: 블루팀(홈팀) 선수 통계 */}
         <div className="team-stats home">
           <h3>{match.home_team_name}</h3>
           {homeStats.map(player => (
@@ -702,48 +754,80 @@ export default function LiveMatch() {
                   <span className="gold">{(player.gold_earned / 1000).toFixed(1)}k</span>
                   <span className="damage">{(player.damage_dealt / 1000).toFixed(1)}k</span>
                 </div>
-                <div className="stat-line">
-                  <span className="vision">VS {player.vision_score || 0}</span>
-                  <span className="wards">{player.wards_placed || 0}/{player.wards_destroyed || 0}</span>
-                </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* 중앙: 맵 (하이라이트 때만 표시) */}
-        {showMap ? (
-          <div className="map-container highlight-active">
-            <SummonersRiftMap
-              champions={champions}
-              objectives={objectives}
-              blueTurrets={homeState?.turrets || {
-                top: { t1: true, t2: true, t3: true, inhib: true },
-                mid: { t1: true, t2: true, t3: true, inhib: true },
-                bot: { t1: true, t2: true, t3: true, inhib: true },
-                nexus: { twin1: true, twin2: true, nexus: true }
-              }}
-              redTurrets={awayState?.turrets || {
-                top: { t1: true, t2: true, t3: true, inhib: true },
-                mid: { t1: true, t2: true, t3: true, inhib: true },
-                bot: { t1: true, t2: true, t3: true, inhib: true },
-                nexus: { twin1: true, twin2: true, nexus: true }
-              }}
-              currentHighlight={currentHighlight}
-              gameTime={gameTime}
-            />
-          </div>
-        ) : (
-          <div className="map-placeholder">
-            <div className="placeholder-text">하이라이트 대기중...</div>
-            <div className="game-progress">
-              <span className="time">{formatTime(gameTime)}</span>
-              <span className="kills">{homeState?.kills || 0} - {awayState?.kills || 0}</span>
+        {/* 중앙: 맵 + 이벤트 로그 */}
+        <div className="center-content">
+          {/* 이벤트 로그 (맵 위) */}
+          <div className="event-log" ref={eventLogRef}>
+            <h3>경기 로그</h3>
+            <div className="events-list">
+              {events.length === 0 ? (
+                <div className="no-events">이벤트가 없습니다.</div>
+              ) : (
+                events.slice(-10).map((event, idx) => (
+                  <div key={idx} className={`event-item ${event.type.toLowerCase()}`}>
+                    <span className="event-time">{formatTime(event.time)}</span>
+                    <span className="event-desc">{event.description}</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
-        )}
 
-        {/* 오른쪽: 어웨이팀 선수 통계 */}
+          {/* 맵 */}
+          {showMap ? (
+            <div className="map-container highlight-active">
+              <SummonersRiftMap
+                champions={champions}
+                objectives={objectives}
+                blueTurrets={homeState?.turrets || {
+                  top: { t1: true, t2: true, t3: true, inhib: true },
+                  mid: { t1: true, t2: true, t3: true, inhib: true },
+                  bot: { t1: true, t2: true, t3: true, inhib: true },
+                  nexus: { twin1: true, twin2: true, nexus: true }
+                }}
+                redTurrets={awayState?.turrets || {
+                  top: { t1: true, t2: true, t3: true, inhib: true },
+                  mid: { t1: true, t2: true, t3: true, inhib: true },
+                  bot: { t1: true, t2: true, t3: true, inhib: true },
+                  nexus: { twin1: true, twin2: true, nexus: true }
+                }}
+                currentHighlight={currentHighlight}
+                gameTime={gameTime}
+              />
+            </div>
+          ) : (
+            <div className="map-placeholder">
+              <div className="placeholder-text">하이라이트 대기중...</div>
+              <div className="game-progress">
+                <span className="time">{formatTime(gameTime)}</span>
+                <span className="kills">{homeState?.kills || 0} - {awayState?.kills || 0}</span>
+              </div>
+            </div>
+          )}
+
+          {/* 드래곤 현황 */}
+          {homeState && awayState && (homeState.dragons.length > 0 || awayState.dragons.length > 0) && (
+            <div className="dragons-display">
+              <div className="dragons home-dragons">
+                {homeState.dragons.map((dragon, idx) => (
+                  <span key={idx} className="dragon-icon" title={dragon}>🐉</span>
+                ))}
+              </div>
+              <div className="dragons away-dragons">
+                {awayState.dragons.map((dragon, idx) => (
+                  <span key={idx} className="dragon-icon" title={dragon}>🐉</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 오른쪽: 레드팀(어웨이팀) 선수 통계 */}
         <div className="team-stats away">
           <h3>{match.away_team_name}</h3>
           {awayStats.map(player => (
@@ -761,46 +845,9 @@ export default function LiveMatch() {
                   <span className="gold">{(player.gold_earned / 1000).toFixed(1)}k</span>
                   <span className="damage">{(player.damage_dealt / 1000).toFixed(1)}k</span>
                 </div>
-                <div className="stat-line">
-                  <span className="vision">VS {player.vision_score || 0}</span>
-                  <span className="wards">{player.wards_placed || 0}/{player.wards_destroyed || 0}</span>
-                </div>
               </div>
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* 드래곤 현황 */}
-      {homeState && awayState && (homeState.dragons.length > 0 || awayState.dragons.length > 0) && (
-        <div className="dragons-display">
-          <div className="dragons home-dragons">
-            {homeState.dragons.map((dragon, idx) => (
-              <span key={idx} className="dragon-icon" title={dragon}>🐉</span>
-            ))}
-          </div>
-          <div className="dragons away-dragons">
-            {awayState.dragons.map((dragon, idx) => (
-              <span key={idx} className="dragon-icon" title={dragon}>🐉</span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 이벤트 로그 */}
-      <div className="event-log" ref={eventLogRef}>
-        <h3>경기 로그</h3>
-        <div className="events-list">
-          {events.length === 0 ? (
-            <div className="no-events">이벤트가 없습니다.</div>
-          ) : (
-            events.map((event, idx) => (
-              <div key={idx} className={`event-item ${event.type.toLowerCase()}`}>
-                <span className="event-time">{formatTime(event.time)}</span>
-                <span className="event-desc">{event.description}</span>
-              </div>
-            ))
-          )}
         </div>
       </div>
 
