@@ -109,10 +109,13 @@ router.get('/:teamId/info', authenticateToken, async (req: AuthRequest, res) => 
 
     // 선수 목록
     const players = await pool.query(
-      `SELECT pc.id, pp.name as player_name, pp.position, pc.ovr, pc.is_starter,
+      `SELECT pc.id,
+              COALESCE(pp.name, SUBSTRING_INDEX(pc.personality, '|', 1)) as player_name,
+              COALESCE(pp.position, SUBSTRING_INDEX(pc.personality, '|', -1)) as position,
+              pc.ovr, pc.is_starter,
               pc.mental, pc.teamfight, pc.focus, pc.laning
        FROM player_cards pc
-       INNER JOIN pro_players pp ON pc.pro_player_id = pp.id
+       LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
        WHERE pc.team_id = ? AND pc.is_contracted = true
        ORDER BY pc.is_starter DESC, pc.ovr DESC`,
       [teamId]
@@ -134,7 +137,7 @@ router.get('/:teamId/info', authenticateToken, async (req: AuthRequest, res) => 
 
     // 재무 정보 (스폰서 수입 등)
     const sponsorIncome = await pool.query(
-      `SELECT COALESCE(SUM(ts.weekly_reward), 0) as weekly_income
+      `SELECT COALESCE(SUM(ts.monthly_payment), 0) as monthly_income
        FROM team_sponsors ts
        INNER JOIN sponsors s ON ts.sponsor_id = s.id
        WHERE ts.team_id = ? AND ts.end_date > NOW()`,
@@ -155,7 +158,7 @@ router.get('/:teamId/info', authenticateToken, async (req: AuthRequest, res) => 
       team: teams[0],
       players,
       matches,
-      sponsorIncome: sponsorIncome[0]?.weekly_income || 0,
+      sponsorIncome: sponsorIncome[0]?.monthly_income || 0,
       leagueStats: leagueStats[0] || null
     });
   } catch (error: any) {

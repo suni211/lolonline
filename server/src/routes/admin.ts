@@ -708,6 +708,32 @@ function generateAIPlayerName(): string {
   return prefix + core + suffix;
 }
 
+// FA 시장 완전 초기화 (스키마 수정 + AI 카드 삭제)
+router.post('/fa-market/reset', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
+  try {
+    // 1. pro_player_id 컬럼을 NULL 허용으로 변경
+    await pool.query(`ALTER TABLE player_cards MODIFY pro_player_id INT NULL`);
+
+    // 2. AI 팀에 속한 모든 카드 삭제 (실제 선수들을 FA로 만듦)
+    const deleteResult = await pool.query(
+      `DELETE FROM player_cards WHERE team_id IN (SELECT id FROM teams WHERE is_ai = true)`
+    );
+
+    // 3. 모든 유저 팀 카드도 삭제하여 완전 FA 상태로 (선택적)
+    // const userDeleteResult = await pool.query(
+    //   `DELETE FROM player_cards WHERE team_id IN (SELECT id FROM teams WHERE is_ai = false)`
+    // );
+
+    res.json({
+      success: true,
+      message: `DB 스키마 수정 완료. AI 팀 카드 ${deleteResult.affectedRows}개 삭제됨. 모든 실제 선수가 FA 상태입니다.`
+    });
+  } catch (error: any) {
+    console.error('Reset FA market error:', error);
+    res.status(500).json({ error: 'FA 시장 초기화 실패: ' + error.message });
+  }
+});
+
 // AI 팀 기존 카드 삭제 (실제 선수 FA화)
 router.post('/ai-teams/clear-cards', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
   try {

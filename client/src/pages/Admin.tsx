@@ -159,6 +159,20 @@ export default function Admin() {
     }
   };
 
+  const resetFAMarket = async () => {
+    if (!confirm('FA 시장을 완전 초기화하시겠습니까? DB 스키마 수정 및 AI 팀 카드 삭제가 수행됩니다.')) return;
+    try {
+      setLoading(true);
+      const res = await axios.post('/api/admin/fa-market/reset');
+      setMessage(res.data.message);
+      fetchData();
+    } catch (error: any) {
+      setMessage(error.response?.data?.error || 'FA 시장 초기화 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const generateAICards = async () => {
     if (!confirm('모든 AI 팀에 가상 선수를 생성하시겠습니까?')) return;
     try {
@@ -448,6 +462,9 @@ export default function Admin() {
                 다음 시즌 시작
               </button>
             )}
+            <button onClick={resetFAMarket} disabled={loading} className="danger">
+              FA 시장 완전 초기화
+            </button>
             <button onClick={clearAICards} disabled={loading} className="warning">
               AI 팀 카드 삭제
             </button>
