@@ -112,26 +112,77 @@ router.get('/:leagueId/playoff', async (req, res) => {
   try {
     const leagueId = parseInt(req.params.leagueId);
 
-    const brackets = await pool.query(
-      `SELECT pb.*, 
-              t1.name as team1_name, t2.name as team2_name, tw.name as winner_name,
-              m.status as match_status, m.home_score, m.away_score
-       FROM playoff_brackets pb
-       LEFT JOIN teams t1 ON pb.team1_id = t1.id
-       LEFT JOIN teams t2 ON pb.team2_id = t2.id
-       LEFT JOIN teams tw ON pb.winner_id = tw.id
-       LEFT JOIN matches m ON pb.match_id = m.id
-       WHERE pb.league_id = ?
-       ORDER BY 
-         CASE pb.round
-           WHEN 'QUARTERFINAL' THEN 1
-           WHEN 'SEMIFINAL' THEN 2
-           WHEN 'FINAL' THEN 3
-         END`,
+    // 현재 플레이오프 조회
+    const playoffs = await pool.query(
+      `SELECT * FROM playoffs WHERE league_id = ? ORDER BY id DESC LIMIT 1`,
       [leagueId]
     );
 
-    res.json(brackets);
+    if (playoffs.length === 0) {
+      return res.json([]);
+    }
+
+    const playoffId = playoffs[0].id;
+
+    // 플레이오프 경기 조회
+    const matches = await pool.query(
+      `SELECT pm.*,
+              ht.name as team1_name, at.name as team2_name, wt.name as winner_name,
+              pm.status as match_status
+       FROM playoff_matches pm
+       LEFT JOIN teams ht ON pm.home_team_id = ht.id
+       LEFT JOIN teams at ON pm.away_team_id = at.id
+       LEFT JOIN teams wt ON pm.winner_team_id = wt.id
+       WHERE pm.playoff_id = ?
+       ORDER BY
+         CASE pm.round
+           WHEN 'WILDCARD' THEN 1
+           WHEN 'SEMI' THEN 2
+           WHEN 'FINAL' THEN 3
+         END,
+         pm.match_number`,
+      [playoffId]
+    );
+
+    // 부전승 팀 조회 (1위, 2위)
+    const byes = await pool.query(
+      `SELECT pb.*, t.name as team_name
+       FROM playoff_byes pb
+       JOIN teams t ON pb.team_id = t.id
+       WHERE pb.playoff_id = ?
+       ORDER BY pb.seed`,
+      [playoffId]
+    );
+
+    // 프론트엔드 호환을 위해 형식 변환
+    const formattedMatches = matches.map((m: any) => ({
+      id: m.id,
+      round: m.round === 'WILDCARD' ? '와일드카드' : m.round === 'SEMI' ? '준결승' : '결승',
+      team1_id: m.home_team_id,
+      team2_id: m.away_team_id,
+      team1_name: m.team1_name,
+      team2_name: m.team2_name,
+      winner_id: m.winner_team_id,
+      winner_name: m.winner_name,
+      match_status: m.match_status,
+      home_score: m.home_score,
+      away_score: m.away_score
+    }));
+
+    // 부전승 정보 추가
+    if (byes.length > 0) {
+      res.json({
+        matches: formattedMatches,
+        byes: byes.map((b: any) => ({
+          seed: b.seed,
+          team_id: b.team_id,
+          team_name: b.team_name
+        })),
+        status: playoffs[0].status
+      });
+    } else {
+      res.json(formattedMatches);
+    }
   } catch (error: any) {
     console.error('Get playoff error:', error);
     res.status(500).json({ error: 'Failed to get playoff bracket' });

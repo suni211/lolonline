@@ -8,7 +8,7 @@ const LEAGUE_PRIZES: { [key: string]: number } = {
 };
 
 export class PlayoffService {
-  // 플레이오프 생성 (정규 시즌 종료 후)
+  // 플레이오프 생성 (정규 시즌 종료 후) - 상위 6팀 참가
   static async createPlayoff(leagueId: number) {
     try {
       // 리그 정보 조회
@@ -23,45 +23,49 @@ export class PlayoffService {
 
       const league = leagues[0];
 
-      // 플레이오프 생성
+      // 플레이오프 생성 (WILDCARD 라운드부터 시작)
       const playoffResult = await pool.query(
         `INSERT INTO playoffs (league_id, season, status)
-         VALUES (?, ?, 'QUARTER')`,
+         VALUES (?, ?, 'WILDCARD')`,
         [leagueId, league.season]
       );
 
       const playoffId = playoffResult.insertId;
 
-      // 상위 8팀 조회
+      // 상위 6팀 조회
       const topTeams = await pool.query(
         `SELECT team_id FROM league_participants
          WHERE league_id = ?
          ORDER BY points DESC, goal_difference DESC
-         LIMIT 8`,
+         LIMIT 6`,
         [leagueId]
       );
 
-      if (topTeams.length < 8) {
-        console.log('Not enough teams for playoff');
+      if (topTeams.length < 6) {
+        console.log('Not enough teams for playoff (need 6)');
         return null;
       }
 
-      // 8강 대진표 생성 (1위 vs 8위, 2위 vs 7위, ...)
-      const matches = [
-        { home: topTeams[0].team_id, away: topTeams[7].team_id },
-        { home: topTeams[1].team_id, away: topTeams[6].team_id },
-        { home: topTeams[2].team_id, away: topTeams[5].team_id },
-        { home: topTeams[3].team_id, away: topTeams[4].team_id }
+      // 1위, 2위는 부전승으로 준결승 직행
+      // 와일드카드: 3위 vs 6위, 4위 vs 5위
+      const wildcardMatches = [
+        { home: topTeams[2].team_id, away: topTeams[5].team_id, matchNum: 1 }, // 3위 vs 6위
+        { home: topTeams[3].team_id, away: topTeams[4].team_id, matchNum: 2 }  // 4위 vs 5위
       ];
+
+      // 1위, 2위 팀 저장 (준결승에서 사용)
+      await pool.query(
+        `INSERT INTO playoff_byes (playoff_id, team_id, seed)
+         VALUES (?, ?, 1), (?, ?, 2)`,
+        [playoffId, topTeams[0].team_id, playoffId, topTeams[1].team_id]
+      );
 
       // 다음 토요일 찾기
       const nextSaturday = this.getNextSaturday(new Date());
       let matchTime = new Date(nextSaturday);
       matchTime.setUTCHours(8, 0, 0, 0); // 17:00 KST
 
-      for (let i = 0; i < matches.length; i++) {
-        const match = matches[i];
-
+      for (const match of wildcardMatches) {
         const year = matchTime.getFullYear();
         const month = String(matchTime.getMonth() + 1).padStart(2, '0');
         const day = String(matchTime.getDate()).padStart(2, '0');
@@ -72,14 +76,14 @@ export class PlayoffService {
 
         await pool.query(
           `INSERT INTO playoff_matches (playoff_id, round, match_number, home_team_id, away_team_id, scheduled_at, status)
-           VALUES (?, 'QUARTER', ?, ?, ?, ?, 'SCHEDULED')`,
-          [playoffId, i + 1, match.home, match.away, scheduledAtStr]
+           VALUES (?, 'WILDCARD', ?, ?, ?, ?, 'SCHEDULED')`,
+          [playoffId, match.matchNum, match.home, match.away, scheduledAtStr]
         );
 
         matchTime = new Date(matchTime.getTime() + 60 * 60 * 1000); // 1시간 간격
       }
 
-      console.log(`Playoff created for league ${leagueId}, season ${league.season}`);
+      console.log(`Playoff created for league ${leagueId}, season ${league.season} (6-team format)`);
       return playoffId;
 
     } catch (error) {
@@ -105,7 +109,7 @@ export class PlayoffService {
       let nextRound: string;
 
       switch (currentRound) {
-        case 'QUARTER':
+        case 'WILDCARD':
           nextRound = 'SEMI';
           break;
         case 'SEMI':
@@ -115,32 +119,64 @@ export class PlayoffService {
           throw new Error('Playoff is already completed');
       }
 
-      // 이전 라운드 승자 조회
-      const winners = await pool.query(
-        `SELECT winner_team_id FROM playoff_matches
-         WHERE playoff_id = ? AND round = ? AND status = 'COMPLETED'
-         ORDER BY match_number`,
-        [playoffId, currentRound]
-      );
-
-      const winnerIds = winners.map((w: any) => w.winner_team_id);
-
-      // 대진표 생성
-      const matches: { home: number; away: number }[] = [];
-      for (let i = 0; i < winnerIds.length; i += 2) {
-        if (i + 1 < winnerIds.length) {
-          matches.push({
-            home: winnerIds[i],
-            away: winnerIds[i + 1]
-          });
-        }
-      }
-
       // 다음 토요일
       const nextSaturday = this.getNextSaturday(new Date());
       let matchTime = new Date(nextSaturday);
       matchTime.setUTCHours(8, 0, 0, 0);
 
+      const matches: { home: number; away: number }[] = [];
+
+      if (currentRound === 'WILDCARD') {
+        // 와일드카드 → 준결승
+        // 1위, 2위 부전승 팀 가져오기
+        const byes = await pool.query(
+          `SELECT team_id, seed FROM playoff_byes WHERE playoff_id = ? ORDER BY seed`,
+          [playoffId]
+        );
+
+        // 와일드카드 승자 조회
+        const wildcardWinners = await pool.query(
+          `SELECT winner_team_id, match_number FROM playoff_matches
+           WHERE playoff_id = ? AND round = 'WILDCARD' AND status = 'COMPLETED'
+           ORDER BY match_number`,
+          [playoffId]
+        );
+
+        if (byes.length < 2 || wildcardWinners.length < 2) {
+          throw new Error('Not all wildcard matches completed');
+        }
+
+        // 준결승 대진
+        // 1위 vs 4/5위 승자 (match 2), 2위 vs 3/6위 승자 (match 1)
+        matches.push({
+          home: byes[0].team_id,  // 1위
+          away: wildcardWinners[1].winner_team_id  // 4위 vs 5위 승자
+        });
+        matches.push({
+          home: byes[1].team_id,  // 2위
+          away: wildcardWinners[0].winner_team_id  // 3위 vs 6위 승자
+        });
+
+      } else if (currentRound === 'SEMI') {
+        // 준결승 → 결승
+        const semiWinners = await pool.query(
+          `SELECT winner_team_id FROM playoff_matches
+           WHERE playoff_id = ? AND round = 'SEMI' AND status = 'COMPLETED'
+           ORDER BY match_number`,
+          [playoffId]
+        );
+
+        if (semiWinners.length < 2) {
+          throw new Error('Not all semifinal matches completed');
+        }
+
+        matches.push({
+          home: semiWinners[0].winner_team_id,
+          away: semiWinners[1].winner_team_id
+        });
+      }
+
+      // 경기 생성
       for (let i = 0; i < matches.length; i++) {
         const match = matches[i];
 
@@ -200,7 +236,7 @@ export class PlayoffService {
         [homeScore, awayScore, winnerId, matchId]
       );
 
-      // 결승전이면 우승팀에게 상금 지급
+      // 결승전이면 우승팀에게 상금 지급 및 WORLDS 진출팀 결정
       if (match.round === 'FINAL') {
         await pool.query(
           'UPDATE playoffs SET status = ? WHERE id = ?',
@@ -214,7 +250,38 @@ export class PlayoffService {
           [prize, winnerId]
         );
 
+        // WORLDS 진출팀 4팀 결정 (1위, 2위, 준결승 패자 2팀)
+        const loserId = winnerId === match.home_team_id ? match.away_team_id : match.home_team_id;
+
+        // 준결승 패자 조회
+        const semiMatches = await pool.query(
+          `SELECT home_team_id, away_team_id, winner_team_id FROM playoff_matches
+           WHERE playoff_id = ? AND round = 'SEMI'`,
+          [match.playoff_id]
+        );
+
+        const semiLosers = semiMatches.map((m: any) =>
+          m.winner_team_id === m.home_team_id ? m.away_team_id : m.home_team_id
+        );
+
+        // WORLDS 진출팀 기록
+        const worldsQualifiers = [
+          { team_id: winnerId, position: 1 },      // 우승
+          { team_id: loserId, position: 2 },       // 준우승
+          { team_id: semiLosers[0], position: 3 }, // 준결승 패자
+          { team_id: semiLosers[1], position: 4 }  // 준결승 패자
+        ];
+
+        for (const qualifier of worldsQualifiers) {
+          await pool.query(
+            `INSERT INTO worlds_qualifiers (playoff_id, league_id, team_id, position, season)
+             VALUES (?, ?, ?, ?, (SELECT season FROM playoffs WHERE id = ?))`,
+            [match.playoff_id, match.league_id, qualifier.team_id, qualifier.position, match.playoff_id]
+          );
+        }
+
         console.log(`Playoff champion: Team ${winnerId}, Prize: ${prize.toLocaleString()} gold`);
+        console.log(`WORLDS qualifiers: ${worldsQualifiers.map(q => q.team_id).join(', ')}`);
       }
 
       return winnerId;
@@ -264,13 +331,72 @@ export class PlayoffService {
         [playoffId]
       );
 
+      // 부전승 팀 정보 조회
+      const byes = await pool.query(
+        `SELECT pb.*, t.name as team_name
+         FROM playoff_byes pb
+         JOIN teams t ON pb.team_id = t.id
+         WHERE pb.playoff_id = ?
+         ORDER BY pb.seed`,
+        [playoffId]
+      );
+
       return {
         ...playoff,
-        matches
+        matches,
+        byes
       };
 
     } catch (error) {
       console.error('Failed to get playoff:', error);
+      throw error;
+    }
+  }
+
+  // WORLDS 진출팀 조회
+  static async getWorldsQualifiers(leagueId: number, season?: number) {
+    try {
+      let query = `
+        SELECT wq.*, t.name as team_name, t.logo_url, l.region
+        FROM worlds_qualifiers wq
+        JOIN teams t ON wq.team_id = t.id
+        JOIN leagues l ON wq.league_id = l.id
+        WHERE wq.league_id = ?
+      `;
+      const params: any[] = [leagueId];
+
+      if (season) {
+        query += ' AND wq.season = ?';
+        params.push(season);
+      }
+
+      query += ' ORDER BY wq.season DESC, wq.position ASC';
+
+      const qualifiers = await pool.query(query, params);
+      return qualifiers;
+
+    } catch (error) {
+      console.error('Failed to get WORLDS qualifiers:', error);
+      throw error;
+    }
+  }
+
+  // 현재 시즌 WORLDS 진출팀 조회 (모든 리그)
+  static async getAllWorldsQualifiers(season: number) {
+    try {
+      const qualifiers = await pool.query(
+        `SELECT wq.*, t.name as team_name, t.logo_url, l.name as league_name, l.region
+         FROM worlds_qualifiers wq
+         JOIN teams t ON wq.team_id = t.id
+         JOIN leagues l ON wq.league_id = l.id
+         WHERE wq.season = ?
+         ORDER BY l.region, wq.position`,
+        [season]
+      );
+      return qualifiers;
+
+    } catch (error) {
+      console.error('Failed to get all WORLDS qualifiers:', error);
       throw error;
     }
   }

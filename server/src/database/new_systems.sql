@@ -505,5 +505,35 @@ INSERT INTO coaches (name, nationality, coach_type, skill_level, salary, experie
 ('WellnessDoc', 'JP', 'DOCTOR', 69, 13000000, 4, '웰니스 의학')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
+-- 플레이오프 부전승 팀 (1위, 2위는 준결승 직행)
+CREATE TABLE IF NOT EXISTS playoff_byes (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    playoff_id INT NOT NULL,
+    team_id INT NOT NULL,
+    seed INT NOT NULL,  -- 1 = 1위, 2 = 2위
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (playoff_id) REFERENCES playoffs(id) ON DELETE CASCADE,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_playoff_bye (playoff_id, team_id)
+);
+
+-- WORLDS 진출팀 (리그별 상위 4팀)
+CREATE TABLE IF NOT EXISTS worlds_qualifiers (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    playoff_id INT NOT NULL,
+    league_id INT NOT NULL,
+    team_id INT NOT NULL,
+    position INT NOT NULL,  -- 1 = 우승, 2 = 준우승, 3 = 3위, 4 = 4위
+    season INT NOT NULL,
+    qualified_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (playoff_id) REFERENCES playoffs(id) ON DELETE CASCADE,
+    FOREIGN KEY (league_id) REFERENCES leagues(id) ON DELETE CASCADE,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_worlds_qualifier (playoff_id, team_id)
+);
+
+-- playoffs 테이블 status 컬럼에 WILDCARD 추가
+ALTER TABLE playoffs MODIFY COLUMN status ENUM('UPCOMING', 'WILDCARD', 'QUARTER', 'SEMI', 'FINAL', 'COMPLETED') DEFAULT 'UPCOMING';
+
 -- 외래 키 체크 다시 활성화
 SET FOREIGN_KEY_CHECKS = 1;

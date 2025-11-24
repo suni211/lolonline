@@ -492,8 +492,8 @@ router.post('/worlds/create', authenticateToken, adminMiddleware, async (req: Au
       message: '월즈 토너먼트가 생성되었습니다',
       tournament_id: tournamentId,
       teams: {
-        east: eastTeams.map((t: any) => t.team_name),
-        west: westTeams.map((t: any) => t.team_name)
+        south: southTeams.map((t: any) => t.team_name),
+        north: northTeams.map((t: any) => t.team_name)
       }
     });
   } catch (error) {

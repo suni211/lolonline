@@ -64,6 +64,7 @@ export default function Leagues() {
   const [standings, setStandings] = useState<Standing[]>([]);
   const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
   const [playoffBracket, setPlayoffBracket] = useState<any[]>([]);
+  const [playoffByes, setPlayoffByes] = useState<any[]>([]);
   const [currentLeague, setCurrentLeague] = useState<League | null>(null);
 
   useEffect(() => {
@@ -98,7 +99,19 @@ export default function Leagues() {
 
       setStandings(leagueRes.data.standings || []);
       setUpcomingMatches(leagueRes.data.upcomingMatches || []);
-      setPlayoffBracket(playoffRes.data || []);
+
+      // 새로운 플레이오프 형식 처리
+      const playoffData = playoffRes.data;
+      if (Array.isArray(playoffData)) {
+        setPlayoffBracket(playoffData);
+        setPlayoffByes([]);
+      } else if (playoffData.matches) {
+        setPlayoffBracket(playoffData.matches);
+        setPlayoffByes(playoffData.byes || []);
+      } else {
+        setPlayoffBracket([]);
+        setPlayoffByes([]);
+      }
     } catch (error) {
       console.error('Failed to fetch league details:', error);
     }
@@ -165,9 +178,24 @@ export default function Leagues() {
             <span className="legend-item ai-team">AI 팀</span>
           </div>
 
-          {currentLeague.status === 'PLAYOFF' && playoffBracket.length > 0 && (
+          {currentLeague.status === 'PLAYOFF' && (playoffBracket.length > 0 || playoffByes.length > 0) && (
             <div className="playoff-section">
-              <h3>플레이오프 브래킷</h3>
+              <h3>플레이오프 브래킷 (6팀)</h3>
+
+              {playoffByes.length > 0 && (
+                <div className="playoff-byes">
+                  <h4>준결승 직행 (부전승)</h4>
+                  <div className="bye-teams">
+                    {playoffByes.map((bye) => (
+                      <div key={bye.team_id} className="bye-team">
+                        <span className="seed">{bye.seed}위</span>
+                        <span className="team-name">{bye.team_name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="playoff-bracket">
                 {playoffBracket.map((bracket) => (
                   <div key={bracket.id} className="bracket-match">
@@ -181,13 +209,17 @@ export default function Leagues() {
                         {bracket.team2_name || 'TBD'}
                       </div>
                     </div>
-                    {bracket.match_status === 'FINISHED' && (
+                    {(bracket.match_status === 'FINISHED' || bracket.match_status === 'COMPLETED') && (
                       <div className="bracket-score">
                         {bracket.home_score} - {bracket.away_score}
                       </div>
                     )}
                   </div>
                 ))}
+              </div>
+
+              <div className="playoff-info">
+                <p>상위 4팀 WORLDS 진출</p>
               </div>
             </div>
           )}
