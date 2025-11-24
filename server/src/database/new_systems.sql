@@ -1,6 +1,9 @@
 -- 새로운 시스템 테이블들
 
--- 0. 기존 테이블 삭제 (의존성 순서대로)
+-- 0. 외래 키 체크 비활성화
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- 기존 테이블 삭제
 DROP TABLE IF EXISTS team_coaches;
 DROP TABLE IF EXISTS coaches;
 DROP TABLE IF EXISTS youth_players;
@@ -339,3 +342,6 @@ INSERT INTO coaches (name, nationality, coach_type, skill_level, salary, experie
 ('BackHealer', 'US', 'DOCTOR', 65, 10000000, 3, '척추 관리'),
 ('SleepExpert', 'KR', 'DOCTOR', 60, 8000000, 2, '수면 관리')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+-- 외래 키 체크 다시 활성화
+SET FOREIGN_KEY_CHECKS = 1;
