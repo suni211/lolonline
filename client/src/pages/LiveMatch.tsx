@@ -397,7 +397,7 @@ export default function LiveMatch() {
           type: 'kill',
           x: 50,
           y: 50,
-          description: `${event.data?.killer} → ${event.data?.victim}`
+          description: `${event.data?.killer_name || event.data?.killer || '???'} → ${event.data?.victim_name || event.data?.victim || '???'}`
         };
         duration = 6000;
         break;
@@ -690,6 +690,23 @@ export default function LiveMatch() {
           </div>
         </div>
       )}
+
+      {/* 이벤트 로그 */}
+      <div className="event-log" ref={eventLogRef}>
+        <h3>경기 로그</h3>
+        <div className="events-list">
+          {events.length === 0 ? (
+            <div className="no-events">이벤트가 없습니다.</div>
+          ) : (
+            events.map((event, idx) => (
+              <div key={idx} className={`event-item ${event.type.toLowerCase()}`}>
+                <span className="event-time">{formatTime(event.time)}</span>
+                <span className="event-desc">{event.description}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
 
       {/* 실시간 채팅 */}
       <div className="live-chat">
