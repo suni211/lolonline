@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import './Transfer.css';
 
 interface TransferListing {
@@ -34,14 +35,38 @@ interface MyCard {
   is_contracted: boolean;
 }
 
+interface FAPlayer {
+  id: number;
+  name: string;
+  position: string;
+  nationality: string;
+  original_team: string;
+  league: string;
+  face_image: string;
+  overall: number;
+}
+
+interface ContractedCard {
+  card_id: number;
+  name: string;
+  position: string;
+  ovr: number;
+  is_starter: boolean;
+}
+
 export default function Transfer() {
   const { team, refreshTeam } = useAuth();
-  const [activeTab, setActiveTab] = useState<'market' | 'sell' | 'history'>('market');
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'fa' | 'market' | 'sell' | 'release' | 'history'>('fa');
   const [listings, setListings] = useState<TransferListing[]>([]);
   const [myListings, setMyListings] = useState<TransferListing[]>([]);
   const [myCards, setMyCards] = useState<MyCard[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // FA 상태
+  const [faPlayers, setFaPlayers] = useState<FAPlayer[]>([]);
+  const [contractedCards, setContractedCards] = useState<ContractedCard[]>([]);
 
   // 필터 상태
   const [filters, setFilters] = useState({
@@ -54,20 +79,66 @@ export default function Transfer() {
     sort: 'newest'
   });
 
+  // FA 필터 상태
+  const [faFilters, setFaFilters] = useState({
+    position: 'all',
+    league: 'all',
+    minOvr: '',
+    maxOvr: '',
+    sort: 'ovr_desc'
+  });
+
   // 판매 등록 상태
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
   const [askingPrice, setAskingPrice] = useState('');
 
   useEffect(() => {
+    fetchFaPlayers();
     fetchMarket();
     fetchMyListings();
     fetchMyCards();
+    fetchContractedCards();
     fetchHistory();
   }, []);
 
   useEffect(() => {
     fetchMarket();
   }, [filters]);
+
+  useEffect(() => {
+    fetchFaPlayers();
+  }, [faFilters]);
+
+  const fetchFaPlayers = async () => {
+    try {
+      const params = new URLSearchParams();
+      Object.entries(faFilters).forEach(([key, value]) => {
+        if (value && value !== 'all') {
+          params.append(key, value);
+        }
+      });
+      const response = await axios.get(`/api/transfer/fa?${params.toString()}`);
+      setFaPlayers(response.data);
+    } catch (error) {
+      console.error('Failed to fetch FA players:', error);
+    }
+  };
+
+  const fetchContractedCards = async () => {
+    try {
+      const response = await axios.get('/api/packs/my-cards');
+      const cards = response.data.filter((c: any) => c.is_contracted);
+      setContractedCards(cards.map((c: any) => ({
+        card_id: c.id,
+        name: c.name,
+        position: c.position,
+        ovr: c.ovr,
+        is_starter: c.is_starter
+      })));
+    } catch (error) {
+      console.error('Failed to fetch contracted cards:', error);
+    }
+  };
 
   const fetchMarket = async () => {
     try {
@@ -130,6 +201,51 @@ export default function Transfer() {
       await fetchHistory();
     } catch (error: any) {
       alert(error.response?.data?.error || '구매 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signFaPlayer = async (playerId: number, overall: number) => {
+    const price = overall * 10000;
+    if (!team || team.gold < price) {
+      alert('골드가 부족합니다!');
+      return;
+    }
+
+    if (!confirm(`이 선수를 ${price.toLocaleString()}원에 계약하시겠습니까?`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await axios.post(`/api/transfer/fa/sign/${playerId}`);
+      alert(response.data.message);
+      await refreshTeam();
+      await fetchFaPlayers();
+      await fetchContractedCards();
+    } catch (error: any) {
+      alert(error.response?.data?.error || '계약 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const releasePlayer = async (cardId: number, ovr: number, name: string) => {
+    const refund = Math.floor(ovr * 10000 * 0.5);
+    if (!confirm(`${name} 선수를 방출하시겠습니까? (환불금: ${refund.toLocaleString()}원)`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await axios.post(`/api/transfer/release/${cardId}`);
+      alert(response.data.message);
+      await refreshTeam();
+      await fetchContractedCards();
+      await fetchFaPlayers();
+    } catch (error: any) {
+      alert(error.response?.data?.error || '방출 실패');
     } finally {
       setLoading(false);
     }
@@ -208,6 +324,12 @@ export default function Transfer() {
 
       <div className="transfer-tabs">
         <button
+          className={`tab-btn ${activeTab === 'fa' ? 'active' : ''}`}
+          onClick={() => setActiveTab('fa')}
+        >
+          FA 선수
+        </button>
+        <button
           className={`tab-btn ${activeTab === 'market' ? 'active' : ''}`}
           onClick={() => setActiveTab('market')}
         >
@@ -220,12 +342,119 @@ export default function Transfer() {
           판매하기
         </button>
         <button
+          className={`tab-btn ${activeTab === 'release' ? 'active' : ''}`}
+          onClick={() => setActiveTab('release')}
+        >
+          선수 방출
+        </button>
+        <button
           className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
           onClick={() => setActiveTab('history')}
         >
           거래 내역
         </button>
       </div>
+
+      {activeTab === 'fa' && (
+        <div className="fa-section">
+          <div className="filter-bar">
+            <select
+              value={faFilters.position}
+              onChange={(e) => setFaFilters({ ...faFilters, position: e.target.value })}
+            >
+              <option value="all">전체 포지션</option>
+              <option value="TOP">탑</option>
+              <option value="JUNGLE">정글</option>
+              <option value="MID">미드</option>
+              <option value="ADC">원딜</option>
+              <option value="SUPPORT">서포터</option>
+            </select>
+
+            <select
+              value={faFilters.league}
+              onChange={(e) => setFaFilters({ ...faFilters, league: e.target.value })}
+            >
+              <option value="all">전체 리그</option>
+              <option value="LCK">LCK</option>
+              <option value="LPL">LPL</option>
+              <option value="LEC">LEC</option>
+              <option value="LCS">LCS</option>
+            </select>
+
+            <input
+              type="number"
+              placeholder="최소 OVR"
+              value={faFilters.minOvr}
+              onChange={(e) => setFaFilters({ ...faFilters, minOvr: e.target.value })}
+            />
+
+            <input
+              type="number"
+              placeholder="최대 OVR"
+              value={faFilters.maxOvr}
+              onChange={(e) => setFaFilters({ ...faFilters, maxOvr: e.target.value })}
+            />
+
+            <select
+              value={faFilters.sort}
+              onChange={(e) => setFaFilters({ ...faFilters, sort: e.target.value })}
+            >
+              <option value="ovr_desc">OVR 높은순</option>
+              <option value="ovr_asc">OVR 낮은순</option>
+              <option value="name">이름순</option>
+            </select>
+          </div>
+
+          <div className="listings-grid">
+            {faPlayers.map((player) => (
+              <div key={player.id} className="listing-card fa-card">
+                <div className="card-header">
+                  <span
+                    className="position"
+                    style={{ backgroundColor: getPositionColor(player.position) }}
+                  >
+                    {player.position}
+                  </span>
+                  <span
+                    className="ovr"
+                    style={{ color: getOvrColor(player.overall) }}
+                  >
+                    {player.overall}
+                  </span>
+                </div>
+                {player.face_image && (
+                  <div className="player-face">
+                    <img src={player.face_image} alt={player.name} />
+                  </div>
+                )}
+                <div className="player-name">{player.name}</div>
+                <div className="player-team">{player.original_team}</div>
+                <div className="player-info">{player.league} | {player.nationality}</div>
+                <div className="price">{(player.overall * 10000).toLocaleString()}원</div>
+                <div className="button-group">
+                  <button
+                    className="buy-btn"
+                    onClick={() => signFaPlayer(player.id, player.overall)}
+                    disabled={loading || !team || team.gold < player.overall * 10000}
+                  >
+                    계약하기
+                  </button>
+                  <button
+                    className="profile-btn"
+                    onClick={() => navigate(`/player/${player.id}`)}
+                  >
+                    프로필
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {faPlayers.length === 0 && (
+            <p className="no-listings">FA 선수가 없습니다.</p>
+          )}
+        </div>
+      )}
 
       {activeTab === 'market' && (
         <div className="market-section">
@@ -403,6 +632,45 @@ export default function Transfer() {
               </div>
             ) : (
               <p className="no-listings">등록된 매물이 없습니다.</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'release' && (
+        <div className="release-section">
+          <h2>선수 방출</h2>
+          <p className="release-info">선수를 방출하면 계약금의 50%를 환불받습니다.</p>
+
+          <div className="contracted-list">
+            {contractedCards.length > 0 ? (
+              contractedCards.map((card) => (
+                <div key={card.card_id} className="contracted-item">
+                  <div className="player-info">
+                    <span className="player-name">{card.name}</span>
+                    <span
+                      className="position"
+                      style={{ backgroundColor: getPositionColor(card.position) }}
+                    >
+                      {card.position}
+                    </span>
+                    <span className="ovr">OVR {card.ovr}</span>
+                    {card.is_starter && <span className="starter-badge">주전</span>}
+                  </div>
+                  <div className="release-actions">
+                    <span className="refund">환불: {Math.floor(card.ovr * 10000 * 0.5).toLocaleString()}원</span>
+                    <button
+                      className="release-btn"
+                      onClick={() => releasePlayer(card.card_id, card.ovr, card.name)}
+                      disabled={loading || card.is_starter}
+                    >
+                      {card.is_starter ? '주전 불가' : '방출'}
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="no-listings">계약된 선수가 없습니다.</p>
             )}
           </div>
         </div>

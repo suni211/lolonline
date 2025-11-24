@@ -1,0 +1,306 @@
+.player-profile-page {
+  padding: 2rem;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.back-btn {
+  padding: 0.5rem 1rem;
+  background-color: var(--primary-blue);
+  color: var(--white);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.back-btn:hover {
+  background-color: var(--light-blue);
+}
+
+.loading,
+.error {
+  text-align: center;
+  padding: 3rem;
+  color: var(--white);
+}
+
+.error button {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--primary-blue);
+  color: var(--white);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* 프로필 헤더 */
+.profile-header {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  padding: 2rem;
+  background-color: var(--primary-blue);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.player-image {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+}
+
+.player-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.placeholder-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.player-main-info {
+  flex: 1;
+}
+
+.player-name {
+  font-size: 2rem;
+  margin: 0 0 0.5rem;
+  color: var(--white);
+}
+
+.player-meta {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.position-badge {
+  padding: 0.3rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--white);
+}
+
+.ovr-badge {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.player-details {
+  display: flex;
+  gap: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+.player-details span {
+  padding: 0.25rem 0.5rem;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+/* 프로필 콘텐츠 */
+.profile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.profile-section {
+  background-color: var(--primary-blue);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.profile-section h2 {
+  margin: 0 0 1rem;
+  color: var(--white);
+  font-size: 1.2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.75rem;
+}
+
+/* 연봉 */
+.salary-display {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ffd43b;
+  text-align: center;
+}
+
+/* 스탯 */
+.stats-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.stat-label {
+  width: 80px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+}
+
+.stat-bar {
+  flex: 1;
+  height: 20px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.stat-fill {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.5s ease;
+}
+
+.stat-value {
+  width: 40px;
+  text-align: right;
+  font-weight: 600;
+  color: var(--white);
+}
+
+/* 성격 */
+.personality-info {
+  text-align: center;
+}
+
+.personality-type {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  font-weight: 600;
+  color: var(--white);
+  margin-bottom: 0.75rem;
+}
+
+.personality-desc {
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* 통산 기록 */
+.career-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.career-stat {
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.career-stat.highlight {
+  background-color: rgba(255, 215, 0, 0.15);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.career-stat .stat-label {
+  display: block;
+  width: auto;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.5rem;
+}
+
+.career-stat .stat-value {
+  display: block;
+  width: auto;
+  text-align: center;
+  font-size: 1.2rem;
+}
+
+/* 순위 */
+.rankings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.ranking-item {
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.ranking-label {
+  display: block;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.5rem;
+}
+
+.ranking-value {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.rank-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #000;
+}
+
+.rank-number {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--white);
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .profile-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .player-meta {
+    justify-content: center;
+  }
+
+  .player-details {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .career-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .rankings-grid {
+    grid-template-columns: 1fr;
+  }
+}
