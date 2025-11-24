@@ -406,6 +406,22 @@ export default function LiveMatch() {
     }));
   };
 
+  // 양팀이 대치하는 형태로 이동 (한타용)
+  const moveChampionsToFight = (centerX: number, centerY: number) => {
+    setChampions(prev => prev.map(champ => {
+      // 블루팀은 중심 기준 좌하단, 레드팀은 우상단
+      const teamOffsetX = champ.team === 'blue' ? -6 : 6;
+      const teamOffsetY = champ.team === 'blue' ? 4 : -4;
+      const randomX = (Math.random() - 0.5) * 6;
+      const randomY = (Math.random() - 0.5) * 6;
+      return {
+        ...champ,
+        x: Math.max(5, Math.min(95, centerX + teamOffsetX + randomX)),
+        y: Math.max(5, Math.min(95, centerY + teamOffsetY + randomY))
+      };
+    }));
+  };
+
   // 이벤트에서 하이라이트 감지
   const detectHighlight = (event: MatchEvent) => {
     let highlight: Highlight | null = null;
@@ -413,10 +429,15 @@ export default function LiveMatch() {
 
     switch (event.type) {
       case 'KILL':
+        // 킬: 먼저 양팀이 붙어서 싸우는 모습을 보여줌
+        const killX = 30 + Math.random() * 40;
+        const killY = 30 + Math.random() * 40;
+        moveChampionsToFight(killX, killY);
+
         highlight = {
           type: 'kill',
-          x: 50,
-          y: 50,
+          x: killX,
+          y: killY,
           description: `${event.data?.killer_name || event.data?.killer || '???'} → ${event.data?.victim_name || event.data?.victim || '???'}`
         };
         // 킬 발생 시 죽은 선수 표시
@@ -426,23 +447,23 @@ export default function LiveMatch() {
               ? { ...champ, isAlive: false }
               : champ
           ));
-          // 10초 후 부활
+          // 15초 후 부활 (부활 시간 증가)
           setTimeout(() => {
             setChampions(prev => prev.map(champ =>
               champ.playerId === event.data.victim_id
                 ? { ...champ, isAlive: true }
                 : champ
             ));
-          }, 10000);
+          }, 15000);
         }
         duration = 30000;
         break;
 
       case 'TEAMFIGHT':
-        // 한타: 모든 선수가 중앙으로 모임
-        const teamfightX = 45 + Math.random() * 10;
-        const teamfightY = 45 + Math.random() * 10;
-        moveChampionsToPosition(teamfightX, teamfightY, 'all');
+        // 한타: 양팀이 대치하는 형태로 (랜덤 위치)
+        const teamfightX = 35 + Math.random() * 30;
+        const teamfightY = 35 + Math.random() * 30;
+        moveChampionsToFight(teamfightX, teamfightY);
         highlight = {
           type: 'teamfight',
           x: teamfightX,
@@ -453,8 +474,8 @@ export default function LiveMatch() {
         break;
 
       case 'DRAGON':
-        // 드래곤: 승리팀이 드래곤 위치로 이동
-        moveChampionsToPosition(64.9, 68, event.data?.team);
+        // 드래곤: 양팀 모두 드래곤 위치에서 한타
+        moveChampionsToFight(64.9, 68);
         highlight = {
           type: 'objective',
           x: 64.9,
@@ -466,8 +487,8 @@ export default function LiveMatch() {
         break;
 
       case 'BARON':
-        // 바론: 승리팀이 바론 위치로 이동
-        moveChampionsToPosition(36.6, 30.2, event.data?.team);
+        // 바론: 양팀 모두 바론 위치에서 한타
+        moveChampionsToFight(36.6, 30.2);
         highlight = {
           type: 'objective',
           x: 36.6,
@@ -479,8 +500,8 @@ export default function LiveMatch() {
         break;
 
       case 'HERALD':
-        // 전령: 승리팀이 전령 위치로 이동
-        moveChampionsToPosition(36.6, 30.2, event.data?.team);
+        // 전령: 양팀 모두 전령 위치에서 한타
+        moveChampionsToFight(36.6, 30.2);
         highlight = {
           type: 'objective',
           x: 36.6,
