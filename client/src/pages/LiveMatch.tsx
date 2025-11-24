@@ -102,6 +102,7 @@ export default function LiveMatch() {
 
   // 맵 관련 상태
   const [champions, setChampions] = useState<ChampionPosition[]>([]);
+  const [deadPlayerIds, setDeadPlayerIds] = useState<number[]>([]);
   const [objectives, setObjectives] = useState<ObjectiveState>({
     dragon: { alive: false, type: 'INFERNAL' },
     baron: { alive: false },
@@ -159,6 +160,11 @@ export default function LiveMatch() {
         baron: { ...prev.baron, alive: data.baron_alive },
         herald: { ...prev.herald, alive: data.herald_alive }
       }));
+
+      // 죽은 선수 ID 업데이트
+      if (data.dead_players) {
+        setDeadPlayerIds(data.dead_players.map((dp: any) => dp.playerId));
+      }
     });
 
     // 이벤트 수신
@@ -913,7 +919,7 @@ export default function LiveMatch() {
           {/* 맵 - 항상 표시 */}
           <div className={`map-container ${currentHighlight ? 'highlight-active' : ''}`}>
             <SummonersRiftMap
-              champions={champions}
+              champions={champions.filter(c => !deadPlayerIds.includes(c.playerId))}
               objectives={objectives}
               blueTurrets={homeState?.turrets || {
                 top: { t1: true, t2: true, t3: true, inhib: true },

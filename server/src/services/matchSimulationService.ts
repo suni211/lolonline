@@ -81,6 +81,12 @@ interface MatchState {
   // 리스폰 대기 중인 선수들
   deadPlayers: RespawnInfo[];
 
+  // 버프 상태
+  baron_buff_team: 'home' | 'away' | null;
+  baron_buff_until: number;
+  elder_buff_team: 'home' | 'away' | null;
+  elder_buff_until: number;
+
   // 경기 종료 조건
   game_over: boolean;
   winner: string | null;
@@ -346,6 +352,12 @@ async function startMatch(match: any, io: Server) {
 
       // 리스폰 대기 중인 선수들
       deadPlayers: [],
+
+      // 버프 상태
+      baron_buff_team: null,
+      baron_buff_until: 0,
+      elder_buff_team: null,
+      elder_buff_until: 0,
 
       game_over: false,
       winner: null,
@@ -664,7 +676,8 @@ async function simulateMatchProgress(match: any, io: Server) {
       dragon_alive: matchData.dragon_alive,
       baron_alive: matchData.baron_alive,
       herald_alive: matchData.herald_alive,
-      player_stats: playerStats
+      player_stats: playerStats,
+      dead_players: matchData.deadPlayers.filter(dp => dp.respawnAt > matchData.game_time)
     });
   } catch (error) {
     console.error('Error simulating match progress:', error);
@@ -701,8 +714,30 @@ async function generateEvents(
   // 이벤트 확률 35%로 증가 (게임 빠르게 진행)
   if (Math.random() > 0.35) return events;
 
+  // 버프 만료 체크
+  if (matchData.baron_buff_team && gameTime > matchData.baron_buff_until) {
+    matchData.baron_buff_team = null;
+  }
+  if (matchData.elder_buff_team && gameTime > matchData.elder_buff_until) {
+    matchData.elder_buff_team = null;
+  }
+
+  // 버프에 따른 승리 확률 조정
+  let adjustedHomeWinChance = homeWinChance;
+  if (matchData.baron_buff_team === 'home') {
+    adjustedHomeWinChance += 0.25; // 바론 버프: +25% 승률
+  } else if (matchData.baron_buff_team === 'away') {
+    adjustedHomeWinChance -= 0.25;
+  }
+  if (matchData.elder_buff_team === 'home') {
+    adjustedHomeWinChance += 0.35; // 장로용 버프: +35% 승률
+  } else if (matchData.elder_buff_team === 'away') {
+    adjustedHomeWinChance -= 0.35;
+  }
+  adjustedHomeWinChance = Math.max(0.1, Math.min(0.9, adjustedHomeWinChance));
+
   // 승리 팀 결정
-  const winningTeam = Math.random() < homeWinChance ? 'home' : 'away';
+  const winningTeam = Math.random() < adjustedHomeWinChance ? 'home' : 'away';
   const allWinningPlayers = winningTeam === 'home' ? homePlayers : awayPlayers;
   const allLosingPlayers = winningTeam === 'home' ? awayPlayers : homePlayers;
   const winningState = winningTeam === 'home' ? matchData.home : matchData.away;
@@ -740,6 +775,14 @@ async function generateEvents(
   if (gameMinutes >= 15) eventPool.push('INHIBITOR'); // 억제기는 15분부터
   if (gameMinutes >= 20 && matchData.baron_alive) eventPool.push('BARON');
   if (matchData.elder_available && matchData.dragon_alive) eventPool.push('ELDER_DRAGON');
+
+  // 바론/장로 버프가 있으면 포탑/억제기 파괴 이벤트 대폭 증가
+  if (matchData.baron_buff_team) {
+    eventPool.push('TURRET', 'TURRET', 'TURRET', 'INHIBITOR', 'INHIBITOR');
+  }
+  if (matchData.elder_buff_team) {
+    eventPool.push('TURRET', 'TURRET', 'INHIBITOR', 'INHIBITOR', 'TEAMFIGHT');
+  }
 
   const eventType = eventPool[Math.floor(Math.random() * eventPool.length)];
 
@@ -842,6 +885,23 @@ async function generateEvents(
         winningState.gold += 1500;
         matchData.baron_alive = false;
         matchData.baron_respawn_at = gameTime + GAME_CONSTANTS.BARON_RESPAWN;
+        // 바론 버프 3분 지속
+        matchData.baron_buff_team = winningTeam;
+        matchData.baron_buff_until = gameTime + 180;
+      }
+      break;
+
+    case 'ELDER_DRAGON':
+      if (matchData.elder_available && matchData.dragon_alive) {
+        event = createEvent(gameTime, 'ELDER_DRAGON', `${winningTeam === 'home' ? '블루팀' : '레드팀'}이 장로 드래곤을 처치했습니다!`, {
+          team: winningTeam
+        });
+        winningState.gold += 500;
+        matchData.dragon_alive = false;
+        matchData.dragon_respawn_at = gameTime + GAME_CONSTANTS.DRAGON_RESPAWN;
+        // 장로용 버프 3분 지속
+        matchData.elder_buff_team = winningTeam;
+        matchData.elder_buff_until = gameTime + 180;
       }
       break;
 

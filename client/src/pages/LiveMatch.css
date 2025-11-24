@@ -1,8 +1,12 @@
 .live-match {
   width: 100%;
-  padding: 20px;
+  height: calc(100vh - 60px);
+  padding: 10px 15px;
   color: #e0e0e0;
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .live-match.loading,
@@ -18,9 +22,10 @@
   justify-content: space-between;
   align-items: center;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border-radius: 12px;
-  padding: 20px 30px;
-  margin-bottom: 15px;
+  border-radius: 8px;
+  padding: 10px 20px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
 }
 
 .scoreboard .team {
@@ -141,19 +146,22 @@
 .main-content {
   display: grid;
   grid-template-columns: 1fr 1.2fr 1fr;
-  gap: 15px;
-  margin-bottom: 15px;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .main-content.with-map {
-  grid-template-columns: 200px 1fr 200px;
-  align-items: start;
+  grid-template-columns: 180px 1fr 180px;
+  align-items: stretch;
 }
 
 /* 팀 스탯 공통 */
 .team-stats {
-  min-width: 180px;
-  max-width: 220px;
+  min-width: 160px;
+  max-width: 200px;
 }
 
 /* 중앙 콘텐츠 (로그 + 맵) */
@@ -272,9 +280,10 @@
 /* 팀 통계 */
 .team-stats {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border-radius: 12px;
-  padding: 12px;
-  height: fit-content;
+  border-radius: 8px;
+  padding: 8px;
+  overflow-y: auto;
+  max-height: 100%;
 }
 
 .team-stats h3 {
