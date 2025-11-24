@@ -39,6 +39,37 @@ async function startStoveLeague() {
        WHERE name LIKE 'LPO%' AND status IN ('REGULAR', 'PLAYOFF')`
     );
 
+    // 시설 유지비 정산 (시즌 종료 시)
+    // 기본 1천만 + 시설 레벨당 150만, 최대 5500만
+    try {
+      const teams = await pool.query(
+        `SELECT t.id, t.name, t.gold,
+                COALESCE(SUM(tf.level), 0) as total_facility_level
+         FROM teams t
+         LEFT JOIN team_facilities tf ON t.id = tf.team_id
+         WHERE t.is_ai = false
+         GROUP BY t.id`
+      );
+
+      for (const team of teams) {
+        const baseCost = 10000000; // 기본 1천만
+        const perLevelCost = 1500000; // 레벨당 150만
+        const maxCost = 55000000; // 최대 5500만
+
+        const totalCost = Math.min(maxCost, baseCost + (team.total_facility_level * perLevelCost));
+
+        // 골드 차감
+        await pool.query(
+          'UPDATE teams SET gold = GREATEST(0, gold - ?) WHERE id = ?',
+          [totalCost, team.id]
+        );
+
+        console.log(`Team ${team.name}: Facility maintenance cost ${totalCost.toLocaleString()} deducted`);
+      }
+    } catch (e) {
+      console.error('Error calculating facility maintenance:', e);
+    }
+
     // 이적시장 활성화 플래그 설정 (game_settings 테이블이 있다면)
     try {
       await pool.query(
