@@ -285,20 +285,7 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
     // 스카우터 등급에 따른 오버롤 범위
     const overallRange = getOverallRangeByStarRating(scouter.star_rating);
 
-    // 스카우터 등급에 따른 고오버롤 선수 확률 가중치
-    // 높은 등급일수록 높은 오버롤 선수에 가중치
-    const starWeightQuery = (() => {
-      switch (scouter.star_rating) {
-        case 5: return 'pp.base_ovr * pp.base_ovr * pp.base_ovr';  // 5성: 오버롤^3 가중치 (고오버롤 매우 유리)
-        case 4: return 'pp.base_ovr * pp.base_ovr';                // 4성: 오버롤^2 가중치
-        case 3: return 'pp.base_ovr';                              // 3성: 오버롤 가중치
-        case 2: return '1';                                        // 2성: 균등 확률
-        case 1: return '1 / (pp.base_ovr + 1)';                    // 1성: 낮은 오버롤 유리
-        default: return '1';
-      }
-    })();
-
-    // 소유되지 않은 선수 중에서 오버롤 범위에 맞는 선수 찾기
+    // 소유되지 않은 선수 중에서 오버롤 범위에 맞는 선수 찾기 (후보 20명)
     let query = `
       SELECT pp.*, pp.base_ovr as overall
       FROM pro_players pp
@@ -314,15 +301,49 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
 
     const params: any[] = [overallRange.min, overallRange.max];
 
-    // 스카우터 전문 분야가 있으면 해당 포지션 우선, 등급에 따른 가중치 적용
+    // 스카우터 전문 분야가 있으면 해당 포지션 우선
     if (scouter.specialty) {
-      query += ` ORDER BY CASE WHEN pp.position = ? THEN 0 ELSE 1 END, RAND() * ${starWeightQuery} DESC LIMIT 1`;
+      query += ` ORDER BY CASE WHEN pp.position = ? THEN 0 ELSE 1 END, RAND() LIMIT 20`;
       params.push(scouter.specialty);
     } else {
-      query += ` ORDER BY RAND() * ${starWeightQuery} DESC LIMIT 1`;
+      query += ` ORDER BY RAND() LIMIT 20`;
     }
 
-    const players = await pool.query(query, params);
+    const candidates = await pool.query(query, params);
+
+    if (candidates.length === 0) {
+      return res.status(400).json({ error: '발굴할 수 있는 선수가 없습니다' });
+    }
+
+    // 스카우터 등급에 따른 가중치 기반 선택
+    // 높은 등급일수록 높은 오버롤 선수 확률 증가
+    const getWeight = (ovr: number): number => {
+      switch (scouter.star_rating) {
+        case 5: return Math.pow(ovr, 3);      // 5성: 오버롤^3 가중치
+        case 4: return Math.pow(ovr, 2);      // 4성: 오버롤^2 가중치
+        case 3: return ovr;                   // 3성: 오버롤 가중치
+        case 2: return 1;                     // 2성: 균등 확률
+        case 1: return 1 / (ovr + 1);         // 1성: 낮은 오버롤 유리
+        default: return 1;
+      }
+    };
+
+    // 가중치 합계 계산
+    const totalWeight = candidates.reduce((sum: number, p: any) => sum + getWeight(p.overall), 0);
+
+    // 가중치 기반 랜덤 선택
+    let random = Math.random() * totalWeight;
+    let selectedPlayer = candidates[0];
+
+    for (const candidate of candidates) {
+      random -= getWeight(candidate.overall);
+      if (random <= 0) {
+        selectedPlayer = candidate;
+        break;
+      }
+    }
+
+    const players = [selectedPlayer];
 
     if (players.length === 0) {
       return res.status(400).json({ error: '발굴할 수 있는 선수가 없습니다' });
