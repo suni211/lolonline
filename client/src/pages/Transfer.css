@@ -514,3 +514,236 @@
     justify-content: space-between;
   }
 }
+
+/* 협상 모달 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.negotiation-modal {
+  background-color: var(--primary-blue);
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.negotiation-modal h2 {
+  margin: 0 0 1.5rem;
+  text-align: center;
+  color: var(--white);
+}
+
+.negotiation-player {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.negotiation-player img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.negotiation-player .player-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.negotiation-player h3 {
+  margin: 0;
+  color: var(--white);
+}
+
+.negotiation-player .position {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: var(--white);
+  width: fit-content;
+}
+
+.negotiation-player .ovr {
+  font-weight: 700;
+}
+
+.negotiation-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.negotiation-stats .stat {
+  padding: 0.5rem;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--white);
+}
+
+.negotiation-personality {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.negotiation-personality .personality-type {
+  display: inline-block;
+  padding: 0.3rem 0.75rem;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  font-weight: 600;
+  color: var(--white);
+  margin-bottom: 0.5rem;
+}
+
+.negotiation-personality p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+}
+
+.negotiation-price {
+  text-align: center;
+}
+
+.asking-price {
+  font-size: 1.1rem;
+  color: var(--white);
+  margin-bottom: 1rem;
+}
+
+.asking-price strong {
+  color: #ffd43b;
+}
+
+.dialogue-box {
+  padding: 1rem;
+  background-color: rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.9);
+  border-left: 3px solid #339af0;
+}
+
+.result-accept, .result-reject {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.result-accept {
+  background-color: rgba(22, 163, 74, 0.3);
+}
+
+.result-accept p {
+  color: #4ade80;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0 0 1rem;
+}
+
+.result-reject {
+  background-color: rgba(220, 38, 38, 0.3);
+}
+
+.result-reject p {
+  color: #f87171;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0 0 1rem;
+}
+
+.result-accept button, .result-reject button {
+  padding: 0.75rem 2rem;
+  background-color: var(--light-blue);
+  color: var(--white);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.offer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.offer-form label {
+  color: var(--white);
+  font-weight: 600;
+}
+
+.offer-form input {
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.3);
+  color: var(--white);
+  font-size: 1rem;
+  text-align: center;
+}
+
+.offer-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.offer-buttons button {
+  flex: 1;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.offer-buttons button:first-child {
+  background-color: #16a34a;
+  color: var(--white);
+}
+
+.offer-buttons button:first-child:hover:not(:disabled) {
+  background-color: #15803d;
+}
+
+.offer-buttons button:first-child:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.offer-buttons button.cancel {
+  background-color: #6b7280;
+  color: var(--white);
+}
+
+.offer-buttons button.cancel:hover {
+  background-color: #4b5563;
+}

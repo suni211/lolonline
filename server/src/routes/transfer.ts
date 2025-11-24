@@ -1,9 +1,73 @@
 import express from 'express';
 import pool from '../database/db.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
-import { generatePersonality, personalityTraits, PersonalityType } from '../services/geminiService.js';
+import { generatePersonality, generateContractNegotiationDialogue, personalityTraits, PersonalityType } from '../services/geminiService.js';
 
 const router = express.Router();
+
+// 성격에 따른 계약금 배수
+const personalityContractModifiers: Record<PersonalityType, number> = {
+  LEADER: 1.2,
+  REBELLIOUS: 1.5,
+  CALM: 1.0,
+  EMOTIONAL: 1.3,
+  COMPETITIVE: 1.25,
+  TIMID: 0.7,
+  GREEDY: 1.8,
+  LOYAL: 0.9,
+  PERFECTIONIST: 1.3,
+  LAZY: 0.8
+};
+
+// 협상 결과 계산
+function calculateNegotiationResult(
+  personality: PersonalityType,
+  askingPrice: number,
+  offeredPrice: number
+): { result: 'ACCEPT' | 'REJECT' | 'COUNTER'; counterPrice?: number; message: string } {
+  const ratio = offeredPrice / askingPrice;
+
+  const acceptThresholds: Record<PersonalityType, number> = {
+    LEADER: 0.85,
+    REBELLIOUS: 0.95,
+    CALM: 0.75,
+    EMOTIONAL: 0.80,
+    COMPETITIVE: 0.90,
+    TIMID: 0.50,
+    GREEDY: 0.98,
+    LOYAL: 0.70,
+    PERFECTIONIST: 0.88,
+    LAZY: 0.60
+  };
+
+  if (ratio >= acceptThresholds[personality]) {
+    return { result: 'ACCEPT', message: '계약 조건을 수락했습니다.' };
+  }
+
+  const rejectThresholds: Record<PersonalityType, number> = {
+    LEADER: 0.5,
+    REBELLIOUS: 0.7,
+    CALM: 0.4,
+    EMOTIONAL: 0.55,
+    COMPETITIVE: 0.6,
+    TIMID: 0.2,
+    GREEDY: 0.8,
+    LOYAL: 0.35,
+    PERFECTIONIST: 0.6,
+    LAZY: 0.3
+  };
+
+  if (ratio < rejectThresholds[personality]) {
+    return { result: 'REJECT', message: '모욕적인 제안입니다. 협상을 종료합니다.' };
+  }
+
+  const counterPrice = Math.floor(askingPrice * (0.5 + ratio * 0.5));
+  return {
+    result: 'COUNTER',
+    counterPrice,
+    message: `${counterPrice.toLocaleString()} 골드는 되어야 할 것 같습니다.`
+  };
+}
 
 // FA 선수 목록 (이적시장에 없는 모든 선수)
 router.get('/fa', authenticateToken, async (req: AuthRequest, res) => {
@@ -82,8 +146,8 @@ router.get('/fa', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
-// FA 선수 계약
-router.post('/fa/sign/:playerId', authenticateToken, async (req: AuthRequest, res) => {
+// FA 선수 협상 시작 (요구 연봉 확인)
+router.get('/fa/negotiate/:playerId', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const playerId = parseInt(req.params.playerId);
 
@@ -113,31 +177,137 @@ router.post('/fa/sign/:playerId', authenticateToken, async (req: AuthRequest, re
       }
     }
 
-    const price = player.overall * 10000;
-
-    const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);
-    if (teams[0].gold < price) {
-      return res.status(400).json({ error: '골드 부족. 필요: ' + price.toLocaleString() });
-    }
-
+    // 스탯 생성
     const baseOvr = player.overall;
     const totalStats = baseOvr * 4;
-    let remaining = totalStats;
     const baseStat = Math.floor(totalStats / 4);
     const variance = 10;
 
     const mental = Math.max(1, Math.min(200, baseStat + Math.floor(Math.random() * variance * 2) - variance));
-    remaining -= mental;
     const teamfight = Math.max(1, Math.min(200, baseStat + Math.floor(Math.random() * variance * 2) - variance));
-    remaining -= teamfight;
     const focus = Math.max(1, Math.min(200, baseStat + Math.floor(Math.random() * variance * 2) - variance));
-    remaining -= focus;
-    const laning = Math.max(1, Math.min(200, remaining));
+    const laning = Math.max(1, Math.min(200, totalStats - mental - teamfight - focus));
 
     const personality = generatePersonality(mental);
     const ovr = Math.round((mental + teamfight + focus + laning) / 4);
 
-    await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [price, req.teamId]);
+    // 요구 연봉 계산
+    const baseCost = ovr * 10000;
+    const modifier = personalityContractModifiers[personality];
+    const askingPrice = Math.floor(baseCost * modifier);
+
+    const traits = personalityTraits[personality];
+
+    res.json({
+      player: {
+        id: player.id,
+        name: player.name,
+        position: player.position,
+        team: player.team,
+        league: player.league,
+        face_image: player.face_image,
+        overall: ovr
+      },
+      stats: { mental, teamfight, focus, laning },
+      personality: {
+        type: personality,
+        name: traits?.name || personality,
+        description: traits?.description || ''
+      },
+      asking_price: askingPrice,
+      base_price: baseCost
+    });
+  } catch (error: any) {
+    console.error('Negotiate FA error:', error);
+    res.status(500).json({ error: '협상 시작 실패' });
+  }
+});
+
+// FA 선수 계약 (연봉협상)
+router.post('/fa/sign/:playerId', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const playerId = parseInt(req.params.playerId);
+    const { offered_price, mental, teamfight, focus, laning, personality } = req.body;
+
+    if (!offered_price || !mental || !teamfight || !focus || !laning || !personality) {
+      return res.status(400).json({ error: '협상 정보가 필요합니다' });
+    }
+
+    const players = await pool.query(
+      `SELECT pp.*, COALESCE(pp.base_ovr, 50) as overall FROM pro_players pp WHERE pp.id = ?`,
+      [playerId]
+    );
+
+    if (players.length === 0) {
+      return res.status(404).json({ error: '선수를 찾을 수 없습니다' });
+    }
+
+    const player = players[0];
+
+    // 이미 계약된 카드가 있는지 확인
+    const existingCards = await pool.query(
+      'SELECT * FROM player_cards WHERE pro_player_id = ? AND is_contracted = true',
+      [playerId]
+    );
+
+    if (existingCards.length > 0) {
+      const card = existingCards[0];
+      if (card.team_id === req.teamId) {
+        return res.status(400).json({ error: '이미 보유한 선수입니다' });
+      } else {
+        return res.status(400).json({ error: '다른 팀에 계약된 선수입니다' });
+      }
+    }
+
+    const ovr = Math.round((mental + teamfight + focus + laning) / 4);
+    const baseCost = ovr * 10000;
+    const modifier = personalityContractModifiers[personality as PersonalityType];
+    const askingPrice = Math.floor(baseCost * modifier);
+
+    // 협상 결과 계산
+    const negotiationResult = calculateNegotiationResult(personality as PersonalityType, askingPrice, offered_price);
+
+    // AI 대사 생성
+    const dialogue = await generateContractNegotiationDialogue(
+      player.name,
+      personality,
+      offered_price,
+      askingPrice,
+      negotiationResult.result,
+      negotiationResult.counterPrice
+    );
+
+    // 거절
+    if (negotiationResult.result === 'REJECT') {
+      return res.json({
+        success: false,
+        result: 'REJECT',
+        message: '협상이 결렬되었습니다.',
+        dialogue,
+        player: { name: player.name, personality }
+      });
+    }
+
+    // 카운터 오퍼
+    if (negotiationResult.result === 'COUNTER') {
+      return res.json({
+        success: false,
+        result: 'COUNTER',
+        message: negotiationResult.message,
+        dialogue,
+        counter_price: negotiationResult.counterPrice,
+        player: { name: player.name, personality, overall: ovr }
+      });
+    }
+
+    // 수락 - 골드 확인
+    const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [req.teamId]);
+    if (teams[0].gold < offered_price) {
+      return res.status(400).json({ error: '골드 부족. 필요: ' + offered_price.toLocaleString() });
+    }
+
+    // 골드 차감 및 카드 생성
+    await pool.query('UPDATE teams SET gold = gold - ? WHERE id = ?', [offered_price, req.teamId]);
 
     const result = await pool.query(
       `INSERT INTO player_cards (pro_player_id, team_id, mental, teamfight, focus, laning, ovr, card_type, personality, is_starter, is_contracted)
@@ -147,9 +317,11 @@ router.post('/fa/sign/:playerId', authenticateToken, async (req: AuthRequest, re
 
     res.json({
       success: true,
+      result: 'ACCEPT',
       message: player.name + ' 선수와 계약 완료!',
+      dialogue,
       player_card_id: result.insertId,
-      cost: price
+      cost: offered_price
     });
   } catch (error: any) {
     console.error('Sign FA error:', error);

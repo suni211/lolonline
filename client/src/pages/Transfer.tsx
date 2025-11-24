@@ -54,6 +54,31 @@ interface ContractedCard {
   is_starter: boolean;
 }
 
+interface NegotiationInfo {
+  player: {
+    id: number;
+    name: string;
+    position: string;
+    team: string;
+    league: string;
+    face_image: string;
+    overall: number;
+  };
+  stats: {
+    mental: number;
+    teamfight: number;
+    focus: number;
+    laning: number;
+  };
+  personality: {
+    type: string;
+    name: string;
+    description: string;
+  };
+  asking_price: number;
+  base_price: number;
+}
+
 export default function Transfer() {
   const { team, refreshTeam } = useAuth();
   const navigate = useNavigate();
@@ -91,6 +116,11 @@ export default function Transfer() {
   // 판매 등록 상태
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
   const [askingPrice, setAskingPrice] = useState('');
+
+  // 협상 상태
+  const [negotiation, setNegotiation] = useState<NegotiationInfo | null>(null);
+  const [offerPrice, setOfferPrice] = useState('');
+  const [negotiationResult, setNegotiationResult] = useState<any>(null);
 
   useEffect(() => {
     fetchFaPlayers();
@@ -207,29 +237,60 @@ export default function Transfer() {
     }
   };
 
-  const signFaPlayer = async (playerId: number, overall: number) => {
-    const price = overall * 10000;
+  const startNegotiation = async (playerId: number) => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`/api/transfer/fa/negotiate/${playerId}`);
+      setNegotiation(response.data);
+      setOfferPrice(response.data.asking_price.toString());
+      setNegotiationResult(null);
+    } catch (error: any) {
+      alert(error.response?.data?.error || '협상 시작 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitOffer = async () => {
+    if (!negotiation || !offerPrice) return;
+
+    const price = parseInt(offerPrice);
     if (!team || team.gold < price) {
       alert('골드가 부족합니다!');
       return;
     }
 
-    if (!confirm(`이 선수를 ${price.toLocaleString()}원에 계약하시겠습니까?`)) {
-      return;
-    }
-
     setLoading(true);
     try {
-      const response = await axios.post(`/api/transfer/fa/sign/${playerId}`);
-      alert(response.data.message);
-      await refreshTeam();
-      await fetchFaPlayers();
-      await fetchContractedCards();
+      const response = await axios.post(`/api/transfer/fa/sign/${negotiation.player.id}`, {
+        offered_price: price,
+        mental: negotiation.stats.mental,
+        teamfight: negotiation.stats.teamfight,
+        focus: negotiation.stats.focus,
+        laning: negotiation.stats.laning,
+        personality: negotiation.personality.type
+      });
+
+      setNegotiationResult(response.data);
+
+      if (response.data.success) {
+        await refreshTeam();
+        await fetchFaPlayers();
+        await fetchContractedCards();
+      } else if (response.data.result === 'COUNTER') {
+        setOfferPrice(response.data.counter_price.toString());
+      }
     } catch (error: any) {
-      alert(error.response?.data?.error || '계약 실패');
+      alert(error.response?.data?.error || '협상 실패');
     } finally {
       setLoading(false);
     }
+  };
+
+  const closeNegotiation = () => {
+    setNegotiation(null);
+    setNegotiationResult(null);
+    setOfferPrice('');
   };
 
   const releasePlayer = async (cardId: number, ovr: number, name: string) => {
@@ -435,10 +496,10 @@ export default function Transfer() {
                 <div className="button-group">
                   <button
                     className="buy-btn"
-                    onClick={() => signFaPlayer(player.id, player.overall)}
-                    disabled={loading || !team || team.gold < player.overall * 10000}
+                    onClick={() => startNegotiation(player.id)}
+                    disabled={loading}
                   >
-                    계약하기
+                    협상하기
                   </button>
                   <button
                     className="profile-btn"
@@ -716,6 +777,81 @@ export default function Transfer() {
           ) : (
             <p className="no-history">거래 내역이 없습니다.</p>
           )}
+        </div>
+      )}
+
+      {/* 협상 모달 */}
+      {negotiation && (
+        <div className="modal-overlay" onClick={closeNegotiation}>
+          <div className="negotiation-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>연봉 협상</h2>
+
+            <div className="negotiation-player">
+              {negotiation.player.face_image && (
+                <img src={negotiation.player.face_image} alt={negotiation.player.name} />
+              )}
+              <div className="player-info">
+                <h3>{negotiation.player.name}</h3>
+                <span className="position" style={{ backgroundColor: getPositionColor(negotiation.player.position) }}>
+                  {negotiation.player.position}
+                </span>
+                <span className="ovr" style={{ color: getOvrColor(negotiation.player.overall) }}>
+                  OVR {negotiation.player.overall}
+                </span>
+              </div>
+            </div>
+
+            <div className="negotiation-stats">
+              <div className="stat">멘탈: {negotiation.stats.mental}</div>
+              <div className="stat">팀파: {negotiation.stats.teamfight}</div>
+              <div className="stat">집중: {negotiation.stats.focus}</div>
+              <div className="stat">라인: {negotiation.stats.laning}</div>
+            </div>
+
+            <div className="negotiation-personality">
+              <span className="personality-type">{negotiation.personality.name}</span>
+              <p>{negotiation.personality.description}</p>
+            </div>
+
+            <div className="negotiation-price">
+              <div className="asking-price">
+                요구 연봉: <strong>{negotiation.asking_price.toLocaleString()}원</strong>
+              </div>
+
+              {negotiationResult?.dialogue && (
+                <div className="dialogue-box">
+                  "{negotiationResult.dialogue}"
+                </div>
+              )}
+
+              {negotiationResult?.result === 'ACCEPT' ? (
+                <div className="result-accept">
+                  <p>계약 완료!</p>
+                  <button onClick={closeNegotiation}>확인</button>
+                </div>
+              ) : negotiationResult?.result === 'REJECT' ? (
+                <div className="result-reject">
+                  <p>협상 결렬</p>
+                  <button onClick={closeNegotiation}>확인</button>
+                </div>
+              ) : (
+                <div className="offer-form">
+                  <label>제안 연봉:</label>
+                  <input
+                    type="number"
+                    value={offerPrice}
+                    onChange={(e) => setOfferPrice(e.target.value)}
+                  />
+                  <div className="offer-buttons">
+                    <button onClick={submitOffer} disabled={loading}>
+                      {loading ? '처리중...' : '제안하기'}
+                    </button>
+                    <button onClick={closeNegotiation} className="cancel">취소</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
