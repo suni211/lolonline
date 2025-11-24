@@ -432,11 +432,11 @@ export class LPOLeagueService {
     }
   }
 
-  // AI 선수 생성
+  // AI 선수 생성 (player_cards 테이블에 생성)
   static async createAIPlayers(teamId: number, tier: string) {
     const positions = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
 
-    // 티어별 스탯 범위 (각 스탯 기준, 오버롤 = 4개 합산)
+    // 티어별 스탯 범위 (각 스탯 기준)
     const statRanges: { [key: string]: { min: number; max: number } } = {
       'SUPER': { min: 55, max: 80 },
       'FIRST': { min: 40, max: 65 },
@@ -445,24 +445,26 @@ export class LPOLeagueService {
 
     const range = statRanges[tier] || statRanges['SECOND'];
 
+    // 성격 목록
+    const personalities = ['LEADER', 'REBELLIOUS', 'CALM', 'EMOTIONAL', 'COMPETITIVE', 'TIMID', 'GREEDY', 'LOYAL', 'PERFECTIONIST', 'LAZY'];
+
     for (const position of positions) {
       const name = this.generatePlayerName();
       const mental = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
       const teamfight = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
       const focus = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
       const laning = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
+      const ovr = Math.round((mental + teamfight + focus + laning) / 4);
+      const personality = personalities[Math.floor(Math.random() * personalities.length)];
 
-      // 선수 생성
-      const playerResult = await pool.query(
-        `INSERT INTO players (name, position, mental, teamfight, focus, laning)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [name, position, mental, teamfight, focus, laning]
-      );
-
-      // 팀에 배정 (스타터로)
+      // player_cards에 AI 가상 선수 생성 (pro_player_id = NULL)
       await pool.query(
-        `INSERT INTO player_ownership (player_id, team_id, is_starter) VALUES (?, ?, true)`,
-        [playerResult.insertId, teamId]
+        `INSERT INTO player_cards (
+          pro_player_id, team_id, mental, teamfight, focus, laning, ovr,
+          card_type, ai_player_name, ai_position, personality,
+          is_starter, is_contracted, player_role
+        ) VALUES (NULL, ?, ?, ?, ?, ?, ?, 'NORMAL', ?, ?, ?, true, true, 'REGULAR')`,
+        [teamId, mental, teamfight, focus, laning, ovr, name, position, personality]
       );
     }
   }
