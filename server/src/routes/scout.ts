@@ -317,17 +317,18 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
     const params: any[] = [overallRange.min, overallRange.max];
 
     // 스카우터 전문 분야가 있으면 해당 포지션만 가져옴 (90% 확률)
+    // 완전 랜덤으로 1명만 선택
     if (scouter.specialty && Math.random() < 0.9) {
-      query += ` AND pp.position = ? ORDER BY RAND() LIMIT 20`;
+      query += ` AND pp.position = ? ORDER BY RAND() LIMIT 1`;
       params.push(scouter.specialty);
     } else {
-      query += ` ORDER BY RAND() LIMIT 20`;
+      query += ` ORDER BY RAND() LIMIT 1`;
     }
 
-    let candidates = await pool.query(query, params);
+    let players = await pool.query(query, params);
 
     // 전문 포지션으로 선수를 못 찾으면 전체에서 다시 검색
-    if (candidates.length === 0 && scouter.specialty) {
+    if (players.length === 0 && scouter.specialty) {
       const fallbackQuery = `
         SELECT pp.*, pp.base_ovr as overall
         FROM pro_players pp
@@ -339,44 +340,10 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
         )
         AND pp.base_ovr >= ?
         AND pp.base_ovr <= ?
-        ORDER BY RAND() LIMIT 20
+        ORDER BY RAND() LIMIT 1
       `;
-      candidates = await pool.query(fallbackQuery, [overallRange.min, overallRange.max]);
+      players = await pool.query(fallbackQuery, [overallRange.min, overallRange.max]);
     }
-
-    if (candidates.length === 0) {
-      return res.status(400).json({ error: '발굴할 수 있는 선수가 없습니다' });
-    }
-
-    // 스카우터 등급에 따른 가중치 기반 선택
-    // 오버롤에 비례하되 완만한 확률
-    const getWeight = (ovr: number): number => {
-      switch (scouter.star_rating) {
-        case 5: return ovr * 1.5;             // 5성: 오버롤 x 1.5 (고오버롤 약간 유리)
-        case 4: return ovr * 1.2;             // 4성: 오버롤 x 1.2
-        case 3: return ovr;                   // 3성: 오버롤 비례
-        case 2: return 50;                    // 2성: 균등 확률
-        case 1: return 100 - ovr;             // 1성: 낮은 오버롤 유리
-        default: return 50;
-      }
-    };
-
-    // 가중치 합계 계산
-    const totalWeight = candidates.reduce((sum: number, p: any) => sum + getWeight(p.overall), 0);
-
-    // 가중치 기반 랜덤 선택
-    let random = Math.random() * totalWeight;
-    let selectedPlayer = candidates[0];
-
-    for (const candidate of candidates) {
-      random -= getWeight(candidate.overall);
-      if (random <= 0) {
-        selectedPlayer = candidate;
-        break;
-      }
-    }
-
-    const players = [selectedPlayer];
 
     if (players.length === 0) {
       return res.status(400).json({ error: '발굴할 수 있는 선수가 없습니다' });
