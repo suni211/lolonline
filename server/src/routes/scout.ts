@@ -297,12 +297,9 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
 
     const scouter = scouters[0];
 
-    // 스카우터 등급에 따른 오버롤 범위
-    const overallRange = getOverallRangeByStarRating(scouter.star_rating);
-
-    // 소유되지 않은 선수 중에서 오버롤 범위에 맞는 선수 찾기 (후보 20명)
+    // 소유되지 않은 선수 중에서 랜덤 선택 (오버롤 범위 조건 제거)
     let query = `
-      SELECT pp.*, pp.base_ovr as overall
+      SELECT pp.*, COALESCE(pp.base_ovr, 50) as overall
       FROM pro_players pp
       WHERE NOT EXISTS (
         SELECT 1 FROM player_cards pc WHERE pc.pro_player_id = pp.id
@@ -310,11 +307,9 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
       AND NOT EXISTS (
         SELECT 1 FROM scouter_discoveries sd WHERE sd.pro_player_id = pp.id AND sd.signed = false
       )
-      AND pp.base_ovr >= ?
-      AND pp.base_ovr <= ?
     `;
 
-    const params: any[] = [overallRange.min, overallRange.max];
+    const params: any[] = [];
 
     // 스카우터 전문 분야가 있으면 해당 포지션만 가져옴 (90% 확률)
     // 완전 랜덤으로 1명만 선택
@@ -330,7 +325,7 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
     // 전문 포지션으로 선수를 못 찾으면 전체에서 다시 검색
     if (players.length === 0 && scouter.specialty) {
       const fallbackQuery = `
-        SELECT pp.*, pp.base_ovr as overall
+        SELECT pp.*, COALESCE(pp.base_ovr, 50) as overall
         FROM pro_players pp
         WHERE NOT EXISTS (
           SELECT 1 FROM player_cards pc WHERE pc.pro_player_id = pp.id
@@ -338,11 +333,9 @@ router.post('/scouters/:scouterId/discover', authenticateToken, async (req: Auth
         AND NOT EXISTS (
           SELECT 1 FROM scouter_discoveries sd WHERE sd.pro_player_id = pp.id AND sd.signed = false
         )
-        AND pp.base_ovr >= ?
-        AND pp.base_ovr <= ?
         ORDER BY RAND() LIMIT 1
       `;
-      players = await pool.query(fallbackQuery, [overallRange.min, overallRange.max]);
+      players = await pool.query(fallbackQuery);
     }
 
     if (players.length === 0) {
