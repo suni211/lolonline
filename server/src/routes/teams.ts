@@ -252,6 +252,12 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(401).json({ error: '인증이 필요합니다' });
     }
 
+    // 어드민은 팀 생성 불가
+    const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = ?', [req.userId]);
+    if (adminCheck.length > 0 && adminCheck[0].is_admin) {
+      return res.status(403).json({ error: '어드민 계정은 팀을 생성할 수 없습니다' });
+    }
+
     // 이미 팀이 있는지 확인
     const existingTeams = await pool.query(
       'SELECT * FROM teams WHERE user_id = ?',

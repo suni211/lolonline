@@ -325,7 +325,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
     }
 
     const users = await pool.query(
-      'SELECT id, username, email, created_at, last_login FROM users WHERE id = ?', 
+      'SELECT id, username, email, is_admin, created_at, last_login FROM users WHERE id = ?',
       [req.userId]
     );
 
@@ -351,8 +351,14 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
     }
 
     // 팀이 없으면 빈 객체 반환 (에러 아님)
+    const userData = users[0];
     res.json({
-      user: users[0],
+      user: {
+        id: userData.id,
+        username: userData.username,
+        email: userData.email,
+        isAdmin: userData.is_admin || false
+      },
       team: team || null
     });
   } catch (error: any) {
