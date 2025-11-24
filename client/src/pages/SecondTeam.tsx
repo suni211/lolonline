@@ -10,7 +10,18 @@ interface Academy {
   training_quality: number;
   scouting_range: number;
   players: YouthPlayer[];
+  nextUpgradeCost: number | null;
 }
+
+// 큰 숫자 포맷 (억, 만 단위)
+const formatCost = (cost: number): string => {
+  if (cost >= 100000000) {
+    return `${(cost / 100000000).toFixed(1)}억`;
+  } else if (cost >= 10000) {
+    return `${(cost / 10000).toFixed(0)}만`;
+  }
+  return cost.toLocaleString();
+};
 
 interface YouthPlayer {
   id: number;
@@ -171,7 +182,10 @@ export default function SecondTeam() {
 
           <div className="academy-actions">
             <button onClick={handleUpgrade} disabled={actionLoading || academy.level >= 5}>
-              아카데미 업그레이드
+              {academy.level >= 5
+                ? '최대 레벨'
+                : `아카데미 업그레이드 (${academy.nextUpgradeCost ? formatCost(academy.nextUpgradeCost) : '?'}원)`
+              }
             </button>
             <button onClick={handleScout} disabled={actionLoading || academy.players.length >= academy.capacity}>
               유스 선수 스카우트

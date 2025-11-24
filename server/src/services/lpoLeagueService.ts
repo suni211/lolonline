@@ -100,23 +100,19 @@ export class LPOLeagueService {
       // 기존 LPO 리그 삭제
       await pool.query(`DELETE FROM leagues WHERE name LIKE 'LPO%'`);
 
-      // LPO 리그 생성
-      const superLeague = await pool.query(
-        "INSERT INTO leagues (name, region, season, current_month, status) VALUES ('LPO SUPER LEAGUE', 'SUPER', 1, 1, 'REGULAR')"
+      // LPO 리그 생성 (SOUTH/NORTH)
+      const southLeague = await pool.query(
+        "INSERT INTO leagues (name, region, season, current_month, status) VALUES ('LPO SOUTH', 'SOUTH', 1, 1, 'REGULAR')"
       );
-      const firstLeague = await pool.query(
-        "INSERT INTO leagues (name, region, season, current_month, status) VALUES ('LPO 1 LEAGUE', 'FIRST', 1, 1, 'REGULAR')"
-      );
-      const secondLeague = await pool.query(
-        "INSERT INTO leagues (name, region, season, current_month, status) VALUES ('LPO 2 LEAGUE', 'SECOND', 1, 1, 'REGULAR')"
+      const northLeague = await pool.query(
+        "INSERT INTO leagues (name, region, season, current_month, status) VALUES ('LPO NORTH', 'NORTH', 1, 1, 'REGULAR')"
       );
 
       // AI 팀 생성 및 리그 배정
-      // SUPER: 10팀, FIRST: 10팀, SECOND: 12팀
+      // SOUTH: 16팀, NORTH: 16팀
       const tiers = [
-        { leagueId: superLeague.insertId, tier: 'SUPER', count: 10, startIdx: 0 },
-        { leagueId: firstLeague.insertId, tier: 'FIRST', count: 10, startIdx: 10 },
-        { leagueId: secondLeague.insertId, tier: 'SECOND', count: 12, startIdx: 20 }
+        { leagueId: southLeague.insertId, tier: 'SOUTH', count: 16, startIdx: 0 },
+        { leagueId: northLeague.insertId, tier: 'NORTH', count: 16, startIdx: 16 }
       ];
 
       for (const tierInfo of tiers) {
@@ -144,14 +140,14 @@ export class LPOLeagueService {
         }
       }
 
-      // 기존 플레이어 팀을 LPO 2 LEAGUE에 등록
+      // 기존 플레이어 팀을 LPO SOUTH에 등록
       if (playerTeams.length > 0) {
-        console.log(`Registering ${playerTeams.length} player teams to LPO 2 LEAGUE...`);
+        console.log(`Registering ${playerTeams.length} player teams to LPO SOUTH...`);
 
         for (const team of playerTeams) {
-          // 팀의 리그를 SECOND로 업데이트
+          // 팀의 리그를 SOUTH로 업데이트
           await pool.query(
-            `UPDATE teams SET league = 'SECOND' WHERE id = ?`,
+            `UPDATE teams SET league = 'SOUTH' WHERE id = ?`,
             [team.id]
           );
 
@@ -159,7 +155,7 @@ export class LPOLeagueService {
           await pool.query(
             `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
              VALUES (?, ?, 0, 0, 0, 0, 0)`,
-            [secondLeague.insertId, team.id]
+            [southLeague.insertId, team.id]
           );
 
           // AI 팀 하나 제거 (플레이어 팀이 대체)
@@ -168,7 +164,7 @@ export class LPOLeagueService {
              JOIN teams t ON lp.team_id = t.id
              WHERE lp.league_id = ? AND t.is_ai = true
              LIMIT 1`,
-            [secondLeague.insertId]
+            [southLeague.insertId]
           );
 
           if (aiTeamToRemove.length > 0) {
@@ -196,14 +192,12 @@ export class LPOLeagueService {
 
       // 각 리그 스케줄 생성
       console.log('Generating match schedules...');
-      await this.generateLeagueSchedule(superLeague.insertId);
-      await this.generateLeagueSchedule(firstLeague.insertId);
-      await this.generateLeagueSchedule(secondLeague.insertId);
+      await this.generateLeagueSchedule(southLeague.insertId);
+      await this.generateLeagueSchedule(northLeague.insertId);
 
       console.log('LPO League system initialized successfully!');
-      console.log('- LPO SUPER LEAGUE: 10 AI teams');
-      console.log('- LPO 1 LEAGUE: 10 AI teams');
-      console.log(`- LPO 2 LEAGUE: ${12 - playerTeams.length} AI teams + ${playerTeams.length} player teams`);
+      console.log(`- LPO SOUTH: ${16 - playerTeams.length} AI teams + ${playerTeams.length} player teams`);
+      console.log('- LPO NORTH: 16 AI teams');
 
     } catch (error) {
       console.error('Failed to initialize LPO leagues:', error);
@@ -228,8 +222,7 @@ export class LPOLeagueService {
       const teamIds = teams.map((t: any) => t.team_id);
 
       // 2홈 2어웨이 스케줄 생성 (라운드 로빈 방식)
-      // SUPER/FIRST: 10팀 -> 각 팀 36경기 (9팀 * 4경기)
-      // SECOND: 12팀 -> 각 팀 44경기 (11팀 * 4경기)
+      // SOUTH/NORTH: 16팀 -> 각 팀 60경기 (15팀 * 4경기)
       const matches: { home: number; away: number }[] = [];
 
       // 1사이클 생성 (홈/어웨이 번갈아가며)
@@ -438,12 +431,11 @@ export class LPOLeagueService {
 
     // 티어별 스탯 범위 (각 스탯 기준)
     const statRanges: { [key: string]: { min: number; max: number } } = {
-      'SUPER': { min: 55, max: 80 },
-      'FIRST': { min: 40, max: 65 },
-      'SECOND': { min: 25, max: 50 }
+      'SOUTH': { min: 35, max: 70 },
+      'NORTH': { min: 35, max: 70 }
     };
 
-    const range = statRanges[tier] || statRanges['SECOND'];
+    const range = statRanges[tier] || statRanges['SOUTH'];
 
     for (const position of positions) {
       const name = this.generatePlayerName();
@@ -488,13 +480,13 @@ export class LPOLeagueService {
          FROM teams t
          JOIN league_participants lp ON t.id = lp.team_id
          JOIN leagues l ON lp.league_id = l.id
-         WHERE t.is_ai = true AND l.region = 'SECOND'
+         WHERE t.is_ai = true AND l.region = 'SOUTH'
          ORDER BY lp.points ASC, lp.goal_difference ASC
          LIMIT 1`
       );
 
       if (aiTeam.length === 0) {
-        throw new Error('No AI team available in LPO 2 LEAGUE');
+        throw new Error('No AI team available in LPO SOUTH');
       }
 
       const targetAI = aiTeam[0];
@@ -508,8 +500,8 @@ export class LPOLeagueService {
          targetAI.wins, targetAI.losses, targetAI.draws, targetAI.points, targetAI.goal_difference]
       );
 
-      // 플레이어 팀의 tier를 SECOND로 변경
-      await pool.query('UPDATE teams SET league = ? WHERE id = ?', ['SECOND', playerTeamId]);
+      // 플레이어 팀의 tier를 SOUTH로 변경
+      await pool.query('UPDATE teams SET league = ? WHERE id = ?', ['SOUTH', playerTeamId]);
 
       // AI 팀을 리그에서 제거
       await pool.query('DELETE FROM league_participants WHERE team_id = ?', [targetAI.id]);
@@ -522,7 +514,7 @@ export class LPOLeagueService {
          targetAI.wins, targetAI.losses, targetAI.draws, targetAI.points, targetAI.goal_difference]
       );
 
-      console.log(`Player team ${playerTeamId} replaced AI team ${targetAI.name} in LPO 2 LEAGUE`);
+      console.log(`Player team ${playerTeamId} replaced AI team ${targetAI.name} in LPO SOUTH`);
 
       return {
         success: true,
@@ -595,15 +587,13 @@ export class LPOLeagueService {
     }
   }
 
-  // 승강제 처리 (아마추어 리그 포함)
-  static async processPromotionRelegation(season: number) {
+  // WORLDS 진출 처리 (상위 4팀)
+  static async processWorldsQualification(season: number) {
     try {
-      // 각 리그의 순위 계산
-      const tiers = ['SUPER', 'FIRST', 'SECOND', 'AMATEUR'];
+      // SOUTH와 NORTH 리그의 순위 계산
+      const tiers = ['SOUTH', 'NORTH'];
 
-      for (let i = 0; i < tiers.length; i++) {
-        const tier = tiers[i];
-
+      for (const tier of tiers) {
         // 해당 티어 리그 조회
         const league = await pool.query(
           "SELECT id FROM leagues WHERE region = ? AND season = ?",
@@ -614,7 +604,7 @@ export class LPOLeagueService {
 
         // 순위 정렬
         const standings = await pool.query(
-          `SELECT lp.team_id, lp.points, lp.goal_difference, t.is_ai
+          `SELECT lp.team_id, lp.points, lp.goal_difference, t.is_ai, t.name
            FROM league_participants lp
            JOIN teams t ON lp.team_id = t.id
            WHERE lp.league_id = ?
@@ -622,75 +612,25 @@ export class LPOLeagueService {
           [league[0].id]
         );
 
-        // 강등 처리
-        if (tier === 'SUPER' || tier === 'FIRST') {
-          // SUPER, FIRST: 하위 2팀 강등
-          if (standings.length >= 2) {
-            const relegatedTeams = standings.slice(-2);
-            const lowerTier = tier === 'SUPER' ? 'FIRST' : 'SECOND';
+        // 상위 4팀 WORLDS 진출
+        if (standings.length >= 4) {
+          const qualifiedTeams = standings.slice(0, 4);
 
-            for (const team of relegatedTeams) {
-              await pool.query(
-                `INSERT INTO promotions_relegations (season, team_id, from_tier, to_tier, type)
-                 VALUES (?, ?, ?, ?, 'RELEGATION')`,
-                [season, team.team_id, tier, lowerTier]
-              );
-              await pool.query('UPDATE teams SET league = ? WHERE id = ?', [lowerTier, team.team_id]);
-            }
-          }
-        } else if (tier === 'SECOND') {
-          // SECOND: 하위 4팀 아마추어로 강등
-          if (standings.length >= 4) {
-            const relegatedTeams = standings.slice(-4);
-
-            for (const team of relegatedTeams) {
-              await pool.query(
-                `INSERT INTO promotions_relegations (season, team_id, from_tier, to_tier, type)
-                 VALUES (?, ?, ?, ?, 'RELEGATION')`,
-                [season, team.team_id, tier, 'AMATEUR']
-              );
-              await pool.query('UPDATE teams SET league = ? WHERE id = ?', ['AMATEUR', team.team_id]);
-            }
-          }
-        }
-
-        // 승격 처리
-        if (tier === 'FIRST' || tier === 'SECOND') {
-          // FIRST, SECOND: 상위 2팀 승격
-          if (standings.length >= 2) {
-            const promotedTeams = standings.slice(0, 2);
-            const upperTier = tier === 'FIRST' ? 'SUPER' : 'FIRST';
-
-            for (const team of promotedTeams) {
-              await pool.query(
-                `INSERT INTO promotions_relegations (season, team_id, from_tier, to_tier, type)
-                 VALUES (?, ?, ?, ?, 'PROMOTION')`,
-                [season, team.team_id, tier, upperTier]
-              );
-              await pool.query('UPDATE teams SET league = ? WHERE id = ?', [upperTier, team.team_id]);
-            }
-          }
-        } else if (tier === 'AMATEUR') {
-          // AMATEUR: 상위 4팀 3부로 승격
-          if (standings.length >= 4) {
-            const promotedTeams = standings.slice(0, 4);
-
-            for (const team of promotedTeams) {
-              await pool.query(
-                `INSERT INTO promotions_relegations (season, team_id, from_tier, to_tier, type)
-                 VALUES (?, ?, ?, ?, 'PROMOTION')`,
-                [season, team.team_id, tier, 'SECOND']
-              );
-              await pool.query('UPDATE teams SET league = ? WHERE id = ?', ['SECOND', team.team_id]);
-            }
+          for (const team of qualifiedTeams) {
+            await pool.query(
+              `INSERT INTO promotions_relegations (season, team_id, from_tier, to_tier, type)
+               VALUES (?, ?, ?, ?, 'WORLDS')`,
+              [season, team.team_id, tier, 'WORLDS']
+            );
+            console.log(`Team ${team.name} qualified for WORLDS from ${tier}`);
           }
         }
       }
 
-      console.log(`Promotion/Relegation processed for season ${season}`);
+      console.log(`WORLDS qualification processed for season ${season}`);
 
     } catch (error) {
-      console.error('Failed to process promotion/relegation:', error);
+      console.error('Failed to process WORLDS qualification:', error);
       throw error;
     }
   }
@@ -700,8 +640,8 @@ export class LPOLeagueService {
     try {
       const newSeason = currentSeason + 1;
 
-      // 승강제 먼저 처리
-      await this.processPromotionRelegation(currentSeason);
+      // WORLDS 진출팀 처리
+      await this.processWorldsQualification(currentSeason);
 
       // 기존 리그 종료
       await pool.query(
@@ -709,11 +649,10 @@ export class LPOLeagueService {
         [currentSeason]
       );
 
-      // 새 리그 생성
+      // 새 리그 생성 (SOUTH/NORTH)
       const tiers = [
-        { name: 'LPO SUPER LEAGUE', region: 'SUPER' },
-        { name: 'LPO 1 LEAGUE', region: 'FIRST' },
-        { name: 'LPO 2 LEAGUE', region: 'SECOND' }
+        { name: 'LPO SOUTH', region: 'SOUTH' },
+        { name: 'LPO NORTH', region: 'NORTH' }
       ];
 
       for (const tier of tiers) {

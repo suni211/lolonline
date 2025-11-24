@@ -28,9 +28,22 @@ export class YouthAcademyService {
         [teamId]
       );
 
+      // 다음 레벨 업그레이드 비용 조회
+      let nextUpgradeCost = null;
+      if (academy[0].level < 5) {
+        const costs = await pool.query(
+          `SELECT upgrade_cost FROM facility_costs WHERE facility_type = 'ACADEMY' AND level = ?`,
+          [academy[0].level + 1]
+        );
+        if (costs.length > 0) {
+          nextUpgradeCost = costs[0].upgrade_cost;
+        }
+      }
+
       return {
         ...academy[0],
-        players: youthPlayers
+        players: youthPlayers,
+        nextUpgradeCost
       };
     } catch (error) {
       console.error('Get academy error:', error);

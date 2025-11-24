@@ -279,9 +279,8 @@ export default function Admin() {
 
   const getTierName = (tier: string) => {
     switch (tier) {
-      case 'SUPER': return 'LPO SUPER LEAGUE';
-      case 'FIRST': return 'LPO 1 LEAGUE';
-      case 'SECOND': return 'LPO 2 LEAGUE';
+      case 'SOUTH': return 'LPO SOUTH';
+      case 'NORTH': return 'LPO NORTH';
       default: return tier;
     }
   };

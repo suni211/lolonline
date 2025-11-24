@@ -871,9 +871,8 @@ router.get('/lpo/status', authenticateToken, adminMiddleware, async (req: AuthRe
        WHERE l.name LIKE 'LPO%'
        ORDER BY
          CASE l.region
-           WHEN 'SUPER' THEN 1
-           WHEN 'FIRST' THEN 2
-           WHEN 'SECOND' THEN 3
+           WHEN 'SOUTH' THEN 1
+           WHEN 'NORTH' THEN 2
          END,
          l.season DESC`
     );
