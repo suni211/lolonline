@@ -20,6 +20,7 @@ import MatchViewer from './pages/MatchViewer';
 import Tactics from './pages/Tactics';
 import Cards from './pages/Cards';
 import Transfer from './pages/Transfer';
+import News from './pages/News';
 import FriendlyMatch from './pages/FriendlyMatch';
 import LiveMatch from './pages/LiveMatch';
 import TeamInfo from './pages/TeamInfo';
@@ -72,6 +73,7 @@ function App() {
             <Route path="tactics" element={<Tactics />} />
             <Route path="cards" element={<Cards />} />
             <Route path="transfer" element={<Transfer />} />
+            <Route path="news" element={<News />} />
             <Route path="friendly" element={<FriendlyMatch />} />
             <Route path="team-info" element={<TeamInfo />} />
             <Route path="player/:playerId" element={<PlayerProfile />} />

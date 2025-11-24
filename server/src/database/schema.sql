@@ -737,3 +737,35 @@ CREATE TABLE IF NOT EXISTS regular_sponsors (
     INDEX idx_regular_sponsor_season (season)
 );
 
+-- 뉴스 테이블
+CREATE TABLE IF NOT EXISTS news (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    -- 뉴스 타입: MATCH_HIGHLIGHT, PLAYER_CONFLICT, TRANSFER_RUMOR, TRANSFER_OFFICIAL, TEAM_NEWS
+    news_type ENUM('MATCH_HIGHLIGHT', 'PLAYER_CONFLICT', 'TRANSFER_RUMOR', 'TRANSFER_OFFICIAL', 'TEAM_NEWS', 'LEAGUE_NEWS') NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    -- 관련 엔티티
+    team_id INT NULL,
+    player_id INT NULL,
+    match_id INT NULL,
+    -- 이적 루머용
+    source_team_id INT NULL,
+    target_team_id INT NULL,
+    -- 루머 -> 오피셜 연결
+    rumor_id INT NULL,
+    -- 신뢰도 (루머용, 1-100)
+    credibility INT DEFAULT 50,
+    -- 공개 여부
+    is_published BOOLEAN DEFAULT TRUE,
+    -- 하이라이트 종류 (MVP, PENTAKILL, COMEBACK 등)
+    highlight_type VARCHAR(50) NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL,
+    FOREIGN KEY (player_id) REFERENCES pro_players(id) ON DELETE SET NULL,
+    FOREIGN KEY (source_team_id) REFERENCES teams(id) ON DELETE SET NULL,
+    FOREIGN KEY (target_team_id) REFERENCES teams(id) ON DELETE SET NULL,
+    INDEX idx_news_type (news_type),
+    INDEX idx_news_created (created_at DESC),
+    INDEX idx_news_team (team_id)
+);
+

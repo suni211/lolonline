@@ -30,6 +30,7 @@ import transferRoutes from './routes/transfer.js';
 import aiRoutes from './routes/ai.js';
 import scoutRoutes from './routes/scout.js';
 import cupRoutes from './routes/cup.js';
+import newsRoutes from './routes/news.js';
 import { initializeDatabase } from './database/init.js';
 import { ProPlayerService } from './services/proPlayerService.js';
 import { initializeSeasonSystem } from './services/seasonService.js';
@@ -80,6 +81,7 @@ app.use('/api/tactics', tacticsRoutes);
 // app.use('/api/packs', packsRoutes); // 카드깡 제거, 스카우트로 대체
 app.use('/api/transfer', transferRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/news', newsRoutes);
 app.use('/api/scout', scoutRoutes);
 app.use('/api/cup', cupRoutes);
 

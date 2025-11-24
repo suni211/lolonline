@@ -1,0 +1,301 @@
+.news-page {
+  padding: 1rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.news-page h1 {
+  margin-bottom: 1.5rem;
+  color: #e0e0e0;
+}
+
+.news-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.news-tabs button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #444;
+  background: #2a2a2a;
+  color: #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.news-tabs button:hover {
+  background: #3a3a3a;
+}
+
+.news-tabs button.active {
+  background: #4a90d9;
+  color: white;
+  border-color: #4a90d9;
+}
+
+.loading, .no-news {
+  text-align: center;
+  padding: 3rem;
+  color: #888;
+}
+
+.news-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.news-card {
+  background: #2a2a2a;
+  border-radius: 8px;
+  padding: 1rem;
+  border-left: 4px solid #444;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.news-card:hover {
+  background: #333;
+  transform: translateX(4px);
+}
+
+.news-card.highlight {
+  border-left-color: #f1c40f;
+}
+
+.news-card.conflict {
+  border-left-color: #e74c3c;
+}
+
+.news-card.rumor {
+  border-left-color: #9b59b6;
+}
+
+.news-card.official {
+  border-left-color: #27ae60;
+}
+
+.news-card.team {
+  border-left-color: #3498db;
+}
+
+.news-card.league {
+  border-left-color: #1abc9c;
+}
+
+.news-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.news-type {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  font-weight: bold;
+}
+
+.news-type.highlight {
+  background: rgba(241, 196, 15, 0.2);
+  color: #f1c40f;
+}
+
+.news-type.conflict {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+}
+
+.news-type.rumor {
+  background: rgba(155, 89, 182, 0.2);
+  color: #9b59b6;
+}
+
+.news-type.official {
+  background: rgba(39, 174, 96, 0.2);
+  color: #27ae60;
+}
+
+.news-type.team {
+  background: rgba(52, 152, 219, 0.2);
+  color: #3498db;
+}
+
+.news-type.league {
+  background: rgba(26, 188, 156, 0.2);
+  color: #1abc9c;
+}
+
+.news-date {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.news-title {
+  margin: 0;
+  font-size: 1rem;
+  color: #e0e0e0;
+  line-height: 1.4;
+}
+
+.credibility-bar {
+  margin-top: 0.5rem;
+  height: 6px;
+  background: #444;
+  border-radius: 3px;
+  position: relative;
+  overflow: hidden;
+}
+
+.credibility-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #9b59b6, #e74c3c);
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.credibility-text {
+  position: absolute;
+  right: 0;
+  top: -16px;
+  font-size: 0.65rem;
+  color: #888;
+}
+
+.news-meta {
+  margin-top: 0.5rem;
+}
+
+.team-tag {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  color: #aaa;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.pagination button {
+  padding: 0.5rem 1rem;
+  background: #3a3a3a;
+  border: none;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination span {
+  color: #888;
+}
+
+/* Modal */
+.news-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.news-modal {
+  background: #2a2a2a;
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 600px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.news-modal .close-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  line-height: 1;
+}
+
+.news-modal .close-btn:hover {
+  color: #fff;
+}
+
+.news-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.news-modal h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  color: #e0e0e0;
+  line-height: 1.4;
+}
+
+.news-modal .news-content {
+  color: #bbb;
+  line-height: 1.7;
+  margin: 0 0 1rem 0;
+}
+
+.news-modal .credibility-info,
+.news-modal .player-info {
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #aaa;
+  margin-top: 0.5rem;
+}
+
+.news-modal .credibility-info div {
+  margin-top: 0.25rem;
+}
+
+@media (max-width: 600px) {
+  .news-tabs {
+    gap: 0.25rem;
+  }
+
+  .news-tabs button {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .news-card {
+    padding: 0.75rem;
+  }
+
+  .news-title {
+    font-size: 0.9rem;
+  }
+}

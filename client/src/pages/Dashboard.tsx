@@ -45,6 +45,7 @@ export default function Dashboard() {
   const [recentMatches, setRecentMatches] = useState<any[]>([]);
   const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
   const [leagueInfo, setLeagueInfo] = useState<LeagueInfo | null>(null);
+  const [latestNews, setLatestNews] = useState<any[]>([]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -71,6 +72,14 @@ export default function Dashboard() {
         setLeagueInfo(leagueRes.data);
       } catch {
         // 리그에 참가하지 않은 경우
+      }
+
+      // 최신 뉴스
+      try {
+        const newsRes = await axios.get('/api/news/latest/summary');
+        setLatestNews(newsRes.data);
+      } catch {
+        // 뉴스 조회 실패
       }
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
@@ -203,6 +212,31 @@ export default function Dashboard() {
           ) : (
             <p className="empty-message">최근 경기 결과가 없습니다.</p>
           )}
+        </div>
+
+        {/* 최신 뉴스 */}
+        <div className="section news-section">
+          <h2>최신 뉴스</h2>
+          {latestNews.length > 0 ? (
+            <div className="news-list-mini">
+              {latestNews.map((news) => (
+                <div key={news.id} className="news-item-mini">
+                  <span className={`news-type-badge ${news.news_type.toLowerCase()}`}>
+                    {news.news_type === 'MATCH_HIGHLIGHT' && '경기'}
+                    {news.news_type === 'TRANSFER_RUMOR' && '루머'}
+                    {news.news_type === 'TRANSFER_OFFICIAL' && '오피셜'}
+                    {news.news_type === 'PLAYER_CONFLICT' && '이슈'}
+                    {news.news_type === 'TEAM_NEWS' && '팀'}
+                    {news.news_type === 'LEAGUE_NEWS' && '리그'}
+                  </span>
+                  <span className="news-title-mini">{news.title}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="empty-message">최신 뉴스가 없습니다.</p>
+          )}
+          <a href="/news" className="view-all-link">모든 뉴스 보기</a>
         </div>
       </div>
     </div>
