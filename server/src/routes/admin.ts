@@ -773,6 +773,18 @@ router.post('/ai-teams/generate-cards', authenticateToken, adminMiddleware, asyn
       return res.status(400).json({ error: 'AI 팀이 없습니다' });
     }
 
+    // ai_player_name, ai_position 컬럼이 없으면 추가
+    try {
+      await pool.query(`ALTER TABLE player_cards ADD COLUMN ai_player_name VARCHAR(100) NULL`);
+    } catch (e) {
+      // 이미 존재하면 무시
+    }
+    try {
+      await pool.query(`ALTER TABLE player_cards ADD COLUMN ai_position VARCHAR(20) NULL`);
+    } catch (e) {
+      // 이미 존재하면 무시
+    }
+
     // 기존 AI 팀 카드 삭제 (pro_player_id가 NULL인 가상 선수 또는 AI 팀 소속)
     await pool.query(
       `DELETE FROM player_cards WHERE team_id IN (SELECT id FROM teams WHERE is_ai = true)`
@@ -796,12 +808,10 @@ router.post('/ai-teams/generate-cards', authenticateToken, adminMiddleware, asyn
         const aiPlayerName = generateAIPlayerName();
 
         // 가상 선수 카드 생성 (pro_player_id = NULL)
-        // personality 컬럼에 이름과 포지션 저장 (임시)
-        const playerInfo = `${aiPlayerName}|${position}`;
         await pool.query(
-          `INSERT INTO player_cards (team_id, pro_player_id, mental, teamfight, focus, laning, ovr, card_type, is_contracted, is_starter, personality)
-           VALUES (?, NULL, ?, ?, ?, ?, ?, 'NORMAL', true, true, ?)`,
-          [aiTeam.id, mental, teamfight, focus, laning, ovr, playerInfo]
+          `INSERT INTO player_cards (team_id, pro_player_id, mental, teamfight, focus, laning, ovr, card_type, is_contracted, is_starter, ai_player_name, ai_position)
+           VALUES (?, NULL, ?, ?, ?, ?, ?, 'NORMAL', true, true, ?, ?)`,
+          [aiTeam.id, mental, teamfight, focus, laning, ovr, aiPlayerName, position]
         );
         totalCreated++;
       }

@@ -110,8 +110,8 @@ router.get('/:teamId/info', authenticateToken, async (req: AuthRequest, res) => 
     // 선수 목록
     const players = await pool.query(
       `SELECT pc.id,
-              COALESCE(pp.name, SUBSTRING_INDEX(pc.personality, '|', 1)) as player_name,
-              COALESCE(pp.position, SUBSTRING_INDEX(pc.personality, '|', -1)) as position,
+              COALESCE(pp.name, pc.ai_player_name) as player_name,
+              COALESCE(pp.position, pc.ai_position) as position,
               pc.ovr, pc.is_starter,
               pc.mental, pc.teamfight, pc.focus, pc.laning
        FROM player_cards pc
