@@ -603,24 +603,24 @@ async function generateEvents(
   // 이벤트 타입 선택 (킬 줄이고 포탑/오브젝트 중심)
   const eventPool: string[] = [];
 
-  // 시간대별 이벤트 (킬 적게, 포탑 많이)
-  if (gameMinutes < 10) {
-    // 초반: 킬 적음, 포탑 시작
-    eventPool.push('KILL', 'TURRET', 'NOTHING', 'NOTHING');
-  } else if (gameMinutes < 20) {
-    // 중반: 포탑 집중, 킬 적당
-    eventPool.push('KILL', 'TURRET', 'TURRET', 'INHIBITOR', 'NOTHING');
+  // 시간대별 이벤트
+  if (gameMinutes < 15) {
+    // 초반 (0~15분): 킬과 오브젝트 위주, 포탑은 거의 안터짐
+    eventPool.push('KILL', 'NOTHING', 'NOTHING');
+  } else if (gameMinutes < 25) {
+    // 중반 (15~25분): 포탑 집중, 킬 적당
+    eventPool.push('KILL', 'TURRET', 'TURRET', 'NOTHING');
   } else {
-    // 후반: 억제기/넥서스 집중
+    // 후반 (25분+): 억제기/넥서스 집중, 한타
     eventPool.push('KILL', 'TURRET', 'INHIBITOR', 'INHIBITOR', 'TEAMFIGHT');
   }
 
   // 오브젝트 이벤트
   if (gameMinutes >= 5 && matchData.dragon_alive) eventPool.push('DRAGON');
   if (gameMinutes >= 8 && matchData.herald_alive) eventPool.push('HERALD');
-  if (gameMinutes >= 10) eventPool.push('TURRET');
-  if (gameMinutes >= 15) eventPool.push('INHIBITOR');
-  if (gameMinutes >= 25 && matchData.baron_alive) eventPool.push('BARON');
+  if (gameMinutes >= 15) eventPool.push('TURRET'); // 포탑은 15분부터
+  if (gameMinutes >= 20) eventPool.push('INHIBITOR'); // 억제기는 20분부터
+  if (gameMinutes >= 20 && matchData.baron_alive) eventPool.push('BARON'); // 바론은 20분부터
   if (matchData.elder_available && matchData.dragon_alive) eventPool.push('ELDER_DRAGON');
 
   const eventType = eventPool[Math.floor(Math.random() * eventPool.length)];
