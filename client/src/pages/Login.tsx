@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 import './Login.css';
 
@@ -9,8 +10,27 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
-  const { login, register } = useAuth();
+  const { login, register, googleLogin } = useAuth();
   const navigate = useNavigate();
+
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    try {
+      if (credentialResponse.credential) {
+        const { needsTeam } = await googleLogin(credentialResponse.credential);
+        if (needsTeam) {
+          navigate('/create-team');
+        } else {
+          navigate('/dashboard');
+        }
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || '구글 로그인에 실패했습니다.');
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError('구글 로그인에 실패했습니다.');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +85,22 @@ export default function Login() {
             {isLogin ? '로그인' : '회원가입'}
           </button>
         </form>
+
+        <div className="divider">
+          <span>또는</span>
+        </div>
+
+        <div className="google-login-container">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            theme="filled_black"
+            size="large"
+            width="100%"
+            text={isLogin ? 'signin_with' : 'signup_with'}
+          />
+        </div>
+
         <button
           onClick={() => {
             setIsLogin(!isLogin);

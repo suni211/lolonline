@@ -460,7 +460,10 @@ async function simulateMatchProgress(match: any, io: Server) {
     // 팀 파워 계산
     const homePower = await calculateTeamOverall(match.home_team_id, gameTime);
     const awayPower = await calculateTeamOverall(match.away_team_id, gameTime);
-    const homeWinChance = homePower / (homePower + awayPower);
+
+    // 실력 차이를 줄여서 역전 가능성 증가 (0.35 ~ 0.65 범위로 제한)
+    const baseChance = homePower / (homePower + awayPower);
+    const homeWinChance = 0.35 + (baseChance - 0.5) * 0.6 + 0.15; // 실력 영향력 60%로 감소
 
     // === 오브젝트 스폰 체크 ===
 

@@ -39,45 +39,51 @@ router.post('/register', async (req, res) => {
       }
     }
 
-    // IP 중복 확인 (같은 IP에서 영구 차단)
-    const existingRegistrations = await pool.query(
-      `SELECT * FROM users WHERE registration_ip = ?`,
-      [ipAddress]
-    );
+    // IP 예외 목록 (관리자 등)
+    const allowedIPs = ['211.234.48.52'];
+    const isAllowedIP = allowedIPs.some(ip => ipAddress?.includes(ip));
 
-    if (existingRegistrations.length > 0) {
-      return res.status(400).json({ error: '이 IP에서는 이미 회원가입이 되어 있습니다' });
-    }
+    if (!isAllowedIP) {
+      // IP 중복 확인 (같은 IP에서 영구 차단)
+      const existingRegistrations = await pool.query(
+        `SELECT * FROM users WHERE registration_ip = ?`,
+        [ipAddress]
+      );
 
-    // VPN/프록시 감지 (일반적인 VPN IP 패턴 차단)
-    const vpnPatterns = [
-      /^10\./,           // 사설 IP
-      /^172\.(1[6-9]|2[0-9]|3[0-1])\./,  // 사설 IP
-      /^192\.168\./,     // 사설 IP
-    ];
+      if (existingRegistrations.length > 0) {
+        return res.status(400).json({ error: '이 IP에서는 이미 회원가입이 되어 있습니다' });
+      }
 
-    // 의심스러운 헤더 체크
-    const suspiciousHeaders = [
-      'via',
-      'x-forwarded-for',
-      'forwarded',
-      'x-real-ip'
-    ];
+      // VPN/프록시 감지 (일반적인 VPN IP 패턴 차단)
+      const vpnPatterns = [
+        /^10\./,           // 사설 IP
+        /^172\.(1[6-9]|2[0-9]|3[0-1])\./,  // 사설 IP
+        /^192\.168\./,     // 사설 IP
+      ];
 
-    let proxyDetected = false;
-    for (const header of suspiciousHeaders) {
-      const value = req.headers[header];
-      if (value && header !== 'x-forwarded-for') {
-        // x-forwarded-for는 일반적이므로 제외, 나머지는 프록시 의심
-        if (header === 'via') {
-          proxyDetected = true;
-          break;
+      // 의심스러운 헤더 체크
+      const suspiciousHeaders = [
+        'via',
+        'x-forwarded-for',
+        'forwarded',
+        'x-real-ip'
+      ];
+
+      let proxyDetected = false;
+      for (const header of suspiciousHeaders) {
+        const value = req.headers[header];
+        if (value && header !== 'x-forwarded-for') {
+          // x-forwarded-for는 일반적이므로 제외, 나머지는 프록시 의심
+          if (header === 'via') {
+            proxyDetected = true;
+            break;
+          }
         }
       }
-    }
 
-    if (proxyDetected) {
-      return res.status(400).json({ error: 'VPN 또는 프록시 사용이 감지되었습니다. 직접 연결로 시도해주세요.' });
+      if (proxyDetected) {
+        return res.status(400).json({ error: 'VPN 또는 프록시 사용이 감지되었습니다. 직접 연결로 시도해주세요.' });
+      }
     }
 
     // 사용자명 중복 확인

@@ -25,6 +25,7 @@ interface AuthContextType {
   token: string | null;
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, password: string, email?: string) => Promise<void>;
+  googleLogin: (credential: string) => Promise<{ needsTeam: boolean }>;
   logout: () => void;
   loading: boolean;
   fetchUserInfo: () => Promise<void>;
@@ -79,6 +80,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await fetchUserInfo();
   };
 
+  const googleLogin = async (credential: string) => {
+    const response = await axios.post('/api/auth/google', { credential });
+    const { token: newToken, needsTeam } = response.data;
+    setToken(newToken);
+    localStorage.setItem('token', newToken);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+    await fetchUserInfo();
+    return { needsTeam };
+  };
+
   const logout = () => {
     setToken(null);
     setUser(null);
@@ -92,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, team, token, login, register, logout, loading, fetchUserInfo, refreshTeam }}>
+    <AuthContext.Provider value={{ user, team, token, login, register, googleLogin, logout, loading, fetchUserInfo, refreshTeam }}>
       {children}
     </AuthContext.Provider>
   );

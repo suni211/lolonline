@@ -484,80 +484,71 @@ export default function LiveMatch() {
           description: 'TEAM FIGHT!'
         };
 
-        // 한타 킬 처리 - 차례대로 죽음
+        // 한타 킬 처리 - 즉시 처리하되 누가 죽었는지 명확히
         const winnerKills = event.data?.winner_kills || 2;
         const loserKills = event.data?.loser_kills || 0;
         const winningTeam = event.data?.team === 'home' ? 'blue' : 'red';
         const losingTeam = winningTeam === 'blue' ? 'red' : 'blue';
 
-        // 지는 팀 선수들 중 랜덤으로 킬 수만큼 죽음 (1초 간격)
-        const losingChamps = champions.filter(c => c.team === losingTeam && c.isAlive);
+        // 지는 팀 선수들 중 랜덤으로 킬 수만큼 죽음
+        const losingChamps = [...champions.filter(c => c.team === losingTeam && c.isAlive)];
+        const deadVictims: string[] = [];
+        const victimIds: number[] = [];
+
         for (let i = 0; i < Math.min(winnerKills, losingChamps.length); i++) {
           const victimIdx = Math.floor(Math.random() * losingChamps.length);
           const victim = losingChamps.splice(victimIdx, 1)[0];
-
-          setTimeout(() => {
-            // 킬 이벤트 추가
-            setEvents(prev => [...prev.slice(-50), {
-              type: 'KILL',
-              time: gameTime + i,
-              description: `${victim.playerName}(이)가 처치당했습니다!`,
-              data: { victim_id: victim.playerId, victim_name: victim.playerName }
-            }]);
-
-            // 죽음 처리
-            setChampions(prev => prev.map(champ =>
-              champ.playerId === victim.playerId
-                ? { ...champ, isAlive: false }
-                : champ
-            ));
-
-            // 부활 처리
-            const gameMinutes = gameTime / 60;
-            const estimatedLevel = Math.min(18, Math.floor(1 + gameMinutes * 0.6));
-            const respawnTime = 6 + (estimatedLevel - 1) * (54 / 17);
-            setTimeout(() => {
-              setChampions(prev => prev.map(champ =>
-                champ.playerId === victim.playerId
-                  ? { ...champ, isAlive: true }
-                  : champ
-              ));
-            }, respawnTime * 1000);
-          }, i * 1500); // 1.5초 간격으로 킬
+          deadVictims.push(victim.playerName);
+          victimIds.push(victim.playerId);
         }
 
         // 이기는 팀도 킬 당함
-        const winningChamps = champions.filter(c => c.team === winningTeam && c.isAlive);
+        const winningChamps = [...champions.filter(c => c.team === winningTeam && c.isAlive)];
+        const deadWinners: string[] = [];
+
         for (let i = 0; i < Math.min(loserKills, winningChamps.length); i++) {
           const victimIdx = Math.floor(Math.random() * winningChamps.length);
           const victim = winningChamps.splice(victimIdx, 1)[0];
-
-          setTimeout(() => {
-            setEvents(prev => [...prev.slice(-50), {
-              type: 'KILL',
-              time: gameTime + i + winnerKills,
-              description: `${victim.playerName}(이)가 처치당했습니다!`,
-              data: { victim_id: victim.playerId, victim_name: victim.playerName }
-            }]);
-
-            setChampions(prev => prev.map(champ =>
-              champ.playerId === victim.playerId
-                ? { ...champ, isAlive: false }
-                : champ
-            ));
-
-            const gameMinutes = gameTime / 60;
-            const estimatedLevel = Math.min(18, Math.floor(1 + gameMinutes * 0.6));
-            const respawnTime = 6 + (estimatedLevel - 1) * (54 / 17);
-            setTimeout(() => {
-              setChampions(prev => prev.map(champ =>
-                champ.playerId === victim.playerId
-                  ? { ...champ, isAlive: true }
-                  : champ
-              ));
-            }, respawnTime * 1000);
-          }, (i + winnerKills) * 1500);
+          deadWinners.push(victim.playerName);
+          victimIds.push(victim.playerId);
         }
+
+        // 킬 로그 추가 (누가 죽었는지 명확히)
+        if (deadVictims.length > 0) {
+          setEvents(prev => [...prev.slice(-50), {
+            type: 'KILL',
+            time: gameTime,
+            description: `${losingTeam === 'blue' ? '블루' : '레드'}팀 ${deadVictims.join(', ')} 처치!`,
+            data: { victims: deadVictims }
+          }]);
+        }
+        if (deadWinners.length > 0) {
+          setEvents(prev => [...prev.slice(-50), {
+            type: 'KILL',
+            time: gameTime,
+            description: `${winningTeam === 'blue' ? '블루' : '레드'}팀 ${deadWinners.join(', ')} 처치!`,
+            data: { victims: deadWinners }
+          }]);
+        }
+
+        // 모든 희생자 즉시 죽음 처리
+        setChampions(prev => prev.map(champ =>
+          victimIds.includes(champ.playerId)
+            ? { ...champ, isAlive: false }
+            : champ
+        ));
+
+        // 부활 처리
+        const gameMinutes = gameTime / 60;
+        const estimatedLevel = Math.min(18, Math.floor(1 + gameMinutes * 0.6));
+        const respawnTime = 6 + (estimatedLevel - 1) * (54 / 17);
+        setTimeout(() => {
+          setChampions(prev => prev.map(champ =>
+            victimIds.includes(champ.playerId)
+              ? { ...champ, isAlive: true }
+              : champ
+          ));
+        }, respawnTime * 1000);
 
         duration = 45000;
         break;
