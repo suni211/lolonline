@@ -268,31 +268,31 @@ router.get('/leagues', authenticateToken, adminMiddleware, async (req: AuthReque
   }
 });
 
-// 새 시즌 리그 생성 (EAST, WEST) + 자동 스케줄 생성
+// 새 시즌 리그 생성 (SOUTH, NORTH) + 자동 스케줄 생성
 router.post('/leagues/create-season', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
   try {
-    const { season, eastName, westName } = req.body;
+    const { season, southName, northName } = req.body;
 
     // 기존 활성 리그 비활성화
     await pool.query(`UPDATE leagues SET status = 'FINISHED' WHERE status = 'ACTIVE'`);
 
-    // EAST 리그 생성
-    const eastResult = await pool.query(
-      `INSERT INTO leagues (name, season, region, status) VALUES (?, ?, 'EAST', 'UPCOMING')`,
-      [eastName || `EAST League S${season}`, season]
+    // SOUTH 리그 생성
+    const southResult = await pool.query(
+      `INSERT INTO leagues (name, season, region, status) VALUES (?, ?, 'SOUTH', 'UPCOMING')`,
+      [southName || `LPO SOUTH S${season}`, season]
     );
 
-    // WEST 리그 생성
-    const westResult = await pool.query(
-      `INSERT INTO leagues (name, season, region, status) VALUES (?, ?, 'WEST', 'UPCOMING')`,
-      [westName || `WEST League S${season}`, season]
+    // NORTH 리그 생성
+    const northResult = await pool.query(
+      `INSERT INTO leagues (name, season, region, status) VALUES (?, ?, 'NORTH', 'UPCOMING')`,
+      [northName || `LPO NORTH S${season}`, season]
     );
 
     res.json({
       success: true,
       message: `시즌 ${season} 리그가 생성되었습니다`,
-      east_league_id: eastResult.insertId,
-      west_league_id: westResult.insertId
+      south_league_id: southResult.insertId,
+      north_league_id: northResult.insertId
     });
   } catch (error) {
     console.error('Create season error:', error);
@@ -433,33 +433,33 @@ router.post('/worlds/create', authenticateToken, adminMiddleware, async (req: Au
   try {
     const { season_number } = req.body;
 
-    // EAST 상위 4팀
-    const eastTeams = await pool.query(
+    // SOUTH 상위 4팀
+    const southTeams = await pool.query(
       `SELECT ls.team_id, t.name as team_name
        FROM league_standings ls
        JOIN leagues l ON ls.league_id = l.id
        JOIN teams t ON ls.team_id = t.id
-       WHERE l.region = 'EAST' AND l.status = 'ACTIVE'
+       WHERE l.region = 'SOUTH' AND l.status = 'ACTIVE'
        ORDER BY ls.points DESC, ls.wins DESC
        LIMIT 4`
     );
 
-    // WEST 상위 4팀
-    const westTeams = await pool.query(
+    // NORTH 상위 4팀
+    const northTeams = await pool.query(
       `SELECT ls.team_id, t.name as team_name
        FROM league_standings ls
        JOIN leagues l ON ls.league_id = l.id
        JOIN teams t ON ls.team_id = t.id
-       WHERE l.region = 'WEST' AND l.status = 'ACTIVE'
+       WHERE l.region = 'NORTH' AND l.status = 'ACTIVE'
        ORDER BY ls.points DESC, ls.wins DESC
        LIMIT 4`
     );
 
-    if (eastTeams.length < 4 || westTeams.length < 4) {
+    if (southTeams.length < 4 || northTeams.length < 4) {
       return res.status(400).json({
         error: '각 리그에 최소 4팀이 필요합니다',
-        east_count: eastTeams.length,
-        west_count: westTeams.length
+        south_count: southTeams.length,
+        north_count: northTeams.length
       });
     }
 
@@ -471,12 +471,12 @@ router.post('/worlds/create', authenticateToken, adminMiddleware, async (req: Au
 
     const tournamentId = worldsResult.insertId;
 
-    // 8강 매치 생성 (크로스 매치: EAST 1위 vs WEST 4위 등)
+    // 8강 매치 생성 (크로스 매치: SOUTH 1위 vs NORTH 4위 등)
     const matches = [
-      { home: eastTeams[0].team_id, away: westTeams[3].team_id, round: 'QUARTER' },
-      { home: westTeams[0].team_id, away: eastTeams[3].team_id, round: 'QUARTER' },
-      { home: eastTeams[1].team_id, away: westTeams[2].team_id, round: 'QUARTER' },
-      { home: westTeams[1].team_id, away: eastTeams[2].team_id, round: 'QUARTER' },
+      { home: southTeams[0].team_id, away: northTeams[3].team_id, round: 'QUARTER' },
+      { home: northTeams[0].team_id, away: southTeams[3].team_id, round: 'QUARTER' },
+      { home: southTeams[1].team_id, away: northTeams[2].team_id, round: 'QUARTER' },
+      { home: northTeams[1].team_id, away: southTeams[2].team_id, round: 'QUARTER' },
     ];
 
     for (const match of matches) {

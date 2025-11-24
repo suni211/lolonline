@@ -18,7 +18,6 @@ import Training from './pages/Training';
 import Admin from './pages/Admin';
 import MatchViewer from './pages/MatchViewer';
 import Tactics from './pages/Tactics';
-import Cards from './pages/Cards';
 import Transfer from './pages/Transfer';
 import News from './pages/News';
 import FriendlyMatch from './pages/FriendlyMatch';
@@ -78,7 +77,6 @@ function App() {
             <Route path="match/:matchId" element={<MatchViewer />} />
             <Route path="live/:matchId" element={<LiveMatch />} />
             <Route path="tactics" element={<Tactics />} />
-            <Route path="cards" element={<Cards />} />
             <Route path="transfer" element={<Transfer />} />
             <Route path="news" element={<News />} />
             <Route path="friendly" element={<FriendlyMatch />} />

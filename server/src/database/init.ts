@@ -722,54 +722,54 @@ async function createIndexesIfNotExists() {
 
 async function createInitialLeagues() {
   try {
-    // EAST 리그 확인 및 생성
-    const eastLeague = await pool.query(
+    // SOUTH 리그 확인 및 생성
+    const southLeague = await pool.query(
       'SELECT * FROM leagues WHERE region = ? AND season = 1',
-      ['EAST']
+      ['SOUTH']
     );
-    
-    if (eastLeague.length === 0) {
+
+    if (southLeague.length === 0) {
       await pool.query(
-        `INSERT INTO leagues (name, region, season, current_month, is_offseason, status) 
+        `INSERT INTO leagues (name, region, season, current_month, is_offseason, status)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        ['EAST LEAGUE', 'EAST', 1, 1, false, 'REGULAR']
+        ['LPO SOUTH', 'SOUTH', 1, 1, false, 'REGULAR']
       );
     }
-    
-    // WEST 리그 확인 및 생성
-    const westLeague = await pool.query(
+
+    // NORTH 리그 확인 및 생성
+    const northLeague = await pool.query(
       'SELECT * FROM leagues WHERE region = ? AND season = 1',
-      ['WEST']
+      ['NORTH']
     );
-    
-    if (westLeague.length === 0) {
-      const westResult = await pool.query(
-        `INSERT INTO leagues (name, region, season, current_month, is_offseason, status) 
+
+    if (northLeague.length === 0) {
+      const northResult = await pool.query(
+        `INSERT INTO leagues (name, region, season, current_month, is_offseason, status)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        ['WEST LEAGUE', 'WEST', 1, 1, false, 'REGULAR']
+        ['LPO NORTH', 'NORTH', 1, 1, false, 'REGULAR']
       );
-      
+
       // 참가 팀이 있으면 경기 일정 생성
-      const westParticipants = await pool.query(
+      const northParticipants = await pool.query(
         'SELECT COUNT(*) as count FROM league_participants WHERE league_id = ?',
-        [westResult.insertId]
+        [northResult.insertId]
       );
-      if (westParticipants[0].count >= 2) {
-        await generateRegularSeasonMatches(westResult.insertId);
+      if (northParticipants[0].count >= 2) {
+        await generateRegularSeasonMatches(northResult.insertId);
       }
     }
 
-    // EAST 리그도 경기 일정 생성
-    if (eastLeague.length > 0) {
-      const eastParticipants = await pool.query(
+    // SOUTH 리그도 경기 일정 생성
+    if (southLeague.length > 0) {
+      const southParticipants = await pool.query(
         'SELECT COUNT(*) as count FROM league_participants WHERE league_id = ?',
-        [eastLeague[0].id]
+        [southLeague[0].id]
       );
-      if (eastParticipants[0].count >= 2) {
-        await generateRegularSeasonMatches(eastLeague[0].id);
+      if (southParticipants[0].count >= 2) {
+        await generateRegularSeasonMatches(southLeague[0].id);
       }
     }
-    
+
     console.log('Initial leagues created');
   } catch (error) {
     console.error('Error creating initial leagues:', error);

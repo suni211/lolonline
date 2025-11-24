@@ -34,7 +34,6 @@ export default function Layout() {
   const navItems = [
     { path: '/dashboard', label: '대시보드' },
     { path: '/players', label: '선수 관리' },
-    { path: '/cards', label: '선수 카드' },
     { path: '/second-team', label: '2군' },
     { path: '/training', label: '훈련' },
     { path: '/mental', label: '멘탈/케미' },
