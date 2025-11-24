@@ -157,9 +157,9 @@
   margin-bottom: 0.25rem;
   text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
   position: relative;
+  text-align: center;
   z-index: 1;
   animation: pulse 2s ease-in-out infinite;
-  text-align: center;
 }
 
 .stat-label {
@@ -214,6 +214,7 @@
   font-size: 1.25rem;
   margin-bottom: 1rem;
   color: var(--white);
+  text-align: center;
 }
 
 .match-list {
