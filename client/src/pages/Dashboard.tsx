@@ -78,7 +78,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="dashboard">
+    <div className="dashboard page-wrapper">
       <div className="dashboard-header">
         <h1 className="page-title">대시보드</h1>
       </div>
@@ -120,26 +120,26 @@ export default function Dashboard() {
 
       {team && (
         <div className="stats-grid">
-          <div className="stat-card card-enter">
+          <div className="stat-card card-enter hover-card">
             <h3>팀 정보</h3>
             <p className="stat-value">{team.name}</p>
             <p className="stat-label">{team.league} LEAGUE</p>
           </div>
-          <div className="stat-card card-enter-delay-1">
+          <div className="stat-card card-enter-delay-1 hover-card">
             <h3>보유 자금</h3>
             <p className="stat-value">{team.gold.toLocaleString()}원</p>
           </div>
-          <div className="stat-card card-enter-delay-2">
+          <div className="stat-card card-enter-delay-2 hover-card">
             <h3>에너지</h3>
             <p className="stat-value">{team.diamond}</p>
           </div>
           {teamStats && (
             <>
-              <div className="stat-card card-enter-delay-3">
+              <div className="stat-card card-enter-delay-3 hover-card">
                 <h3>보유 선수</h3>
                 <p className="stat-value">{teamStats.player_count} / 10</p>
               </div>
-              <div className="stat-card card-enter-delay-1">
+              <div className="stat-card card-enter-delay-1 hover-card">
                 <h3>스타터</h3>
                 <p className="stat-value">{teamStats.starter_count} / 5</p>
               </div>

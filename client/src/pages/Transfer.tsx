@@ -203,7 +203,7 @@ export default function Transfer() {
   };
 
   return (
-    <div className="transfer-page">
+    <div className="transfer-page page-wrapper">
       <h1 className="page-title">이적시장</h1>
 
       <div className="transfer-tabs">

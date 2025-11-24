@@ -72,7 +72,7 @@ export default function Players() {
   });
 
   return (
-    <div className="players-page">
+    <div className="players-page page-wrapper">
       <div className="page-header">
         <h1 className="page-title">선수 관리</h1>
         <p className="page-subtitle">선수 카드에서 새로운 선수를 획득하세요</p>
@@ -101,10 +101,11 @@ export default function Players() {
       </div>
 
       <div className="players-grid">
-        {filteredPlayers.map((player) => (
+        {filteredPlayers.map((player, index) => (
           <div
             key={player.id}
-            className={`player-card ${player.is_starter ? 'starter' : ''}`}
+            className={`player-card hover-card list-item-animate ${player.is_starter ? 'starter' : ''}`}
+            style={{ animationDelay: `${Math.min(index * 0.05, 0.5)}s` }}
             onClick={() => setSelectedPlayer(player)}
           >
             <div className="player-header">

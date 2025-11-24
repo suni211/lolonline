@@ -199,7 +199,7 @@ export default function Matches() {
   };
 
   return (
-    <div className="matches-page">
+    <div className="matches-page page-wrapper">
       <h1 className="page-title">경기</h1>
 
       <div className="match-filters">

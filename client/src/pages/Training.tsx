@@ -98,7 +98,7 @@ export default function Training() {
   const starterCards = contractedCards.filter(c => c.is_starter);
 
   return (
-    <div className="training-page">
+    <div className="training-page page-wrapper">
       <h1 className="page-title">훈련 시스템</h1>
 
       <div className="training-sections">

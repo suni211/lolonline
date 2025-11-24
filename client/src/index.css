@@ -198,3 +198,259 @@ code {
   animation: fadeIn 0.5s ease-out 0.3s both;
 }
 
+/* 호버 효과 - 카드 */
+.hover-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+}
+
+.hover-card:active {
+  transform: translateY(-2px);
+}
+
+/* 호버 효과 - 버튼 강화 */
+.hover-btn {
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.hover-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.hover-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+}
+
+/* 호버 효과 - 글로우 */
+.hover-glow:hover {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+}
+
+/* 로딩 스피너 */
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(59, 130, 246, 0.2);
+  border-top-color: var(--light-blue);
+  border-radius: 50%;
+  animation: rotate 0.8s linear infinite;
+}
+
+.spinner-small {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}
+
+.spinner-large {
+  width: 60px;
+  height: 60px;
+  border-width: 4px;
+}
+
+/* 스켈레톤 로딩 */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 75%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite linear;
+  border-radius: 4px;
+}
+
+.skeleton-text {
+  height: 14px;
+  margin-bottom: 8px;
+}
+
+.skeleton-title {
+  height: 24px;
+  width: 60%;
+  margin-bottom: 12px;
+}
+
+.skeleton-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+}
+
+.skeleton-card {
+  height: 120px;
+  border-radius: 8px;
+}
+
+/* 페이지 래퍼 애니메이션 */
+.page-wrapper {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* 리스트 아이템 순차 애니메이션 */
+.list-item-animate {
+  animation: slideIn 0.4s ease-out both;
+}
+
+.list-item-animate:nth-child(1) { animation-delay: 0.05s; }
+.list-item-animate:nth-child(2) { animation-delay: 0.1s; }
+.list-item-animate:nth-child(3) { animation-delay: 0.15s; }
+.list-item-animate:nth-child(4) { animation-delay: 0.2s; }
+.list-item-animate:nth-child(5) { animation-delay: 0.25s; }
+.list-item-animate:nth-child(6) { animation-delay: 0.3s; }
+.list-item-animate:nth-child(7) { animation-delay: 0.35s; }
+.list-item-animate:nth-child(8) { animation-delay: 0.4s; }
+.list-item-animate:nth-child(9) { animation-delay: 0.45s; }
+.list-item-animate:nth-child(10) { animation-delay: 0.5s; }
+
+/* 성공/에러 메시지 애니메이션 */
+.message-animate {
+  animation: scaleIn 0.3s ease-out;
+}
+
+/* 모달 애니메이션 */
+.modal-overlay {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content {
+  animation: scaleIn 0.3s ease-out;
+}
+
+/* 숫자 증가 애니메이션 효과용 */
+.number-animate {
+  transition: all 0.3s ease-out;
+}
+
+/* 프로그레스 바 애니메이션 */
+.progress-bar {
+  transition: width 0.6s ease-out;
+}
+
+.progress-bar-animate {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* 아이콘 회전 */
+.icon-spin {
+  animation: rotate 1s linear infinite;
+}
+
+/* 바운스 효과 */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.bounce {
+  animation: bounce 0.5s ease;
+}
+
+/* 쉐이크 효과 (에러용) */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.shake {
+  animation: shake 0.5s ease;
+}
+
+/* 펄스 글로우 (알림용) */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+}
+
+.pulse-glow {
+  animation: pulseGlow 2s infinite;
+}
+
+/* 툴팁 애니메이션 */
+.tooltip-animate {
+  animation: fadeIn 0.15s ease-out;
+}
+
+/* 드롭다운 애니메이션 */
+@keyframes dropDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scaleY(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+.dropdown-animate {
+  animation: dropDown 0.2s ease-out;
+  transform-origin: top;
+}
+
+/* 탭 전환 애니메이션 */
+.tab-content-enter {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* 뱃지 팝 효과 */
+@keyframes pop {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.badge-pop {
+  animation: pop 0.3s ease-out;
+}
+
+/* 카운트다운/타이머 펄스 */
+.timer-pulse {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+/* 승리/패배 효과 */
+@keyframes victoryGlow {
+  0%, 100% {
+    text-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
+  }
+  50% {
+    text-shadow: 0 0 30px rgba(46, 204, 113, 0.8), 0 0 50px rgba(46, 204, 113, 0.5);
+  }
+}
+
+.victory-text {
+  animation: victoryGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes defeatPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.defeat-text {
+  animation: defeatPulse 1.5s ease-in-out infinite;
+}
+

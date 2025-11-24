@@ -121,7 +121,7 @@ export default function Facilities() {
   const stadiumCapacity = getStadiumCapacity(stadiumLevel);
 
   return (
-    <div className="facilities-page">
+    <div className="facilities-page page-wrapper">
       <div className="page-header">
         <h1 className="page-title">구단 경영</h1>
       </div>

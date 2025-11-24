@@ -254,7 +254,7 @@ export default function Scout() {
   };
 
   return (
-    <div className="scout-page">
+    <div className="scout-page page-wrapper">
       <h1 className="page-title">스카우트</h1>
 
       {result && (
@@ -302,8 +302,8 @@ export default function Scout() {
             <p className="no-scouters">보유한 스카우터가 없습니다</p>
           ) : (
             <div className="scouters-list">
-              {scouters.map(scouter => (
-                <div key={scouter.id} className="scouter-card">
+              {scouters.map((scouter, index) => (
+                <div key={scouter.id} className="scouter-card hover-card list-item-animate" style={{ animationDelay: `${index * 0.1}s` }}>
                   <div className="scouter-header">
                     <span className="scouter-name">{scouter.name}</span>
                     <span className={`star-rating star-${scouter.star_rating}`}>
@@ -349,8 +349,8 @@ export default function Scout() {
             <p className="no-discoveries">발굴된 선수가 없습니다. 스카우터를 통해 선수를 발굴하세요.</p>
           ) : (
             <div className="discoveries-list">
-              {discoveries.map(discovery => (
-                <div key={discovery.id} className="discovery-card">
+              {discoveries.map((discovery, index) => (
+                <div key={discovery.id} className="discovery-card hover-card list-item-animate" style={{ animationDelay: `${index * 0.1}s` }}>
                   <div className="player-header">
                     {discovery.face_image ? (
                       <img src={discovery.face_image} alt={discovery.name} className="player-face" />

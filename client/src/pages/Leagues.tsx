@@ -135,7 +135,7 @@ export default function Leagues() {
   };
 
   return (
-    <div className="leagues-page">
+    <div className="leagues-page page-wrapper">
       <h1 className="page-title">LPO LEAGUE</h1>
 
       <div className="tier-selector">
