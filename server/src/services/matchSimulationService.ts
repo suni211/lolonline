@@ -1037,6 +1037,56 @@ async function generateEvents(
           });
         }
       }
+
+      // 한타 승리 후 오브젝트 획득 (장로 > 바론 > 용 > 포탑)
+      if (matchData.elder_available && matchData.dragon_alive) {
+        // 장로용 획득
+        winningState.gold += 500;
+        matchData.dragon_alive = false;
+        matchData.dragon_respawn_at = gameTime + GAME_CONSTANTS.DRAGON_RESPAWN;
+        matchData.elder_buff_team = winningTeam;
+        matchData.elder_buff_until = gameTime + 180;
+      } else if (gameMinutes >= 20 && matchData.baron_alive) {
+        // 바론 획득
+        winningState.barons++;
+        winningState.gold += 1500;
+        matchData.baron_alive = false;
+        matchData.baron_respawn_at = gameTime + GAME_CONSTANTS.BARON_RESPAWN;
+        matchData.baron_buff_team = winningTeam;
+        matchData.baron_buff_until = gameTime + 180;
+      } else if (matchData.dragon_alive) {
+        // 용 획득
+        const dragonTypes = ['불', '바다', '바람', '대지', '마법공학', '화학공학'];
+        const dragonType = dragonTypes[Math.floor(Math.random() * dragonTypes.length)];
+        winningState.dragons.push(dragonType);
+        winningState.gold += 200;
+        matchData.dragon_alive = false;
+        matchData.dragon_respawn_at = gameTime + GAME_CONSTANTS.DRAGON_RESPAWN;
+        if (winningState.dragons.length === 4) {
+          matchData.elder_available = true;
+        }
+      } else {
+        // 포탑 1-3개 파괴
+        const turretsToDestroy = 1 + Math.floor(Math.random() * 3);
+        for (let t = 0; t < turretsToDestroy; t++) {
+          const tfLanes = ['top', 'mid', 'bot'] as const;
+          const tfLane = tfLanes[Math.floor(Math.random() * tfLanes.length)];
+          const tfTurrets = losingState.turrets[tfLane];
+          if (tfTurrets.t1) {
+            tfTurrets.t1 = false;
+            winningState.gold += 250;
+          } else if (tfTurrets.t2) {
+            tfTurrets.t2 = false;
+            winningState.gold += 250;
+          } else if (tfTurrets.t3) {
+            tfTurrets.t3 = false;
+            winningState.gold += 250;
+          } else if (tfTurrets.inhib) {
+            tfTurrets.inhib = false;
+            winningState.gold += 50;
+          }
+        }
+      }
       break;
 
     case 'GANK':
@@ -1123,38 +1173,34 @@ async function updatePlayerStatsLOL(matchId: number, homePlayers: any[], awayPla
     // 포지션별 CS 증가율 (분당)
     // 30분 기준: ADC 280-320, MID 250-290, TOP 230-270, JG 180-220, SUP 20-35
     let csPerMin: number;
-    let goldPerMin: number;
 
     switch (position) {
       case 'ADC':
         csPerMin = 9 + Math.random() * 1.5;  // 9-10.5/분
-        goldPerMin = 400 + Math.random() * 100;
         break;
       case 'MID':
         csPerMin = 8 + Math.random() * 1.5;  // 8-9.5/분
-        goldPerMin = 380 + Math.random() * 100;
         break;
       case 'TOP':
         csPerMin = 7.5 + Math.random() * 1.5;  // 7.5-9/분
-        goldPerMin = 360 + Math.random() * 100;
         break;
       case 'JUNGLE':
         csPerMin = 6 + Math.random() * 1.5;  // 6-7.5/분 (캠프)
-        goldPerMin = 340 + Math.random() * 100;
         break;
       case 'SUPPORT':
         // 서폿은 낮은 CS (게임 끝나면 10-50 CS)
         csPerMin = 0.4 + Math.random() * 1.2;  // 0.4-1.6/분 (30분=12-48 CS)
-        goldPerMin = 200 + Math.random() * 50;
         break;
       default:
         csPerMin = 7 + Math.random() * 2;
-        goldPerMin = 350 + Math.random() * 100;
     }
 
     // 6초마다 호출되므로 분당 값 / 10
     const csIncrease = Math.floor(csPerMin / 10 + Math.random() * 0.5);
-    const goldIncrease = Math.floor(goldPerMin / 10);
+    // 골드는 CS당 20-25골드 + 서폿은 추가 패시브 골드
+    const goldPerCs = 20 + Math.random() * 5;
+    const passiveGold = position === 'SUPPORT' ? 15 : 5; // 서폿은 패시브 골드 더 많음
+    const goldIncrease = Math.floor(csIncrease * goldPerCs + passiveGold);
 
     // 딜량 (경기 끝날 때 2만~6만, 서포터는 1만 이하)
     // 30분 경기 기준 분당 ~1500-2000 딜
