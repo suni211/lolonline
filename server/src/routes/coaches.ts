@@ -37,11 +37,22 @@ router.get('/effects', authenticateToken, async (req: any, res) => {
   }
 });
 
+// 코치 협상
+router.post('/negotiate', authenticateToken, async (req: any, res) => {
+  try {
+    const { coachId, offeredSalary, contractMonths } = req.body;
+    const result = await CoachService.negotiateCoach(req.teamId, coachId, offeredSalary, contractMonths);
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // 코치 고용
 router.post('/hire', authenticateToken, async (req: any, res) => {
   try {
-    const { coachId, contractMonths } = req.body;
-    const result = await CoachService.hireCoach(req.teamId, coachId, contractMonths);
+    const { coachId, contractMonths, negotiatedSalary } = req.body;
+    const result = await CoachService.hireCoach(req.teamId, coachId, contractMonths, negotiatedSalary);
     res.json(result);
   } catch (error: any) {
     res.status(400).json({ error: error.message });

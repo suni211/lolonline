@@ -39,8 +39,8 @@ export class CoachService {
     }
   }
 
-  // 코치 고용
-  static async hireCoach(teamId: number, coachId: number, contractMonths: number = 12) {
+  // 코치 협상
+  static async negotiateCoach(teamId: number, coachId: number, offeredSalary: number, contractMonths: number = 12) {
     try {
       // 코치 정보 확인
       const coaches = await pool.query(
@@ -53,6 +53,104 @@ export class CoachService {
       }
 
       const coach = coaches[0];
+      const expectedSalary = coach.salary;
+
+      // 협상 성공 확률 계산
+      // 제안 급여가 기대 급여의 몇 %인지 계산
+      const offerRatio = offeredSalary / expectedSalary;
+
+      // 기본 수락 확률 계산
+      // 100% 이상 제안: 무조건 수락
+      // 80-100%: 높은 확률로 수락
+      // 60-80%: 중간 확률
+      // 60% 미만: 낮은 확률
+      let acceptProbability = 0;
+
+      if (offerRatio >= 1.0) {
+        acceptProbability = 100;
+      } else if (offerRatio >= 0.9) {
+        acceptProbability = 80 + (offerRatio - 0.9) * 200; // 80-100%
+      } else if (offerRatio >= 0.8) {
+        acceptProbability = 50 + (offerRatio - 0.8) * 300; // 50-80%
+      } else if (offerRatio >= 0.7) {
+        acceptProbability = 20 + (offerRatio - 0.7) * 300; // 20-50%
+      } else if (offerRatio >= 0.6) {
+        acceptProbability = (offerRatio - 0.6) * 200; // 0-20%
+      } else {
+        acceptProbability = 0;
+      }
+
+      // 스킬 레벨이 높을수록 협상이 어려움
+      const skillPenalty = Math.floor(coach.skill_level / 20); // 20레벨당 5% 감소
+      acceptProbability = Math.max(0, acceptProbability - skillPenalty * 5);
+
+      // 계약 기간이 길수록 수락 확률 증가
+      if (contractMonths >= 24) {
+        acceptProbability += 10;
+      } else if (contractMonths >= 18) {
+        acceptProbability += 5;
+      }
+
+      // 최종 확률 제한
+      acceptProbability = Math.min(100, Math.max(0, acceptProbability));
+
+      // 협상 결과 결정
+      const roll = Math.random() * 100;
+      const accepted = roll < acceptProbability;
+
+      if (accepted) {
+        // 최종 급여 결정 (코치가 약간 반격할 수 있음)
+        let finalSalary = offeredSalary;
+        if (offerRatio < 0.9) {
+          // 너무 낮은 제안은 코치가 약간 올림
+          const counterOffer = offeredSalary + (expectedSalary - offeredSalary) * 0.2;
+          finalSalary = Math.floor(counterOffer);
+        }
+
+        return {
+          success: true,
+          accepted: true,
+          finalSalary,
+          contractMonths,
+          message: offerRatio < 0.9
+            ? `${coach.name} 코치가 ${finalSalary.toLocaleString()}원에 수락했습니다.`
+            : `${coach.name} 코치가 제안을 수락했습니다.`,
+          coach
+        };
+      } else {
+        // 거절 시 최소 요구 급여 알려줌
+        const minimumAcceptable = Math.floor(expectedSalary * 0.8);
+        return {
+          success: true,
+          accepted: false,
+          minimumSalary: minimumAcceptable,
+          message: `${coach.name} 코치가 제안을 거절했습니다. 최소 ${minimumAcceptable.toLocaleString()}원 이상을 원합니다.`,
+          coach
+        };
+      }
+    } catch (error) {
+      console.error('Negotiate coach error:', error);
+      throw error;
+    }
+  }
+
+  // 코치 고용 (협상 후 또는 직접 고용)
+  static async hireCoach(teamId: number, coachId: number, contractMonths: number = 12, negotiatedSalary?: number) {
+    try {
+      // 코치 정보 확인
+      const coaches = await pool.query(
+        `SELECT * FROM coaches WHERE id = ? AND is_available = true`,
+        [coachId]
+      );
+
+      if (coaches.length === 0) {
+        throw new Error('코치를 찾을 수 없습니다');
+      }
+
+      const coach = coaches[0];
+
+      // 협상된 급여가 있으면 사용, 없으면 기본 급여
+      const finalSalary = negotiatedSalary || coach.salary;
 
       // 같은 타입의 코치가 이미 있는지 확인
       const existing = await pool.query(
@@ -68,14 +166,14 @@ export class CoachService {
 
       // 팀 골드 확인 (첫 달 급여)
       const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [teamId]);
-      if (teams.length === 0 || teams[0].gold < coach.salary) {
-        throw new Error('골드가 부족합니다');
+      if (teams.length === 0 || teams[0].gold < finalSalary) {
+        throw new Error('원이 부족합니다');
       }
 
       // 골드 차감
       await pool.query(
         'UPDATE teams SET gold = gold - ? WHERE id = ?',
-        [coach.salary, teamId]
+        [finalSalary, teamId]
       );
 
       // 계약 생성
@@ -85,20 +183,21 @@ export class CoachService {
       await pool.query(
         `INSERT INTO team_coaches (team_id, coach_id, contract_start, contract_end, monthly_salary)
          VALUES (?, ?, CURDATE(), ?, ?)`,
-        [teamId, coachId, contractEnd, coach.salary]
+        [teamId, coachId, contractEnd, finalSalary]
       );
 
       // 재정 기록
       await pool.query(
         `INSERT INTO financial_records (team_id, record_type, category, amount, description)
          VALUES (?, 'EXPENSE', 'COACH_SALARY', ?, ?)`,
-        [teamId, coach.salary, `${coach.name} 코치 첫 달 급여`]
+        [teamId, finalSalary, `${coach.name} 코치 첫 달 급여`]
       );
 
       return {
         success: true,
-        message: `${coach.name} 코치를 고용했습니다`,
-        coach
+        message: `${coach.name} 코치를 고용했습니다 (월급: ${finalSalary.toLocaleString()}원)`,
+        coach,
+        monthlySalary: finalSalary
       };
     } catch (error) {
       console.error('Hire coach error:', error);
