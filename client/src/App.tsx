@@ -14,7 +14,7 @@ import TournamentHistory from './pages/TournamentHistory';
 import Trades from './pages/Trades';
 import Missions from './pages/Missions';
 import TeamManagement from './pages/TeamManagement';
-import Training from './pages/Training';
+// import Training from './pages/Training'; // 훈련 시스템 제거 (자동 레벨업으로 대체)
 import Admin from './pages/Admin';
 import MatchViewer from './pages/MatchViewer';
 import Tactics from './pages/Tactics';
@@ -73,7 +73,8 @@ function App() {
             <Route path="trades" element={<Trades />} />
             <Route path="missions" element={<Missions />} />
             <Route path="team" element={<TeamManagement />} />
-            <Route path="training" element={<Training />} />
+            {/* <Route path="training" element={<Training />} /> */}
+            {/* 훈련 시스템 제거 (자동 레벨업으로 대체) */}
             <Route path="sponsors" element={<Sponsors />} />
             <Route path="admin" element={<Admin />} />
             <Route path="match/:matchId" element={<MatchViewer />} />

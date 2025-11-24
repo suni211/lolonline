@@ -17,7 +17,7 @@ import tradeRoutes from './routes/trades.js';
 import missionRoutes from './routes/missions.js';
 import friendlyMatchRoutes from './routes/friendlyMatches.js';
 import combinationRoutes from './routes/combinations.js';
-import trainingRoutes from './routes/training.js';
+// import trainingRoutes from './routes/training.js'; // 훈련 시스템 제거 (자동 레벨업으로 대체)
 import contractNegotiationRoutes from './routes/contractNegotiations.js';
 import coachRoutes from './routes/coaches.js';
 import facilityRoutes, { initializeFacilityRevenue } from './routes/facilities.js';
@@ -82,7 +82,7 @@ app.use('/api/trades', tradeRoutes);
 app.use('/api/missions', missionRoutes);
 app.use('/api/friendly-matches', friendlyMatchRoutes);
 app.use('/api/combinations', combinationRoutes);
-app.use('/api/training', trainingRoutes);
+// app.use('/api/training', trainingRoutes); // 훈련 시스템 제거 (자동 레벨업으로 대체)
 app.use('/api/sponsors', sponsorRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/admin', adminRoutes);

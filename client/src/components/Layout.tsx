@@ -35,7 +35,7 @@ export default function Layout() {
     { path: '/dashboard', label: '대시보드' },
     { path: '/players', label: '선수 관리' },
     { path: '/second-team', label: '2군' },
-    { path: '/training', label: '훈련' },
+    // { path: '/training', label: '훈련' }, // 훈련 시스템 제거 (자동 레벨업으로 대체)
     { path: '/mental', label: '멘탈/케미' },
     { path: '/tactics', label: '전략실' },
     { path: '/coaching', label: '코칭스태프' },
