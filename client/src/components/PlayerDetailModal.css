@@ -16,8 +16,9 @@
 .modal-content {
   background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
   border-radius: 12px;
-  padding: 1rem;
-  width: 320px;
+  padding: 1.2rem;
+  width: 500px;
+  max-width: 90vw;
   max-height: 85vh;
   overflow-y: auto;
   color: var(--white);
@@ -25,7 +26,7 @@
   border: 1px solid rgba(59, 130, 246, 0.3);
   animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
 }
 
 .modal-content::before {
@@ -101,9 +102,9 @@
 .info-row {
   display: flex;
   justify-content: space-between;
-  padding: 0.5rem 0;
+  padding: 0.6rem 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 
 .info-row:last-child {
@@ -127,12 +128,12 @@
 .stat-item {
   display: flex;
   justify-content: space-between;
-  padding: 0.6rem 0.8rem;
+  padding: 0.7rem 1rem;
   background: linear-gradient(135deg, rgba(30, 58, 138, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
   border-radius: 6px;
   border: 1px solid rgba(59, 130, 246, 0.2);
   transition: all 0.3s ease;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
 }
 
 .stat-item:hover {
@@ -229,13 +230,13 @@
 }
 
 .tab-btn {
-  padding: 0.7rem 1.2rem;
+  padding: 0.8rem 1.4rem;
   background: none;
   border: none;
   color: rgba(255, 255, 255, 0.6);
   cursor: pointer;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   transition: all 0.3s ease;
   border-bottom: 3px solid transparent;
   margin-bottom: -3px;
@@ -247,13 +248,13 @@
 }
 
 .tab-active {
-  padding: 0.7rem 1.2rem;
+  padding: 0.8rem 1.4rem;
   background: none;
   border: none;
   color: var(--light-blue);
   cursor: pointer;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   transition: all 0.3s ease;
   border-bottom: 3px solid var(--light-blue);
   margin-bottom: -3px;
