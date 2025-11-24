@@ -117,8 +117,9 @@ export default function Transfer() {
           params.append(key, value);
         }
       });
+      params.append('limit', '1000'); // 모든 선수 가져오기
       const response = await axios.get(`/api/transfer/fa?${params.toString()}`);
-      setFaPlayers(response.data);
+      setFaPlayers(response.data.players || response.data);
     } catch (error) {
       console.error('Failed to fetch FA players:', error);
     }

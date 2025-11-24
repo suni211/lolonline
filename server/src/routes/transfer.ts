@@ -8,7 +8,7 @@ const router = express.Router();
 // FA 선수 목록 (이적시장에 없는 모든 선수)
 router.get('/fa', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const { position, minOvr, maxOvr, search, page = 1, limit = 20 } = req.query;
+    const { position, league, minOvr, maxOvr, search, sort = 'ovr_desc', page = 1, limit = 20 } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
     let query = `
@@ -22,6 +22,10 @@ router.get('/fa', authenticateToken, async (req: AuthRequest, res) => {
     if (position && position !== 'all') {
       query += ' AND pp.position = ?';
       params.push(position);
+    }
+    if (league && league !== 'all') {
+      query += ' AND pp.league = ?';
+      params.push(league);
     }
     if (minOvr) {
       query += ' AND COALESCE(pp.base_ovr, 50) >= ?';
@@ -42,14 +46,25 @@ router.get('/fa', authenticateToken, async (req: AuthRequest, res) => {
     );
     const total = countResult[0].total;
 
-    query += ' ORDER BY COALESCE(pp.base_ovr, 50) DESC LIMIT ? OFFSET ?';
+    // 정렬
+    if (sort === 'ovr_desc') {
+      query += ' ORDER BY COALESCE(pp.base_ovr, 50) DESC';
+    } else if (sort === 'ovr_asc') {
+      query += ' ORDER BY COALESCE(pp.base_ovr, 50) ASC';
+    } else if (sort === 'name') {
+      query += ' ORDER BY pp.name ASC';
+    } else {
+      query += ' ORDER BY COALESCE(pp.base_ovr, 50) DESC';
+    }
+
+    query += ' LIMIT ? OFFSET ?';
     params.push(Number(limit), offset);
 
     const players = await pool.query(query, params);
 
     const playersWithPrice = players.map((p: any) => ({
       ...p,
-      price: p.overall * 50000
+      price: p.overall * 10000
     }));
 
     res.json({

@@ -45,7 +45,6 @@ export default function Layout() {
     { path: '/cup', label: '컵 대회' },
     { path: '/history', label: '대회 정보' },
     { path: '/transfer', label: '이적시장' },
-    { path: '/scout', label: '스카우트' },
     { path: '/team-info', label: '팀 정보' },
     { path: '/missions', label: '미션' },
     { path: '/team', label: '팀 관리' },
