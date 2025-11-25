@@ -111,7 +111,7 @@ export async function generateMatchPosts(
 
     // 경기 MVP 선수 찾기 (가장 많이 득점한 선수)
     const topPlayer = await pool.query(
-      `SELECT COALESCE(pp.nickname, pc.ai_player_name, '선수') as name
+      `SELECT COALESCE(pp.name, pc.ai_player_name, '선수') as name
        FROM match_stats ms
        JOIN player_cards pc ON ms.player_id = pc.id
        LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
