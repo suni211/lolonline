@@ -24,7 +24,8 @@
       "Bash(powershell -Command:*)",
       "Bash(npm start)",
       "WebSearch",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npx tsx:*)"
     ],
     "deny": [],
     "ask": []

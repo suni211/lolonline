@@ -9,6 +9,7 @@ interface Song {
   bpm: number;
   duration: number;
   music_url?: string;
+  bga_url?: string;
 }
 
 interface Chart {
@@ -35,12 +36,15 @@ interface RhythmGamePlayProps {
   chart: Chart;
   bgmEnabled: boolean;
   noteSpeed: number;
+  bgmVolume: number;
+  bgaOpacity: number;
   onGameEnd: () => void;
 }
 
-const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: RhythmGamePlayProps) => {
+const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, bgmVolume, bgaOpacity, onGameEnd }: RhythmGamePlayProps) => {
   console.log('🎮 RhythmGamePlay received song:', song);
   console.log('🎵 song.music_url:', song?.music_url);
+  console.log('🎬 song.bga_url:', song?.bga_url);
   console.log('📋 All song keys:', Object.keys(song || {}));
   const [notes, setNotes] = useState<Note[]>([]);
   const [gameStarted, setGameStarted] = useState(false);
@@ -60,6 +64,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
   const audioLoadStartTimeRef = useRef<number>(Date.now());
 
   const audioRef = useRef<HTMLAudioElement>(null);
+  const bgaVideoRef = useRef<HTMLVideoElement>(null);
   const gameLoopRef = useRef<number | null>(null);
   const gameFieldRef = useRef<HTMLDivElement>(null);
   const judgedNotesRef = useRef<Set<number>>(new Set());
@@ -71,6 +76,13 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
   // 현재 누르고 있는 키들 (시각적 피드백)
   const [pressedKeys, setPressedKeys] = useState<Set<number>>(new Set());
   const [heldLongNotes, setHeldLongNotes] = useState<Set<number>>(new Set());
+
+  // 볼륨 설정 적용
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = bgmVolume;
+    }
+  }, [bgmVolume]);
 
   // 점수 계산 공식
   const getScoreForJudgment = (type: string) => {
@@ -279,20 +291,24 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
     };
   }, [gameStarted, gameEnded, actualDuration]);
 
-  // 게임 시작 후 음악 재생
+  // 게임 시작 후 음악 및 BGA 재생
   useEffect(() => {
-    if (!gameStarted || gameEnded || !bgmEnabled) return;
+    if (!gameStarted || gameEnded) return;
 
     // 약간의 지연 후 재생 (DOM 업데이트 후)
     const timer = setTimeout(() => {
-      if (audioRef.current) {
+      if (bgmEnabled && audioRef.current) {
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(err => console.error('음악 재생 실패:', err));
+      }
+      if (song.bga_url && bgaVideoRef.current) {
+        bgaVideoRef.current.currentTime = 0;
+        bgaVideoRef.current.play().catch(err => console.error('BGA 재생 실패:', err));
       }
     }, 50);
 
     return () => clearTimeout(timer);
-  }, [gameStarted, bgmEnabled]);
+  }, [gameStarted, bgmEnabled, song.bga_url]);
 
   // 게임 시작
   const handleGameStart = (e: React.MouseEvent) => {
@@ -523,6 +539,9 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
     if (audioRef.current) {
       audioRef.current.pause();
     }
+    if (bgaVideoRef.current) {
+      bgaVideoRef.current.pause();
+    }
 
     // 등급 계산
     const calculatedGrade = calculateGrade(score, chart.note_count);
@@ -726,6 +745,28 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
 
   return (
     <div ref={gameFieldRef} className="rhythm-game-play" onKeyDown={handleKeyPress} onKeyUp={handleKeyUp} tabIndex={0}>
+      {/* BGA 비디오 배경 */}
+      {song.bga_url && (
+        <video
+          ref={bgaVideoRef}
+          className="bga-video"
+          src={song.bga_url.startsWith('http') ? song.bga_url : song.bga_url.startsWith('/') ? window.location.origin + song.bga_url : song.bga_url}
+          loop
+          muted
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            opacity: bgaOpacity,
+            zIndex: 0,
+            pointerEvents: 'none'
+          }}
+        />
+      )}
+
       {/* HUD */}
       <div className="game-hud">
         <div className="hud-item">

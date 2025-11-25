@@ -13,6 +13,7 @@ interface Song {
   cover_image_url?: string;
   description?: string;
   music_url?: string;
+  bga_url?: string;
 }
 
 interface Chart {
@@ -31,6 +32,8 @@ const RhythmGame = () => {
   const [loading, setLoading] = useState(true);
   const [bgmEnabled, setBgmEnabled] = useState(true);
   const [noteSpeed, setNoteSpeed] = useState(1.0);  // 노트 내려오는 속도 (1.0 = 기본, 최대 9.0)
+  const [bgmVolume, setBgmVolume] = useState(0.5);  // 배경음악 볼륨 (0.0 ~ 1.0)
+  const [bgaOpacity, setBgaOpacity] = useState(0.3);  // BGA 투명도 (0.0 ~ 1.0)
 
   useEffect(() => {
     fetchSongs();
@@ -145,8 +148,9 @@ const RhythmGame = () => {
             ))}
           </div>
 
-          {/* 노트 속도 조정 */}
+          {/* 게임 설정 */}
           <div style={{ marginTop: '30px', padding: '20px', backgroundColor: 'rgba(0, 0, 0, 0.3)', borderRadius: '8px' }}>
+            {/* 노트 속도 */}
             <p style={{ marginBottom: '10px', fontSize: '14px' }}>⚡ 노트 속도: <strong>{noteSpeed.toFixed(1)}x</strong></p>
             <input
               type="range"
@@ -155,10 +159,34 @@ const RhythmGame = () => {
               step="0.1"
               value={noteSpeed}
               onChange={(e) => setNoteSpeed(parseFloat(e.target.value))}
+              style={{ width: '100%', cursor: 'pointer', marginBottom: '20px' }}
+            />
+
+            {/* 배경음악 볼륨 */}
+            <p style={{ marginBottom: '10px', fontSize: '14px' }}>🔊 배경음악 볼륨: <strong>{Math.round(bgmVolume * 100)}%</strong></p>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={bgmVolume}
+              onChange={(e) => setBgmVolume(parseFloat(e.target.value))}
+              style={{ width: '100%', cursor: 'pointer', marginBottom: '20px' }}
+            />
+
+            {/* BGA 투명도 */}
+            <p style={{ marginBottom: '10px', fontSize: '14px' }}>🎬 BGA 투명도: <strong>{Math.round(bgaOpacity * 100)}%</strong></p>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={bgaOpacity}
+              onChange={(e) => setBgaOpacity(parseFloat(e.target.value))}
               style={{ width: '100%', cursor: 'pointer' }}
             />
-            <p style={{ marginTop: '10px', fontSize: '12px', color: '#f39c12' }}>
-              1.0 = 느림 | 5.0 = 보통 | 9.0 = 매우 빠름
+            <p style={{ marginTop: '10px', fontSize: '12px', color: '#888' }}>
+              BGA 투명도 0% = 안 보임 | 100% = 완전히 보임
             </p>
           </div>
 
@@ -180,6 +208,8 @@ const RhythmGame = () => {
           chart={selectedChart}
           bgmEnabled={bgmEnabled}
           noteSpeed={noteSpeed}
+          bgmVolume={bgmVolume}
+          bgaOpacity={bgaOpacity}
           onGameEnd={handleGameEnd}
         />
       )}
