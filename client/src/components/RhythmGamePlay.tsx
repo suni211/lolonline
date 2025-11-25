@@ -66,9 +66,9 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
   // 판정 계산 (현재 시간과 노트 타이밍 비교)
   const getJudgment = (timingDiff: number): string => {
     const absDiff = Math.abs(timingDiff);
-    if (absDiff <= 50) return 'PERFECT'; // ±50ms
-    if (absDiff <= 100) return 'GOOD';   // ±100ms
-    if (absDiff <= 200) return 'BAD';    // ±200ms
+    if (absDiff <= 50) return 'PERFECT';  // ±50ms
+    if (absDiff <= 100) return 'GOOD';    // ±100ms
+    if (absDiff <= 200) return 'BAD';     // ±200ms
     return 'MISS';
   };
 
