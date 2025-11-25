@@ -127,7 +127,8 @@ router.post('/scout', authenticateToken, async (req: AuthRequest, res) => {
 
     if (availableCoaches.length === 0) {
       // 새로운 감독/코치 생성
-      const roles: ('HEAD_COACH' | 'ASSISTANT_COACH')[] = ['HEAD_COACH', 'ASSISTANT_COACH'];
+      const roles: ('HEAD' | 'STRATEGY' | 'MENTAL' | 'PHYSICAL' | 'ANALYST' | 'DOCTOR')[] =
+        ['HEAD', 'STRATEGY', 'MENTAL', 'PHYSICAL', 'ANALYST', 'DOCTOR'];
       const role = roles[Math.floor(Math.random() * roles.length)];
 
       // 더 다양한 코치 이름 (중복 방지를 위해 더 많은 이름 추가)

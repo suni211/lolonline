@@ -216,12 +216,13 @@ CREATE TABLE IF NOT EXISTS coaches (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(100) NOT NULL,
     nationality VARCHAR(50) NOT NULL DEFAULT 'KR',
-    role ENUM('HEAD_COACH', 'ASSISTANT_COACH') NOT NULL,
+    role ENUM('HEAD', 'STRATEGY', 'MENTAL', 'PHYSICAL', 'ANALYST', 'DOCTOR', 'HEAD_COACH', 'ASSISTANT_COACH') NOT NULL,
     scouting_ability INT DEFAULT 50 CHECK (scouting_ability >= 1 AND scouting_ability <= 100),
     training_boost DECIMAL(3,2) DEFAULT 1.0 CHECK (training_boost >= 0.5 AND training_boost <= 2.0),
     salary BIGINT DEFAULT 0,
     contract_expires_at DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_available BOOLEAN DEFAULT TRUE
 );
 
 -- 감독 소유 테이블

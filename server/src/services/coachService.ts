@@ -5,11 +5,15 @@ export class CoachService {
   static async getAvailableCoaches(teamId: number) {
     try {
       const coaches = await pool.query(
-        `SELECT c.id, c.name, c.nationality, c.role as coach_type, c.scouting_ability as skill_level,
-                c.salary,
+        `SELECT c.id, c.name, c.nationality,
+                CASE WHEN c.role = 'HEAD_COACH' THEN 'HEAD'
+                     WHEN c.role = 'ASSISTANT_COACH' THEN 'STRATEGY'
+                     ELSE c.role END as coach_type,
+                c.scouting_ability as skill_level, c.salary,
                 (SELECT COUNT(*) FROM coach_ownership co WHERE co.coach_id = c.id) as is_hired,
                 '특화' as specialty
          FROM coaches c
+         WHERE c.is_available = TRUE
          ORDER BY c.scouting_ability DESC, c.salary ASC`
       );
 
@@ -24,8 +28,12 @@ export class CoachService {
   static async getTeamCoaches(teamId: number) {
     try {
       const coaches = await pool.query(
-        `SELECT co.id, co.coach_id, c.name, c.nationality, c.role as coach_type, c.scouting_ability as skill_level,
-                c.training_boost, c.salary as monthly_salary, co.acquired_at as contract_start,
+        `SELECT co.id, co.coach_id, c.name, c.nationality,
+                CASE WHEN c.role = 'HEAD_COACH' THEN 'HEAD'
+                     WHEN c.role = 'ASSISTANT_COACH' THEN 'STRATEGY'
+                     ELSE c.role END as coach_type,
+                c.scouting_ability as skill_level, c.training_boost, c.salary as monthly_salary,
+                co.acquired_at as contract_start,
                 DATE_ADD(co.acquired_at, INTERVAL 12 MONTH) as contract_end
          FROM coach_ownership co
          JOIN coaches c ON co.coach_id = c.id
@@ -268,7 +276,10 @@ export class CoachService {
   static async getCoachEffects(teamId: number) {
     try {
       const coaches = await pool.query(
-        `SELECT c.role as coach_type, c.scouting_ability as skill_level, '특화' as specialty
+        `SELECT CASE WHEN c.role = 'HEAD_COACH' THEN 'HEAD'
+                     WHEN c.role = 'ASSISTANT_COACH' THEN 'STRATEGY'
+                     ELSE c.role END as coach_type,
+                c.scouting_ability as skill_level, '특화' as specialty
          FROM coach_ownership co
          JOIN coaches c ON co.coach_id = c.id
          WHERE co.team_id = ?`,
