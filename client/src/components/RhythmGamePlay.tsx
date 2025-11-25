@@ -372,11 +372,12 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
   // 활성 노트 (현재 떨어지는 노트들)
   // 화면 위쪽 밖에서부터 아래쪽 밖까지 충분히 길게 표시
   const lookAheadTime = 5000 * noteSpeed; // 미래 노트 (위쪽에서 떨어지는 중)
-  // 판정선을 지난 후 최소 10초까지는 노트를 계속 표시 (아래쪽까지 완전히 떨어지게)
-  const lookBehindTime = 10000 + (5000 / Math.max(0.1, noteSpeed));
+  // lookBehindTime을 곡의 전체 길이에 기반해서 설정
+  // 이렇게 하면 모든 노트가 게임 내내 끝까지 표시됨 (아래로 완전히 떨어질 때까지)
+  const lookBehindTime = (actualDuration * 1000) + 5000; // 곡의 전체 길이 + 추가 시간
   const activeNotes = notes.filter(
     (note) =>
-      note.timing >= currentTime - lookBehindTime && // 과거 노트도 충분히 길게
+      note.timing >= currentTime - lookBehindTime && // 과거 노트 (곡 길이 범위 내)
       note.timing <= currentTime + lookAheadTime && // 미래 노트도 충분히 길게
       !judgedNotesRef.current.has(note.id)
   );
