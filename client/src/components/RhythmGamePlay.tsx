@@ -81,11 +81,22 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
         const url = `${apiUrl}/api/rhythm-game/charts/${chart.id}/notes`;
         console.log('Fetching notes from:', url);
         const response = await axios.get(url);
-        setNotes(response.data.notes || response.data);
+        console.log('Notes response:', response.data);
+
+        // API 응답 형식 처리
+        let notesData = Array.isArray(response.data)
+          ? response.data
+          : response.data?.notes
+          ? response.data.notes
+          : [];
+
+        console.log('Parsed notes:', notesData, 'count:', notesData.length);
+        setNotes(notesData);
         setLoadingNotes(false);
       } catch (error) {
         console.error('노트 로드 실패:', error);
         setLoadingNotes(false);
+        setNotes([]);
       }
     };
 

@@ -189,8 +189,8 @@ const RhythmGameNoteRecorder = () => {
       // 이 키는 무시
       keyPressRef.current[keyIndex] = null;
       return;
-    } else if (!isSlideKey && duration > 100) {
-      // D/F/J/K의 duration이 100ms 이상이면 LONG 노트 (E/I는 슬라이드만)
+    } else if (!isSlideKey && duration >= 200) {
+      // D/F/J/K의 duration이 200ms 이상이면 LONG 노트 (E/I는 슬라이드만)
       noteType = 'LONG';
     }
 
