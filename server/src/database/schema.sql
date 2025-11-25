@@ -814,3 +814,74 @@ CREATE TABLE IF NOT EXISTS news (
     INDEX idx_news_team (team_id)
 );
 
+-- 리듬게임 곡 테이블
+CREATE TABLE IF NOT EXISTS rhythm_songs (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    title VARCHAR(200) NOT NULL,
+    artist VARCHAR(100) NOT NULL,
+    bpm INT DEFAULT 120,
+    duration INT NOT NULL,  -- 초 단위
+    difficulty ENUM('EASY', 'NORMAL', 'HARD', 'INSANE') DEFAULT 'NORMAL',
+    music_url VARCHAR(500),  -- 음악 파일 URL
+    cover_image_url VARCHAR(500),
+    description TEXT,
+    created_by INT,  -- 곡 생성자 (팀 관리자)
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_song_difficulty (difficulty),
+    INDEX idx_song_created (created_at DESC)
+);
+
+-- 리듬게임 악보(차트) 테이블
+CREATE TABLE IF NOT EXISTS rhythm_charts (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    song_id INT NOT NULL,
+    difficulty ENUM('EASY', 'NORMAL', 'HARD', 'INSANE') DEFAULT 'NORMAL',
+    creator_id INT,  -- 악보 생성자
+    note_count INT DEFAULT 0,  -- 총 노트 수
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (song_id) REFERENCES rhythm_songs(id) ON DELETE CASCADE,
+    FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE KEY unique_song_difficulty (song_id, difficulty),
+    INDEX idx_chart_created (created_at DESC)
+);
+
+-- 리듬게임 노트 테이블
+CREATE TABLE IF NOT EXISTS rhythm_notes (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    chart_id INT NOT NULL,
+    key_index INT NOT NULL CHECK (key_index >= 0 AND key_index <= 3),  -- 0=좌, 1=좌중앙, 2=우중앙, 3=우
+    timing INT NOT NULL,  -- 밀리초 단위
+    duration INT DEFAULT 0,  -- 롱노트인 경우 지속 시간
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (chart_id) REFERENCES rhythm_charts(id) ON DELETE CASCADE,
+    INDEX idx_note_chart (chart_id),
+    INDEX idx_note_timing (timing)
+);
+
+-- 리듬게임 플레이 기록 테이블
+CREATE TABLE IF NOT EXISTS rhythm_records (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    team_id INT NOT NULL,
+    player_card_id INT,  -- 경험치를 받을 선수 카드
+    chart_id INT NOT NULL,
+    score INT DEFAULT 0,  -- 총점
+    accuracy DECIMAL(5,2) DEFAULT 0,  -- 정확도 (%)
+    max_combo INT DEFAULT 0,  -- 최대 콤보
+    perfect_count INT DEFAULT 0,
+    good_count INT DEFAULT 0,
+    bad_count INT DEFAULT 0,
+    miss_count INT DEFAULT 0,
+    exp_gained INT DEFAULT 0,  -- 획득 경험치
+    gold_gained BIGINT DEFAULT 0,  -- 획득 골드
+    fans_gained INT DEFAULT 0,  -- 획득 팬 수 (1-50)
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (player_card_id) REFERENCES player_cards(id) ON DELETE SET NULL,
+    FOREIGN KEY (chart_id) REFERENCES rhythm_charts(id) ON DELETE CASCADE,
+    INDEX idx_record_team (team_id),
+    INDEX idx_record_player (player_card_id),
+    INDEX idx_record_created (created_at DESC)
+);
+
