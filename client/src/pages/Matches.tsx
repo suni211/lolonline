@@ -121,6 +121,10 @@ export default function Matches() {
 
   // 상태 필터 적용
   const filteredMatches = matches.filter(m => {
+    if (filter === 'all') {
+      // 전체는 SCHEDULED와 LIVE만 표시
+      return m.status === 'SCHEDULED' || m.status === 'LIVE';
+    }
     if (filter !== 'all' && m.status !== filter.toUpperCase()) return false;
     return true;
   });
@@ -196,9 +200,31 @@ export default function Matches() {
     );
   };
 
+  // 종료된 경기들 (finished 필터일 때만)
+  const finishedMatches = matches.filter(m => m.status === 'FINISHED');
+  const finishedCupMatches = finishedMatches.filter(m => m.match_type === 'CUP');
+  const finishedSouthLeagueMatches = finishedMatches.filter(m =>
+    m.league_name && m.league_name.toUpperCase().includes('SOUTH')
+  );
+  const finishedNorthLeagueMatches = finishedMatches.filter(m =>
+    m.league_name && m.league_name.toUpperCase().includes('NORTH')
+  );
+  const finishedAmateurLeagueMatches = finishedMatches.filter(m =>
+    m.league_name && m.league_name.toUpperCase().includes('AMATEUR')
+  );
+  const finishedFriendlyMatches = finishedMatches.filter(m => m.match_type === 'FRIENDLY');
+  const finishedOtherLeagueMatches = finishedMatches.filter(m =>
+    m.match_type !== 'CUP' &&
+    m.match_type !== 'FRIENDLY' &&
+    !finishedCupMatches.includes(m) &&
+    !finishedSouthLeagueMatches.includes(m) &&
+    !finishedNorthLeagueMatches.includes(m) &&
+    !finishedAmateurLeagueMatches.includes(m)
+  );
+
   return (
     <div className="matches-page page-wrapper">
-      <h1 className="page-title">경기</h1>
+      <h1 className="page-title">스케쥴</h1>
 
       <div className="match-filters">
         <div className="filter-group">
@@ -206,7 +232,7 @@ export default function Matches() {
             onClick={() => setFilter('all')}
             className={filter === 'all' ? 'filter-active' : ''}
           >
-            전체
+            예정/진행중
           </button>
           <button
             onClick={() => setFilter('scheduled')}
@@ -224,23 +250,43 @@ export default function Matches() {
             onClick={() => setFilter('finished')}
             className={filter === 'finished' ? 'filter-active' : ''}
           >
-            종료
+            지난 경기
           </button>
         </div>
       </div>
 
-      <div className="matches-container">
-        {renderMatchList(cupMatches, 'LPO 컵')}
-        {renderMatchList(southLeagueMatches, 'LPO SOUTH (1부)')}
-        {renderMatchList(northLeagueMatches, 'LPO NORTH (1부)')}
-        {renderMatchList(amateurLeagueMatches, 'LPO AMATEUR (2부)')}
-        {renderMatchList(otherLeagueMatches, '기타 리그')}
-        {renderMatchList(friendlyMatches, '친선전')}
+      {/* 예정/진행중 경기 */}
+      {filter !== 'finished' && (
+        <div className="matches-container">
+          {renderMatchList(cupMatches, 'LPO 컵')}
+          {renderMatchList(southLeagueMatches, 'LPO SOUTH (1부)')}
+          {renderMatchList(northLeagueMatches, 'LPO NORTH (1부)')}
+          {renderMatchList(amateurLeagueMatches, 'LPO AMATEUR (2부)')}
+          {renderMatchList(otherLeagueMatches, '기타 리그')}
+          {renderMatchList(friendlyMatches, '친선전')}
 
-        {filteredMatches.length === 0 && (
-          <div className="no-matches">경기가 없습니다</div>
-        )}
-      </div>
+          {filteredMatches.length === 0 && (
+            <div className="no-matches">예정된 경기가 없습니다</div>
+          )}
+        </div>
+      )}
+
+      {/* 지난 경기 */}
+      {filter === 'finished' && (
+        <div className="matches-container">
+          <h2 style={{ marginTop: '20px', marginBottom: '10px' }}>지난 경기</h2>
+          {renderMatchList(finishedCupMatches, 'LPO 컵')}
+          {renderMatchList(finishedSouthLeagueMatches, 'LPO SOUTH (1부)')}
+          {renderMatchList(finishedNorthLeagueMatches, 'LPO NORTH (1부)')}
+          {renderMatchList(finishedAmateurLeagueMatches, 'LPO AMATEUR (2부)')}
+          {renderMatchList(finishedOtherLeagueMatches, '기타 리그')}
+          {renderMatchList(finishedFriendlyMatches, '친선전')}
+
+          {finishedMatches.length === 0 && (
+            <div className="no-matches">지난 경기가 없습니다</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
