@@ -31,19 +31,19 @@ export class StreamingService {
         throw new Error('오늘 이미 스트리밍을 했습니다');
       }
 
-      // 시청자 수 계산 (OVR 기반)
-      const baseViewers = 1000;
-      const overallBonus = (player.ovr || 70) * 50;
-      const randomBonus = Math.floor(Math.random() * 5000);
-      const viewers = baseViewers + overallBonus + randomBonus;
+      // 시청자 수 계산 (OVR 기반, 100~1000명대)
+      const baseViewers = 100;
+      const overallBonus = (player.ovr || 70) * 3;  // OVR 70 = 210
+      const randomBonus = Math.floor(Math.random() * 500);
+      const viewers = baseViewers + overallBonus + randomBonus;  // 100~810명
 
-      // 수익 계산 (시청자당 100~500원)
-      const incomePerViewer = 100 + Math.floor(Math.random() * 400);
+      // 수익 계산 (시청자당 500~2000원으로 상향)
+      const incomePerViewer = 500 + Math.floor(Math.random() * 1500);
       const income = viewers * incomePerViewer * durationHours;
 
-      // 팬 증가 계산
-      const maleFansGained = Math.floor(viewers * 0.01 * (0.5 + Math.random() * 0.5));
-      const femaleFansGained = Math.floor(viewers * 0.015 * (0.5 + Math.random() * 0.5));
+      // 팬 증가 계산 (기존의 1/3 수준으로 조정)
+      const maleFansGained = Math.floor(viewers * 0.002 * (0.5 + Math.random() * 0.5));
+      const femaleFansGained = Math.floor(viewers * 0.003 * (0.5 + Math.random() * 0.5));
 
       // 스트리밍 기록 저장
       await pool.query(
