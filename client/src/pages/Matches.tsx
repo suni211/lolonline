@@ -125,8 +125,8 @@ export default function Matches() {
       // 전체는 SCHEDULED와 LIVE만 표시
       return m.status === 'SCHEDULED' || m.status === 'LIVE';
     }
-    if (filter !== 'all' && m.status !== filter.toUpperCase()) return false;
-    return true;
+    // filter가 'all'이 아닌 경우 해당 상태만 표시
+    return m.status === filter.toUpperCase();
   });
 
   // 경기 분류
