@@ -49,6 +49,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
   const [loadingNotes, setLoadingNotes] = useState(true);
   const [audioReady, setAudioReady] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [actualDuration, setActualDuration] = useState(song.duration);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const gameLoopRef = useRef<number | null>(null);
@@ -110,7 +111,15 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
 
     const gameLoop = () => {
       if (audioRef.current) {
-        setCurrentTime(audioRef.current.currentTime * 1000); // 밀리초 단위
+        const currentSec = audioRef.current.currentTime;
+        setCurrentTime(currentSec * 1000); // 밀리초 단위
+
+        // 곡이 끝났으면 게임 종료
+        if (currentSec >= actualDuration) {
+          console.log('곡 종료:', currentSec, '>=', actualDuration);
+          handleGameEnd();
+          return;
+        }
       }
       gameLoopRef.current = requestAnimationFrame(gameLoop);
     };
@@ -122,7 +131,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
         cancelAnimationFrame(gameLoopRef.current);
       }
     };
-  }, [gameStarted, gameEnded]);
+  }, [gameStarted, gameEnded, actualDuration]);
 
   // 게임 시작
   const handleGameStart = (e: React.MouseEvent) => {
@@ -449,6 +458,12 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
         ref={audioRef}
         src={song.music_url}
         crossOrigin="anonymous"
+        onLoadedMetadata={(e) => {
+          const audio = e.target as HTMLAudioElement;
+          const duration = Math.round(audio.duration);
+          console.log('Audio metadata loaded. Duration:', duration, 'seconds');
+          setActualDuration(duration);
+        }}
         onCanPlay={() => {
           console.log('Audio ready:', song.music_url);
           setAudioReady(true);
