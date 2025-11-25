@@ -189,11 +189,32 @@ export class EventService {
         break;
 
       case 'FAN':
-        // 팀 팬 수에 영향
-        await pool.query(
-          `UPDATE teams SET fan_count = GREATEST(0, fan_count + ?) WHERE id = ?`,
-          [effectValue, teamId]
-        );
+        // 팀 팬 수에 영향 (male_fans, female_fans도 함께 업데이트)
+        if (effectValue > 0) {
+          // 팬 증가
+          const maleFansChange = Math.floor(effectValue * (0.4 + Math.random() * 0.2)); // 40-60%
+          const femaleFansChange = effectValue - maleFansChange;
+          await pool.query(
+            `UPDATE teams SET fan_count = fan_count + ?, male_fans = male_fans + ?, female_fans = female_fans + ? WHERE id = ?`,
+            [effectValue, maleFansChange, femaleFansChange, teamId]
+          );
+        } else if (effectValue < 0) {
+          // 팬 감소 (비율 유지하면서 감소)
+          const [teamData] = await pool.query(
+            'SELECT fan_count, male_fans, female_fans FROM teams WHERE id = ?',
+            [teamId]
+          );
+          if (teamData.length > 0) {
+            const currentTotal = teamData[0].fan_count;
+            const maleRatio = teamData[0].male_fans / currentTotal;
+            const maleFansChange = Math.floor(effectValue * maleRatio);
+            const femaleFansChange = effectValue - maleFansChange;
+            await pool.query(
+              `UPDATE teams SET fan_count = GREATEST(0, fan_count + ?), male_fans = GREATEST(0, male_fans + ?), female_fans = GREATEST(0, female_fans + ?) WHERE id = ?`,
+              [effectValue, maleFansChange, femaleFansChange, teamId]
+            );
+          }
+        }
         break;
 
       case 'SATISFACTION':

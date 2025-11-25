@@ -138,9 +138,11 @@ export class RhythmGameService {
       );
 
       // 팀 골드 및 팬 증가
+      const maleFansGained = Math.floor(fansGained * (0.4 + Math.random() * 0.2)); // 40-60%
+      const femaleFansGained = fansGained - maleFansGained;
       await pool.query(
-        'UPDATE teams SET gold = gold + ?, fan_count = fan_count + ? WHERE id = ?',
-        [goldGained, fansGained, teamId]
+        'UPDATE teams SET gold = gold + ?, fan_count = fan_count + ?, male_fans = male_fans + ?, female_fans = female_fans + ? WHERE id = ?',
+        [goldGained, fansGained, maleFansGained, femaleFansGained, teamId]
       );
 
       // 선수 경험치 증가

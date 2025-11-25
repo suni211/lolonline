@@ -361,22 +361,54 @@ export class NewsService {
     );
   }
 
-  // 경기 결과 기반 자동 뉴스 생성
+  // 경기 결과 기반 자동 뉴스 생성 (커뮤니티 글 기반)
   static async generateMatchNews(matchId: number, winnerId: number, loserId: number, winnerScore: number, loserScore: number) {
-    // 압도적 승리 (3-0)
-    if (winnerScore === 3 && loserScore === 0) {
-      await this.createMatchHighlight(matchId, 'STOMP', null, winnerId);
-    }
-    // 역전승 (상대가 먼저 2점 앞섰다가 역전)
-    else if (winnerScore === 3 && loserScore === 2) {
-      await this.createMatchHighlight(matchId, 'COMEBACK', null, winnerId);
-    }
-    // 일반 승리
-    else {
-      // 20% 확률로 뉴스 생성
-      if (Math.random() < 0.2) {
-        await this.createMatchHighlight(matchId, 'MATCH_WIN', null, winnerId);
+    try {
+      // 해당 경기와 관련된 커뮤니티 글들을 가져와서 뉴스로 승격
+      const communityPosts = await pool.query(
+        `SELECT cp.id, cp.team_id, cp.author_nickname, cp.content, cp.post_type
+         FROM community_posts cp
+         WHERE cp.match_id = ?
+         ORDER BY cp.created_at DESC
+         LIMIT 3`,
+        [matchId]
+      );
+
+      // 커뮤니티 글이 있으면 일부를 뉴스로 승격
+      if (communityPosts.length > 0) {
+        // 2-3개의 글을 뉴스로 승격 (전부는 아니고)
+        const numToPromote = Math.min(communityPosts.length, 1 + Math.floor(Math.random() * 2));
+
+        for (let i = 0; i < numToPromote; i++) {
+          const post = communityPosts[i];
+
+          // 뉴스 제목은 커뮤니티 글 내용의 일부를 사용
+          const title = post.content.length > 50
+            ? post.content.substring(0, 47) + '...'
+            : post.content;
+
+          // 뉴스 타입 결정
+          const newsType = post.post_type === 'PLAYER_PRAISE' ? 'MATCH_HIGHLIGHT' : 'COMMUNITY';
+
+          await pool.query(
+            `INSERT INTO news (news_type, title, content, team_id, match_id, author_nickname, view_count, comment_count, like_count)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              newsType,
+              title,
+              post.content,
+              post.team_id,
+              matchId,
+              post.author_nickname,
+              Math.floor(Math.random() * 3000) + 500, // 조회수
+              Math.floor(Math.random() * 150) + 10,    // 댓글수
+              Math.floor(Math.random() * 400) + 50     // 좋아요수
+            ]
+          );
+        }
       }
+    } catch (error) {
+      console.error('Error generating match news from community posts:', error);
     }
   }
 

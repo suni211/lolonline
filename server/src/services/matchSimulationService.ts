@@ -5,6 +5,8 @@ import { giveMatchExperience } from './playerService.js';
 import { checkInjuryAfterMatch, getInjuryPenalty } from './injuryService.js';
 import { EventService } from './eventService.js';
 import { NewsService } from './newsService.js';
+import CommunityService from './communityService.js';
+import FinanceService from './financeService.js';
 
 // 롤 게임 상수 (실제 프로 경기 기준)
 const GAME_CONSTANTS = {
@@ -1716,6 +1718,11 @@ async function processMatchEnd(match: any, matchData: any, homeScore: number, aw
       if (homeScore !== awayScore) {
         await giveMatchExperience(match.id, loserTeamId, false, 0.5);
       }
+
+      // 친선전 기록 삭제 (보상 지급 후)
+      console.log(`🗑️ 친선전 기록 삭제: match_id=${match.id}`);
+      await pool.query('DELETE FROM match_stats WHERE match_id = ?', [match.id]);
+      await pool.query('DELETE FROM matches WHERE id = ?', [match.id]);
     } else {
       // 리그전 보상 - 입장료 수익 + 랜덤 선수 카드
       await giveLeagueMatchRewards(match, winnerTeamId, loserTeamId, homeScore, awayScore);
@@ -1759,6 +1766,53 @@ async function processMatchEnd(match: any, matchData: any, homeScore: number, aw
       } catch (newsError) {
         console.error('Error generating match news:', newsError);
       }
+    }
+
+    // 팀 스탯 업데이트 (케미스트리, 사기, 스트레스) - 친선전은 제외하고 리그 경기만
+    if (match.match_type !== 'FRIENDLY') {
+      // 케미스트리: 경기를 할수록 소폭 증가
+      const chemistryIncrease = Math.floor(1 + Math.random() * 2); // 1~2 증가
+      await pool.query(
+        'UPDATE teams SET team_chemistry = LEAST(100, team_chemistry + ?) WHERE id IN (?, ?)',
+        [chemistryIncrease, match.home_team_id, match.away_team_id]
+      );
+
+      // 승리팀: 사기 상승, 스트레스 감소
+      if (homeScore !== awayScore) {
+        const moraleIncrease = Math.floor(5 + Math.random() * 6); // 5~10 증가
+        const stressDecrease = Math.floor(3 + Math.random() * 5); // 3~7 감소
+        await pool.query(
+          'UPDATE teams SET team_morale = LEAST(100, team_morale + ?), team_stress = GREATEST(0, team_stress - ?) WHERE id = ?',
+          [moraleIncrease, stressDecrease, winnerTeamId]
+        );
+
+        // 패배팀: 사기 하락, 스트레스 증가
+        const moraleDrop = Math.floor(4 + Math.random() * 6); // 4~9 감소
+        const stressIncrease = Math.floor(5 + Math.random() * 8); // 5~12 증가
+        await pool.query(
+          'UPDATE teams SET team_morale = GREATEST(0, team_morale - ?), team_stress = LEAST(100, team_stress + ?) WHERE id = ?',
+          [moraleDrop, stressIncrease, homeScore > awayScore ? match.away_team_id : match.home_team_id]
+        );
+      } else {
+        // 무승부: 사기와 스트레스 소폭 변화
+        const moraleChange = Math.floor(Math.random() * 3) - 1; // -1 ~ 1
+        const stressChange = Math.floor(1 + Math.random() * 3); // 1~3 증가
+        await pool.query(
+          'UPDATE teams SET team_morale = LEAST(100, GREATEST(0, team_morale + ?)), team_stress = LEAST(100, team_stress + ?) WHERE id IN (?, ?)',
+          [moraleChange, stressChange, match.home_team_id, match.away_team_id]
+        );
+      }
+    }
+
+    // 커뮤니티 글 자동 생성 (리그 경기만)
+    if (match.match_type !== 'FRIENDLY') {
+      await CommunityService.generateMatchPosts(
+        match.id,
+        match.home_team_id,
+        match.away_team_id,
+        homeScore,
+        awayScore
+      );
     }
 
     // 벤치 선수 갈등 체크
@@ -1961,10 +2015,12 @@ async function giveLeagueMatchRewards(match: any, winnerTeamId: number, loserTea
     if (homeScore > awayScore) {
       // 홈팀 승리: 팬 증가, 민심 상승
       const fanIncrease = Math.floor(attendance * 0.05); // 관중의 5%가 새 팬
+      const maleFansIncrease = Math.floor(fanIncrease * (0.4 + Math.random() * 0.2)); // 40-60%
+      const femaleFansIncrease = fanIncrease - maleFansIncrease;
       const moraleIncrease = Math.floor(3 + Math.random() * 5); // 3~7 증가
       await pool.query(
-        'UPDATE teams SET fan_count = fan_count + ?, fan_morale = LEAST(100, fan_morale + ?) WHERE id = ?',
-        [fanIncrease, moraleIncrease, homeTeamId]
+        'UPDATE teams SET fan_count = fan_count + ?, male_fans = male_fans + ?, female_fans = female_fans + ?, fan_morale = LEAST(100, fan_morale + ?) WHERE id = ?',
+        [fanIncrease, maleFansIncrease, femaleFansIncrease, moraleIncrease, homeTeamId]
       );
       // 원정팀 패배: 민심 하락
       const moraleDrop = Math.floor(2 + Math.random() * 4); // 2~5 감소
@@ -1975,10 +2031,12 @@ async function giveLeagueMatchRewards(match: any, winnerTeamId: number, loserTea
     } else if (awayScore > homeScore) {
       // 원정팀 승리: 팬 증가, 민심 상승
       const fanIncrease = Math.floor(100 + Math.random() * 200);
+      const maleFansIncrease = Math.floor(fanIncrease * (0.4 + Math.random() * 0.2)); // 40-60%
+      const femaleFansIncrease = fanIncrease - maleFansIncrease;
       const moraleIncrease = Math.floor(3 + Math.random() * 5);
       await pool.query(
-        'UPDATE teams SET fan_count = fan_count + ?, fan_morale = LEAST(100, fan_morale + ?) WHERE id = ?',
-        [fanIncrease, moraleIncrease, match.away_team_id]
+        'UPDATE teams SET fan_count = fan_count + ?, male_fans = male_fans + ?, female_fans = female_fans + ?, fan_morale = LEAST(100, fan_morale + ?) WHERE id = ?',
+        [fanIncrease, maleFansIncrease, femaleFansIncrease, moraleIncrease, match.away_team_id]
       );
       // 홈팀 패배: 민심 크게 하락 (홈에서 지면 더 실망)
       const moraleDrop = Math.floor(4 + Math.random() * 6); // 4~9 감소

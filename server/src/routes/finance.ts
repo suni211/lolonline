@@ -252,82 +252,61 @@ router.get('/daily-stats', authenticateToken, async (req: AuthRequest, res) => {
       dailyStats[dateStr] = { income: 0, expense: 0 };
     }
 
-    // 경기 수입
+    // financial_transactions 테이블에서 집계 (있는 경우)
     try {
-      const matchIncome = await pool.query(
+      const transactions = await pool.query(
         `SELECT
-          DATE(m.finished_at) as date,
-          SUM(CASE
-            WHEN (m.home_team_id = ? AND m.home_score > m.away_score) OR
-                 (m.away_team_id = ? AND m.away_score > m.home_score) THEN 5000000
-            ELSE 1000000
-          END) as income
-         FROM matches m
-         WHERE (m.home_team_id = ? OR m.away_team_id = ?)
-           AND m.status = 'FINISHED'
-           AND m.finished_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-         GROUP BY DATE(m.finished_at)`,
-        [req.teamId, req.teamId, req.teamId, req.teamId, days]
-      );
-
-      matchIncome.forEach((row: any) => {
-        if (row.date) {
-          const dateStr = new Date(row.date).toISOString().split('T')[0];
-          if (dailyStats[dateStr]) {
-            dailyStats[dateStr].income += parseInt(row.income) || 0;
-          }
-        }
-      });
-    } catch (e) {
-      // 쿼리 실패 시 무시
-    }
-
-    // 스트리밍 수입
-    try {
-      const streamIncome = await pool.query(
-        `SELECT
-          DATE(stream_date) as date,
-          SUM(income) as income
-         FROM streaming_history
-         WHERE team_id = ? AND stream_date >= DATE_SUB(NOW(), INTERVAL ? DAY)
-         GROUP BY DATE(stream_date)`,
+          DATE(created_at) as date,
+          SUM(CASE WHEN transaction_type = 'INCOME' THEN amount ELSE 0 END) as income,
+          SUM(CASE WHEN transaction_type = 'EXPENSE' THEN amount ELSE 0 END) as expense
+         FROM financial_transactions
+         WHERE team_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+         GROUP BY DATE(created_at)`,
         [req.teamId, days]
       );
 
-      streamIncome.forEach((row: any) => {
+      transactions.forEach((row: any) => {
         if (row.date) {
           const dateStr = new Date(row.date).toISOString().split('T')[0];
           if (dailyStats[dateStr]) {
-            dailyStats[dateStr].income += parseInt(row.income) || 0;
+            dailyStats[dateStr].income = parseInt(row.income) || 0;
+            dailyStats[dateStr].expense = parseInt(row.expense) || 0;
           }
         }
       });
     } catch (e) {
-      // streaming_history 테이블이 없는 경우
-    }
+      // financial_transactions 테이블이 없는 경우 기존 방식 사용
+      console.warn('financial_transactions table not found, using fallback method');
 
-    // 훈련 비용
-    try {
-      const trainingExpense = await pool.query(
-        `SELECT
-          DATE(trained_at) as date,
-          COUNT(*) * 500 as expense
-         FROM player_training
-         WHERE team_id = ? AND trained_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-         GROUP BY DATE(trained_at)`,
-        [req.teamId, days]
-      );
+      // 경기 수입
+      try {
+        const matchIncome = await pool.query(
+          `SELECT
+            DATE(m.finished_at) as date,
+            SUM(CASE
+              WHEN (m.home_team_id = ? AND m.home_score > m.away_score) OR
+                   (m.away_team_id = ? AND m.away_score > m.home_score) THEN 5000000
+              ELSE 1000000
+            END) as income
+           FROM matches m
+           WHERE (m.home_team_id = ? OR m.away_team_id = ?)
+             AND m.status = 'FINISHED'
+             AND m.finished_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+           GROUP BY DATE(m.finished_at)`,
+          [req.teamId, req.teamId, req.teamId, req.teamId, days]
+        );
 
-      trainingExpense.forEach((row: any) => {
-        if (row.date) {
-          const dateStr = new Date(row.date).toISOString().split('T')[0];
-          if (dailyStats[dateStr]) {
-            dailyStats[dateStr].expense += parseInt(row.expense) || 0;
+        matchIncome.forEach((row: any) => {
+          if (row.date) {
+            const dateStr = new Date(row.date).toISOString().split('T')[0];
+            if (dailyStats[dateStr]) {
+              dailyStats[dateStr].income += parseInt(row.income) || 0;
+            }
           }
-        }
-      });
-    } catch (e) {
-      // 쿼리 실패 시 무시
+        });
+      } catch (err) {
+        // 쿼리 실패 시 무시
+      }
     }
 
     // 배열로 변환

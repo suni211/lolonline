@@ -303,14 +303,13 @@ router.get('/all-matches/upcoming', authenticateToken, async (req: AuthRequest, 
   }
 });
 
-// 최근 경기 결과 조회
+// 다음 예정 경기 조회 (모든 팀)
 router.get('/all-matches/recent', async (req, res) => {
   try {
     const matches = await pool.query(
       `SELECT m.id, m.league_id, m.home_team_id, m.away_team_id, m.match_type, m.round,
               m.status, m.home_score, m.away_score,
               DATE_FORMAT(m.scheduled_at, '%Y-%m-%d %H:%i:%s') as scheduled_at,
-              DATE_FORMAT(m.finished_at, '%Y-%m-%d %H:%i:%s') as finished_at,
               ht.name as home_team_name, ht.logo_url as home_team_logo,
               at.name as away_team_name, at.logo_url as away_team_logo,
               l.name as league_name
@@ -318,14 +317,14 @@ router.get('/all-matches/recent', async (req, res) => {
        JOIN teams ht ON m.home_team_id = ht.id
        JOIN teams at ON m.away_team_id = at.id
        JOIN leagues l ON m.league_id = l.id
-       WHERE m.status = 'FINISHED'
-       ORDER BY m.finished_at DESC
+       WHERE m.status IN ('SCHEDULED', 'LIVE')
+       ORDER BY m.scheduled_at ASC
        LIMIT 20`
     );
     res.json(matches);
   } catch (error) {
-    console.error('Get recent matches error:', error);
-    res.status(500).json({ error: '최근 경기 조회 실패' });
+    console.error('Get next matches error:', error);
+    res.status(500).json({ error: '다음 경기 조회 실패' });
   }
 });
 

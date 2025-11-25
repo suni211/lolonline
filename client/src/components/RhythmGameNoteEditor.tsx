@@ -26,18 +26,42 @@ const RhythmGameNoteEditor = () => {
   const [duration, setDuration] = useState(240);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [keyMapping, setKeyMapping] = useState<number[]>([0, 1, 2, 3]); // 키 매핑 (랜덤화 가능)
 
   const DIFFICULTIES = ['EASY', 'NORMAL', 'HARD', 'INSANE'];
-  const KEYS = [
+  const BASE_KEYS = [
     { index: 0, label: 'D / ←', color: '#3498db' },
     { index: 1, label: 'F', color: '#9b59b6' },
     { index: 2, label: 'J', color: '#e74c3c' },
     { index: 3, label: 'K / →', color: '#f39c12' }
   ];
 
+  // 현재 키 매핑에 따라 KEYS를 재배열
+  const KEYS = keyMapping.map(mappedIndex => BASE_KEYS[mappedIndex]);
+
   useEffect(() => {
     fetchSongs();
   }, []);
+
+  // O키로 키 배치 랜덤화
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'o' && selectedSong) {
+        // 배열을 랜덤하게 섞기 (Fisher-Yates 알고리즘)
+        const shuffled = [...keyMapping];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        setKeyMapping(shuffled);
+        setMessage(`🔀 키 배치 랜덤화: ${shuffled.map(i => BASE_KEYS[i].label.split(' ')[0]).join(' → ')}`);
+        setTimeout(() => setMessage(''), 2000);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [keyMapping, selectedSong]);
 
   const fetchSongs = async () => {
     try {
@@ -317,6 +341,7 @@ const RhythmGameNoteEditor = () => {
           <li><strong>노트 추가:</strong> 타임라인의 원하는 위치를 클릭하여 노트를 추가합니다</li>
           <li><strong>노트 삭제:</strong> 추가된 노트를 클릭하면 삭제됩니다</li>
           <li><strong>세부 편집:</strong> 아래 테이블에서 각 노트의 정확한 시간(ms)과 길이를 편집할 수 있습니다</li>
+          <li><strong>키 랜덤화 (O키):</strong> O키를 누르면 키 배치가 무작위로 바뀝니다 (예: DFJK → FDKJ)</li>
           <li><strong>저장:</strong> 모든 노트를 추가한 후 "악보 저장" 버튼으로 저장합니다</li>
         </ul>
         <p className="guide-tip">💡 팁: 한 번에 하나의 난이도씩 저장합니다. 같은 곡의 다른 난이도는 별도로 작성해주세요</p>

@@ -190,7 +190,8 @@ router.post('/users/:userId/reset', authenticateToken, adminMiddleware, async (r
 
     // 팀 리소스 초기화
     await pool.query(
-      `UPDATE teams SET gold = 1000, diamond = 100, fan_count = 1000 WHERE id = ?`,
+      `UPDATE teams SET gold = 1000, diamond = 100, fan_count = 1000, male_fans = 500, female_fans = 500,
+       team_chemistry = 50, team_morale = 70, team_stress = 30 WHERE id = ?`,
       [teamId]
     );
 
