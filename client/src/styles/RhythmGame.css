@@ -336,6 +336,16 @@
   background: #f39c12;
 }
 
+.note-key-4 {
+  left: 16.66%;
+  background: #e74c3c;  /* E키: 빨간색 (DF 연결) */
+}
+
+.note-key-5 {
+  left: 66.66%;
+  background: #3498db;  /* I키: 파란색 (JK 연결) */
+}
+
 /* 판정선 */
 .judgment-line {
   position: absolute;
@@ -357,7 +367,7 @@
 .keys-area {
   height: 120px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   background: rgba(0, 0, 0, 0.3);
   border-top: 2px solid #555;
 }
@@ -393,6 +403,21 @@
 .key-1 { background: rgba(155, 89, 182, 0.1); }
 .key-2 { background: rgba(231, 76, 60, 0.1); }
 .key-3 { background: rgba(243, 156, 18, 0.1); }
+.key-4 { background: rgba(231, 76, 60, 0.1); }  /* E키: 빨간색 */
+.key-5 { background: rgba(52, 152, 219, 0.1); } /* I키: 파란색 */
+
+/* 슬라이드 키 색상 강조 */
+.slide-key-red {
+  border: 2px solid #e74c3c !important;
+  color: #e74c3c !important;
+  font-weight: bold;
+}
+
+.slide-key-blue {
+  border: 2px solid #3498db !important;
+  color: #3498db !important;
+  font-weight: bold;
+}
 
 /* 판정 피드백 */
 .judgment-feedback {

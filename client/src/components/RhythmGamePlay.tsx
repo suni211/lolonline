@@ -50,6 +50,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const gameLoopRef = useRef<number | null>(null);
+  const gameFieldRef = useRef<HTMLDivElement>(null);
   const judgedNotesRef = useRef<Set<number>>(new Set());
 
   // 점수 계산 공식
@@ -113,8 +114,15 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
   // 게임 시작
   const handleGameStart = () => {
     setGameStarted(true);
+    // 게임 필드에 focus를 주어 키 입력 활성화
+    setTimeout(() => {
+      if (gameFieldRef.current) {
+        gameFieldRef.current.focus();
+      }
+    }, 0);
+
     if (audioRef.current && bgmEnabled) {
-      audioRef.current.play();
+      audioRef.current.play().catch(err => console.error('음악 재생 실패:', err));
     }
   };
 
@@ -137,6 +145,12 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
       case 'k':
       case 'arrowright':
         keyIndex = 3;
+        break;
+      case 'e':
+        keyIndex = 4;  // E: DF 연결 (빨간색)
+        break;
+      case 'i':
+        keyIndex = 5;  // I: JK 연결 (파란색)
         break;
       default:
         return;
@@ -307,7 +321,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
   }
 
   return (
-    <div className="rhythm-game-play" onKeyDown={handleKeyPress} tabIndex={0}>
+    <div ref={gameFieldRef} className="rhythm-game-play" onKeyDown={handleKeyPress} tabIndex={0}>
       {/* HUD */}
       <div className="game-hud">
         <div className="hud-item">
@@ -360,8 +374,10 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
         <div className="keys-area">
           <div className="key key-0">D</div>
           <div className="key key-1">F</div>
+          <div className="key key-4 slide-key-red">E</div>
           <div className="key key-2">J</div>
           <div className="key key-3">K</div>
+          <div className="key key-5 slide-key-blue">I</div>
         </div>
       </div>
 
