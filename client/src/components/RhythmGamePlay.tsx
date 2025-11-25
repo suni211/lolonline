@@ -479,7 +479,11 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
       {/* 오디오 */}
       <audio
         ref={audioRef}
-        src={song.music_url}
+        src={song.music_url && song.music_url.startsWith('http')
+          ? song.music_url
+          : song.music_url && song.music_url.startsWith('/')
+            ? window.location.origin + song.music_url
+            : song.music_url}
         crossOrigin="anonymous"
         onLoadedMetadata={(e) => {
           const audio = e.target as HTMLAudioElement;

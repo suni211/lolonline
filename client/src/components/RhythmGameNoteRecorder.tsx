@@ -441,7 +441,15 @@ const RhythmGameNoteRecorder = () => {
       </div>
 
       {/* 오디오 */}
-      <audio ref={audioRef} src={selectedSong?.music_url} crossOrigin="anonymous" />
+      <audio
+        ref={audioRef}
+        src={selectedSong?.music_url && selectedSong.music_url.startsWith('http')
+          ? selectedSong.music_url
+          : selectedSong?.music_url && selectedSong.music_url.startsWith('/')
+            ? window.location.origin + selectedSong.music_url
+            : selectedSong?.music_url}
+        crossOrigin="anonymous"
+      />
 
       {/* 사용 설명서 */}
       <div className="recorder-guide">
