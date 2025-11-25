@@ -15,6 +15,8 @@ interface RecordedNote {
   key_index: number;
   timing: number;
   duration: number;
+  type: 'NORMAL' | 'LONG' | 'SLIDE';
+  slide_path?: number[];
 }
 
 const RhythmGameNoteRecorder = () => {
@@ -30,6 +32,7 @@ const RhythmGameNoteRecorder = () => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const gameLoopRef = useRef<number | null>(null);
   const keyPressRef = useRef<{ [key: number]: number | null }>({ 0: null, 1: null, 2: null, 3: null });
+  const slideStartRef = useRef<{ keyIndex: number; timing: number; path: number[] } | null>(null);
 
   const DIFFICULTIES = ['EASY', 'NORMAL', 'HARD', 'INSANE'];
   const KEYS = [
@@ -119,6 +122,29 @@ const RhythmGameNoteRecorder = () => {
     if (keyPressRef.current[keyIndex] !== null) return;
 
     e.preventDefault();
+
+    // 현재 누르고 있는 다른 키가 있는지 확인
+    const activePressedKey = Object.entries(keyPressRef.current).find(
+      ([_, pressTime]) => pressTime !== null
+    );
+
+    if (activePressedKey) {
+      // 슬라이드 시작
+      const activeKeyIndex = parseInt(activePressedKey[0]);
+      if (!slideStartRef.current) {
+        slideStartRef.current = {
+          keyIndex: activeKeyIndex,
+          timing: activePressedKey[1]!,
+          path: [activeKeyIndex, keyIndex]
+        };
+      } else {
+        // 이미 슬라이드 중이면 경로에 추가
+        if (!slideStartRef.current.path.includes(keyIndex)) {
+          slideStartRef.current.path.push(keyIndex);
+        }
+      }
+    }
+
     // 이 키의 누르기 시작 시간 기록
     keyPressRef.current[keyIndex] = currentTime;
   };
@@ -137,10 +163,30 @@ const RhythmGameNoteRecorder = () => {
     const endTime = currentTime;
     const duration = Math.max(0, endTime - startTime);
 
+    let noteType: 'NORMAL' | 'LONG' | 'SLIDE' = 'NORMAL';
+    let slidePath: number[] | undefined = undefined;
+
+    // 슬라이드 노트인 경우
+    if (slideStartRef.current && slideStartRef.current.keyIndex === keyIndex) {
+      noteType = 'SLIDE';
+      slidePath = slideStartRef.current.path;
+      slideStartRef.current = null;
+    } else if (slideStartRef.current) {
+      // 슬라이드 중인데 다른 키가 떼어지면, 슬라이드 노트로 유지
+      // 이 키는 무시
+      keyPressRef.current[keyIndex] = null;
+      return;
+    } else if (duration > 100) {
+      // duration이 100ms 이상이면 LONG 노트
+      noteType = 'LONG';
+    }
+
     const newNote: RecordedNote = {
       key_index: keyIndex,
       timing: Math.round(startTime),
-      duration: Math.round(duration)
+      duration: Math.round(duration),
+      type: noteType,
+      slide_path: slidePath
     };
 
     setRecordedNotes([...recordedNotes, newNote].sort((a, b) => a.timing - b.timing));
@@ -293,41 +339,53 @@ const RhythmGameNoteRecorder = () => {
                     <div className="col-time">시간 (ms)</div>
                     <div className="col-key">키</div>
                     <div className="col-duration">길이</div>
+                    <div className="col-type">타입</div>
                     <div className="col-action">삭제</div>
                   </div>
-                  {recordedNotes.map((note, idx) => (
-                    <div key={idx} className="table-row">
-                      <div className="col-time">
-                        <input
-                          type="number"
-                          min="0"
-                          value={note.timing}
-                          onChange={(e) => updateNote(idx, 'timing', Number(e.target.value))}
-                        />
+                  {recordedNotes.map((note, idx) => {
+                    const typeLabel = note.type === 'SLIDE'
+                      ? `슬라이드 ${note.slide_path?.map(k => KEYS[k].label).join('→') || ''}`
+                      : note.type === 'LONG'
+                      ? '롱노트'
+                      : '일반';
+
+                    return (
+                      <div key={idx} className="table-row">
+                        <div className="col-time">
+                          <input
+                            type="number"
+                            min="0"
+                            value={note.timing}
+                            onChange={(e) => updateNote(idx, 'timing', Number(e.target.value))}
+                          />
+                        </div>
+                        <div className="col-key">
+                          <select
+                            value={note.key_index}
+                            onChange={(e) => updateNote(idx, 'key_index', Number(e.target.value))}
+                          >
+                            {KEYS.map((k) => (
+                              <option key={k.index} value={k.index}>{k.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="col-duration">
+                          <input
+                            type="number"
+                            min="0"
+                            value={note.duration}
+                            onChange={(e) => updateNote(idx, 'duration', Number(e.target.value))}
+                          />
+                        </div>
+                        <div className="col-type" title={typeLabel}>
+                          {typeLabel}
+                        </div>
+                        <div className="col-action">
+                          <button onClick={() => removeNote(idx)}>✕</button>
+                        </div>
                       </div>
-                      <div className="col-key">
-                        <select
-                          value={note.key_index}
-                          onChange={(e) => updateNote(idx, 'key_index', Number(e.target.value))}
-                        >
-                          {KEYS.map((k) => (
-                            <option key={k.index} value={k.index}>{k.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="col-duration">
-                        <input
-                          type="number"
-                          min="0"
-                          value={note.duration}
-                          onChange={(e) => updateNote(idx, 'duration', Number(e.target.value))}
-                        />
-                      </div>
-                      <div className="col-action">
-                        <button onClick={() => removeNote(idx)}>✕</button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
