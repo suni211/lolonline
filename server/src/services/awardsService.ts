@@ -150,7 +150,7 @@ export class AwardsService {
       // 재정 기록
       await pool.query(
         `INSERT INTO financial_records (team_id, record_type, category, amount, description)
-         VALUES (?, 'INCOME', 'PRIZE', ?, ?)`,
+         VALUES (?, 'INCOME', 'OTHER', ?, ?)`,
         [teamId, prizeGold, `시즌 ${season} ${awardType} 상금`]
       );
     } catch (error) {

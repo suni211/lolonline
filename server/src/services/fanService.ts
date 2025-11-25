@@ -116,7 +116,7 @@ export class FanService {
           // 재정 기록
           await pool.query(
             `INSERT INTO financial_records (team_id, record_type, category, amount, description)
-             VALUES (?, 'INCOME', 'MERCHANDISE', ?, ?)`,
+             VALUES (?, 'INCOME', 'OTHER', ?, ?)`,
             [team.id, merchandiseResult.income, `월간 굿즈 판매 수익 (${merchandiseResult.buyers}명 구매)`]
           );
 
@@ -228,7 +228,7 @@ export class FanService {
       // 재정 기록
       await pool.query(
         `INSERT INTO financial_records (team_id, record_type, category, amount, description)
-         VALUES (?, 'EXPENSE', 'EVENT', ?, ?)`,
+         VALUES (?, 'EXPENSE', 'OTHER', ?, ?)`,
         [teamId, config.cost, `팬 이벤트: ${eventType}`]
       );
 
