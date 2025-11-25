@@ -17,13 +17,6 @@ interface Note {
   duration: number;
 }
 
-interface Chart {
-  id?: number;
-  song_id: number;
-  difficulty: string;
-  notes: Note[];
-}
-
 const RhythmGameNoteEditor = () => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
@@ -116,7 +109,6 @@ const RhythmGameNoteEditor = () => {
   };
 
   const beatMs = (60 / bpm) * 1000; // 비트당 밀리초
-  const barMs = beatMs * 4; // 마디당 밀리초
 
   return (
     <div className="rhythm-game-note-editor">
@@ -179,10 +171,20 @@ const RhythmGameNoteEditor = () => {
             {/* 타임라인 */}
             <div className="timeline-container">
               <div className="timeline-ruler">
+                {/* 초 단위 마커 */}
                 {Array.from({ length: Math.ceil(duration / 1000) + 1 }).map((_, i) => (
-                  <div key={i} className="time-marker" style={{ left: `${(i * 1000 / duration) * 100}%` }}>
+                  <div key={`second-${i}`} className="time-marker" style={{ left: `${(i * 1000 / duration) * 100}%` }}>
                     <div className="marker-label">{i}s</div>
                   </div>
+                ))}
+
+                {/* 비트 단위 마커 */}
+                {Array.from({ length: Math.ceil((duration * 1000) / beatMs) }).map((_, i) => (
+                  <div
+                    key={`beat-${i}`}
+                    className="beat-marker"
+                    style={{ left: `${((i * beatMs) / (duration * 1000)) * 100}%` }}
+                  />
                 ))}
               </div>
 
