@@ -7,9 +7,8 @@ const router = express.Router();
 // 곡 목록 조회
 router.get('/songs', async (req: Request, res: Response) => {
   try {
-    const { difficulty } = req.query;
-    const songs = await RhythmGameService.getSongs(difficulty as string);
-    res.json({ success: true, songs });
+    const songs = await RhythmGameService.getSongs();
+    res.json(songs);
   } catch (error) {
     console.error('Get songs error:', error);
     res.status(500).json({ success: false, error: (error as any).message });
@@ -21,7 +20,7 @@ router.get('/songs/:songId', async (req: Request, res: Response) => {
   try {
     const songId = parseInt(req.params.songId);
     const data = await RhythmGameService.getSongWithCharts(songId);
-    res.json({ success: true, data });
+    res.json(data);
   } catch (error) {
     console.error('Get song error:', error);
     res.status(500).json({ success: false, error: (error as any).message });
@@ -38,7 +37,7 @@ router.get('/charts/:chartId/notes', async (req: Request, res: Response) => {
     console.error('Get chart notes error:', error);
     res.status(500).json({ success: false, error: (error as any).message });
   }
-});
+}); // RhythmGamePlay.tsx가 { success, notes } 형식으로 기대하므로 유지
 
 // 리듬게임 플레이 결과 제출
 router.post('/submit', authenticateToken, async (req: AuthRequest, res: Response) => {
