@@ -31,15 +31,17 @@ const RhythmGameNoteRecorder = () => {
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const gameLoopRef = useRef<number | null>(null);
-  const keyPressRef = useRef<{ [key: number]: number | null }>({ 0: null, 1: null, 2: null, 3: null });
+  const keyPressRef = useRef<{ [key: number]: number | null }>({ 0: null, 1: null, 2: null, 3: null, 4: null, 5: null });
   const slideStartRef = useRef<{ keyIndex: number; timing: number; path: number[] } | null>(null);
 
   const DIFFICULTIES = ['EASY', 'NORMAL', 'HARD', 'INSANE'];
   const KEYS = [
-    { index: 0, label: 'D / ←', key: 'd', color: '#3498db' },
-    { index: 1, label: 'F', key: 'f', color: '#9b59b6' },
-    { index: 2, label: 'J', key: 'j', color: '#e74c3c' },
-    { index: 3, label: 'K / →', key: 'k', color: '#f39c12' }
+    { index: 0, label: 'D / ←', key: 'd', color: '#3498db', type: 'normal' },
+    { index: 1, label: 'F', key: 'f', color: '#9b59b6', type: 'normal' },
+    { index: 2, label: 'J', key: 'j', color: '#e74c3c', type: 'normal' },
+    { index: 3, label: 'K / →', key: 'k', color: '#f39c12', type: 'normal' },
+    { index: 4, label: 'E', key: 'e', color: '#1abc9c', type: 'slide' },
+    { index: 5, label: 'I', key: 'i', color: '#e67e22', type: 'slide' }
   ];
 
   useEffect(() => {
@@ -48,9 +50,11 @@ const RhythmGameNoteRecorder = () => {
 
   const fetchSongs = async () => {
     try {
-      const response = await axios.get('/api/rhythm-game/songs');
-      const songsData = Array.isArray(response.data) ? response.data : response.data.songs || [];
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/rhythm-game/songs`);
+      // API는 배열을 직접 반환
+      const songsData = Array.isArray(response.data) ? response.data : [];
       setSongs(songsData);
+      console.log('Songs loaded:', songsData);
     } catch (error) {
       console.error('fetchSongs error:', error);
       setMessage('곡 목록 로드 실패');
@@ -123,13 +127,16 @@ const RhythmGameNoteRecorder = () => {
 
     e.preventDefault();
 
+    const keyConfig = KEYS.find(k => k.index === keyIndex);
+    const isSlideKey = keyConfig?.type === 'slide';
+
     // 현재 누르고 있는 다른 키가 있는지 확인
     const activePressedKey = Object.entries(keyPressRef.current).find(
       ([_, pressTime]) => pressTime !== null
     );
 
-    if (activePressedKey) {
-      // 슬라이드 시작
+    if (activePressedKey && isSlideKey) {
+      // E나 I 키로 슬라이드 시작 (E/I는 슬라이드 전용)
       const activeKeyIndex = parseInt(activePressedKey[0]);
       if (!slideStartRef.current) {
         slideStartRef.current = {
@@ -163,22 +170,31 @@ const RhythmGameNoteRecorder = () => {
     const endTime = currentTime;
     const duration = Math.max(0, endTime - startTime);
 
+    const keyConfig = KEYS.find(k => k.index === keyIndex);
+    const isSlideKey = keyConfig?.type === 'slide';
+
     let noteType: 'NORMAL' | 'LONG' | 'SLIDE' = 'NORMAL';
     let slidePath: number[] | undefined = undefined;
 
-    // 슬라이드 노트인 경우
-    if (slideStartRef.current && slideStartRef.current.keyIndex === keyIndex) {
+    // E/I 키로 슬라이드 노트 종료
+    if (slideStartRef.current && isSlideKey && slideStartRef.current.keyIndex !== keyIndex) {
       noteType = 'SLIDE';
       slidePath = slideStartRef.current.path;
       slideStartRef.current = null;
     } else if (slideStartRef.current) {
-      // 슬라이드 중인데 다른 키가 떼어지면, 슬라이드 노트로 유지
+      // 슬라이드 중인데 E/I가 아닌 다른 키가 떼어지면, 슬라이드 유지
       // 이 키는 무시
       keyPressRef.current[keyIndex] = null;
       return;
-    } else if (duration > 100) {
-      // duration이 100ms 이상이면 LONG 노트
+    } else if (!isSlideKey && duration > 100) {
+      // D/F/J/K의 duration이 100ms 이상이면 LONG 노트 (E/I는 슬라이드만)
       noteType = 'LONG';
+    }
+
+    // E/I 키는 슬라이드만 생성, 단독으로는 노트 생성 안 함
+    if (isSlideKey && !slideStartRef.current) {
+      keyPressRef.current[keyIndex] = null;
+      return;
     }
 
     const newNote: RecordedNote = {
@@ -213,19 +229,27 @@ const RhythmGameNoteRecorder = () => {
 
     try {
       setLoading(true);
-      const response = await axios.post('/api/rhythm-game/charts', {
+      console.log('Saving chart:', { songId: selectedSong.id, difficulty: selectedDifficulty, noteCount: recordedNotes.length });
+
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/rhythm-game/charts`, {
         songId: selectedSong.id,
         difficulty: selectedDifficulty,
         notes: recordedNotes
       });
 
-      if (response.data.success) {
+      console.log('Chart saved response:', response.data);
+
+      if (response.data?.success) {
         setMessage(`✅ ${selectedDifficulty} 악보가 저장되었습니다! (${recordedNotes.length}개 노트)`);
         setRecordedNotes([]);
         setTimeout(() => setMessage(''), 3000);
+      } else {
+        setMessage(response.data?.message || '악보 저장 완료');
+        setRecordedNotes([]);
       }
     } catch (error: any) {
-      setMessage(error.response?.data?.error || '저장 실패');
+      console.error('Save chart error:', error);
+      setMessage(error.response?.data?.error || error.message || '저장 실패');
     } finally {
       setLoading(false);
     }
