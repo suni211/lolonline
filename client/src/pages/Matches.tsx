@@ -113,6 +113,17 @@ export default function Matches() {
         return dateA.getTime() - dateB.getTime();
       });
 
+      // 디버깅: 리그 이름 확인
+      console.log('📊 전체 경기 수:', allMatches.length);
+      console.log('📊 SOUTH 경기:', allMatches.filter(m => m.league_name?.toUpperCase().includes('SOUTH')).length);
+      console.log('📊 NORTH 경기:', allMatches.filter(m => m.league_name?.toUpperCase().includes('NORTH')).length);
+      console.log('📊 경기 샘플:', allMatches.slice(0, 3).map(m => ({
+        league: m.league_name,
+        status: m.status,
+        home: m.home_team_name,
+        away: m.away_team_name
+      })));
+
       setMatches(allMatches);
     } catch (error) {
       console.error('Failed to fetch matches:', error);
