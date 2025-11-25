@@ -64,7 +64,7 @@ export class StreamingService {
       // 재정 기록
       await pool.query(
         `INSERT INTO financial_records (team_id, record_type, category, amount, description)
-         VALUES (?, 'INCOME', 'STREAMING', ?, ?)`,
+         VALUES (?, 'INCOME', 'OTHER', ?, ?)`,
         [teamId, income, `${player.name} 스트리밍 수익 (${viewers.toLocaleString()}명 시청)`]
       );
 
