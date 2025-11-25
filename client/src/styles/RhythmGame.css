@@ -297,10 +297,10 @@
 /* 노트 컨테이너 */
 .notes-container {
   position: absolute;
-  top: 0;
+  top: -500px;  /* 화면 위쪽 밖에서 시작 가능 */
   left: 0;
   right: 0;
-  bottom: 120px;
+  bottom: -500px;  /* 화면 아래쪽까지 확장 */
   pointer-events: none;
 }
 

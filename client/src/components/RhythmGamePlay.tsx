@@ -365,18 +365,19 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
     }
   };
 
-  // 판정선 위치 (CSS의 .judgment-line bottom 값과 동일해야 함, px)
-  const JUDGMENT_LINE_Y = 120;
+  // 판정선 위치 (notes-container가 top: -500, bottom: -500으로 확장되어 있으므로)
+  // 판정선 = 500 + 120 = 620px (notes-container 내에서)
+  const JUDGMENT_LINE_Y = 620;
 
   // 활성 노트 (현재 떨어지는 노트들)
-  // noteSpeed를 고려하여 표시 범위 조정: 빠를수록 더 많은 노트를 미리 표시
-  const lookAheadTime = 3000 * noteSpeed; // noteSpeed가 빠를수록 더 먼 미래의 노트를 표시
-  // 판정선을 지난 후 최소 2초까지는 노트를 계속 표시 (smooth falloff)
-  const lookBehindTime = 2000 + (1200 / Math.max(0.1, noteSpeed));
+  // 화면 위쪽 밖에서부터 아래쪽 밖까지 충분히 길게 표시
+  const lookAheadTime = 5000 * noteSpeed; // 미래 노트 (위쪽에서 떨어지는 중)
+  // 판정선을 지난 후 최소 10초까지는 노트를 계속 표시 (아래쪽까지 완전히 떨어지게)
+  const lookBehindTime = 10000 + (5000 / Math.max(0.1, noteSpeed));
   const activeNotes = notes.filter(
     (note) =>
-      note.timing >= Math.max(0, currentTime - lookBehindTime) && // 과거 노트도 일부 보여줌
-      note.timing <= currentTime + lookAheadTime && // noteSpeed에 따른 앞 미리 보기
+      note.timing >= currentTime - lookBehindTime && // 과거 노트도 충분히 길게
+      note.timing <= currentTime + lookAheadTime && // 미래 노트도 충분히 길게
       !judgedNotesRef.current.has(note.id)
   );
 
