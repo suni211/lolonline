@@ -160,7 +160,6 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
     }
 
     console.log('게임 시작: audioReady=', audioReady, 'loadingNotes=', loadingNotes);
-    setGameStarted(true);
 
     // 게임 필드에 focus를 주어 키 입력 활성화
     setTimeout(() => {
@@ -169,10 +168,14 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
       }
     }, 0);
 
-    if (audioRef.current && bgmEnabled) {
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(err => console.error('음악 재생 실패:', err));
-    }
+    // audio 준비 완료 후 gameStarted 설정 (audio 제거 방지)
+    setTimeout(() => {
+      if (audioRef.current && bgmEnabled) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(err => console.error('음악 재생 실패:', err));
+      }
+      setGameStarted(true);
+    }, 10);
   };
 
   // 키 입력 처리
@@ -295,9 +298,10 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
   };
 
   // 활성 노트 (현재 떨어지는 노트들)
+  // currentTime이 음수가 될 수 없으므로, 최대 3초 앞의 노트들만 표시
   const activeNotes = notes.filter(
     (note) =>
-      note.timing >= currentTime - 500 && // 500ms 이전
+      note.timing >= Math.max(0, currentTime - 500) && // 500ms 이전 (최소 0)
       note.timing <= currentTime + 3000 && // 3초 이후
       !judgedNotesRef.current.has(note.id)
   );
