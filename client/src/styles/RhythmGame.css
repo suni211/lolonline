@@ -312,7 +312,6 @@
   background: #3498db;
   border-radius: 4px;
   left: 0;
-  transition: all 0.05s linear;
   box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
 }
 

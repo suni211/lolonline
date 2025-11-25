@@ -371,9 +371,11 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
   // 활성 노트 (현재 떨어지는 노트들)
   // noteSpeed를 고려하여 표시 범위 조정: 빠를수록 더 많은 노트를 미리 표시
   const lookAheadTime = 3000 * noteSpeed; // noteSpeed가 빠를수록 더 먼 미래의 노트를 표시
+  // 판정선을 지난 후 최소 2초까지는 노트를 계속 표시 (smooth falloff)
+  const lookBehindTime = 2000 + (1200 / Math.max(0.1, noteSpeed));
   const activeNotes = notes.filter(
     (note) =>
-      note.timing >= Math.max(0, currentTime - 500) && // 500ms 이전 (최소 0)
+      note.timing >= Math.max(0, currentTime - lookBehindTime) && // 과거 노트도 일부 보여줌
       note.timing <= currentTime + lookAheadTime && // noteSpeed에 따른 앞 미리 보기
       !judgedNotesRef.current.has(note.id)
   );
