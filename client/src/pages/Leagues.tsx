@@ -319,12 +319,12 @@ export default function Leagues() {
                     <div className="match-teams">
                       <span className="team-with-logo" title={match.home_team_name}>
                         {match.home_team_logo && <img src={match.home_team_logo} alt="" className="team-logo-small" />}
-                        {abbreviateTeamName(match.home_team_name)}
+                        {match.home_team_abbr || abbreviateTeamName(match.home_team_name)}
                       </span>
                       <span className="vs">vs</span>
                       <span className="team-with-logo" title={match.away_team_name}>
                         {match.away_team_logo && <img src={match.away_team_logo} alt="" className="team-logo-small" />}
-                        {abbreviateTeamName(match.away_team_name)}
+                        {match.away_team_abbr || abbreviateTeamName(match.away_team_name)}
                       </span>
                     </div>
                     <div className="match-time">

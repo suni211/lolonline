@@ -85,12 +85,12 @@ router.get('/:leagueId', async (req, res) => {
       `SELECT m.id, m.league_id, m.home_team_id, m.away_team_id, m.match_type, m.round,
               m.status, m.home_score, m.away_score,
               DATE_FORMAT(m.scheduled_at, '%Y-%m-%d %H:%i:%s') as scheduled_at,
-              ht.name as home_team_name, ht.logo_url as home_team_logo,
-              at.name as away_team_name, at.logo_url as away_team_logo
+              ht.name as home_team_name, ht.abbreviation as home_team_abbr, ht.logo_url as home_team_logo,
+              at.name as away_team_name, at.abbreviation as away_team_abbr, at.logo_url as away_team_logo
        FROM matches m
        INNER JOIN teams ht ON m.home_team_id = ht.id
        INNER JOIN teams at ON m.away_team_id = at.id
-       WHERE m.league_id = ? AND m.status = 'SCHEDULED'
+       WHERE m.league_id = ? AND m.status IN ('SCHEDULED', 'LIVE')
        ORDER BY m.scheduled_at ASC
        LIMIT 10`,
       [leagueId]
@@ -283,8 +283,8 @@ router.get('/all-matches/upcoming', authenticateToken, async (req: AuthRequest, 
       `SELECT m.id, m.league_id, m.home_team_id, m.away_team_id, m.match_type, m.round,
               m.status, m.home_score, m.away_score,
               DATE_FORMAT(m.scheduled_at, '%Y-%m-%d %H:%i:%s') as scheduled_at,
-              ht.name as home_team_name, ht.logo_url as home_team_logo,
-              at.name as away_team_name, at.logo_url as away_team_logo,
+              ht.name as home_team_name, ht.abbreviation as home_team_abbr, ht.logo_url as home_team_logo,
+              at.name as away_team_name, at.abbreviation as away_team_abbr, at.logo_url as away_team_logo,
               l.name as league_name
        FROM matches m
        JOIN teams ht ON m.home_team_id = ht.id
@@ -310,8 +310,8 @@ router.get('/all-matches/recent', async (req, res) => {
       `SELECT m.id, m.league_id, m.home_team_id, m.away_team_id, m.match_type, m.round,
               m.status, m.home_score, m.away_score,
               DATE_FORMAT(m.scheduled_at, '%Y-%m-%d %H:%i:%s') as scheduled_at,
-              ht.name as home_team_name, ht.logo_url as home_team_logo,
-              at.name as away_team_name, at.logo_url as away_team_logo,
+              ht.name as home_team_name, ht.abbreviation as home_team_abbr, ht.logo_url as home_team_logo,
+              at.name as away_team_name, at.abbreviation as away_team_abbr, at.logo_url as away_team_logo,
               l.name as league_name
        FROM matches m
        JOIN teams ht ON m.home_team_id = ht.id
