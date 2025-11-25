@@ -65,8 +65,17 @@ export const io = new Server(httpServer, {
 app.use(cors());
 app.use(express.json());
 
-// uploads 폴더 정적 파일 서빙 (선수 이미지 등)
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+// uploads 폴더 정적 파일 서빙 (음악, 이미지 등) - CORS 헤더 포함
+app.use('/uploads', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Range');
+  res.header('Accept-Ranges', 'bytes');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+}, express.static(path.join(__dirname, '..', 'uploads')));
 
 // IP 주소 추출을 위한 미들웨어
 app.set('trust proxy', true);
