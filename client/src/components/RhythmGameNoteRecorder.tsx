@@ -29,10 +29,6 @@ const RhythmGameNoteRecorder = () => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // 노트 녹음 시 더 쉬운 판정 윈도우 (±150ms) 사용
-  // 게임 플레이 시에는 더 타이트한 판정 (±50/±100/±200ms) 적용
-  const RECORDING_JUDGMENT_WINDOW = 150;
-
   const audioRef = useRef<HTMLAudioElement>(null);
   const gameLoopRef = useRef<number | null>(null);
   const keyPressRef = useRef<{ [key: number]: number | null }>({ 0: null, 1: null, 2: null, 3: null });
