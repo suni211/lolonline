@@ -60,6 +60,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
   const gameLoopRef = useRef<number | null>(null);
   const gameFieldRef = useRef<HTMLDivElement>(null);
   const judgedNotesRef = useRef<Set<number>>(new Set());
+  const notesRef = useRef<Note[]>([]);
 
   // 현재 누르고 있는 키들 (시각적 피드백)
   const [pressedKeys, setPressedKeys] = useState<Set<number>>(new Set());
@@ -114,6 +115,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
         console.log('Note type breakdown:', typeCount);
 
         setNotes(notesData);
+        notesRef.current = notesData;
         setLoadingNotes(false);
       } catch (error) {
         console.error('노트 로드 실패:', error);
@@ -135,7 +137,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
         setCurrentTime(currentMs); // 밀리초 단위
 
         // 자동 미스 처리: 판정선을 지난 노트들 (timingDiff <= -300ms 이상)
-        notes.forEach(note => {
+        notesRef.current.forEach(note => {
           if (!judgedNotesRef.current.has(note.id)) {
             const timingDiff = note.timing - currentMs;
             // 판정 범위를 완전히 벗어난 경우 (300ms 이상 경과)
@@ -145,11 +147,6 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
               setJudgments((prev) => ({ ...prev, miss: prev.miss + 1 }));
               setRecentJudgment({ type: 'MISS', timing: currentMs });
               setTimeout(() => setRecentJudgment(null), 200);
-
-              // 정확도 재계산
-              const totalJudgments = Object.values(judgments).reduce((a, b) => a + b, 0) + 1;
-              const newAccuracy = (Object.values(judgments).reduce((a, b) => a + b, 0) * 100 / (totalJudgments * 100)) * 100;
-              setAccuracy(Math.min(100, newAccuracy));
             }
           }
         });
@@ -171,7 +168,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
         cancelAnimationFrame(gameLoopRef.current);
       }
     };
-  }, [gameStarted, gameEnded, actualDuration, notes, judgments]);
+  }, [gameStarted, gameEnded, actualDuration]);
 
   // 게임 시작 후 음악 재생
   useEffect(() => {
