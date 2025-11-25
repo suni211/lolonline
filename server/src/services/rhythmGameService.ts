@@ -215,7 +215,7 @@ export class RhythmGameService {
   static async createChart(
     songId: number,
     difficulty: string,
-    creatorId: number,
+    creatorId: number | null,
     notes: Array<{ keyIndex: number; timing: number; duration?: number }>
   ) {
     try {

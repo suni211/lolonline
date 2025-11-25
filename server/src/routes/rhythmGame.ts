@@ -95,7 +95,7 @@ router.get('/stats/:teamId', async (req: Request, res: Response) => {
 router.post('/charts', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { songId, difficulty, notes } = req.body;
-    const creatorId = req.user?.id || null;
+    const creatorId = req.userId || null;
 
     if (!songId || !difficulty || !notes || !Array.isArray(notes)) {
       return res.status(400).json({ success: false, error: '필수 정보가 없습니다' });
