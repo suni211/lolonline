@@ -47,6 +47,8 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
   const [judgments, setJudgments] = useState({ perfect: 0, good: 0, bad: 0, miss: 0 });
   const [recentJudgment, setRecentJudgment] = useState<Judgment | null>(null);
   const [loadingNotes, setLoadingNotes] = useState(true);
+  const [audioReady, setAudioReady] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const gameLoopRef = useRef<number | null>(null);
@@ -228,7 +230,9 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
       const playerCardId = parseInt(localStorage.getItem('selectedPlayerCardId') || '0');
 
       if (teamId) {
-        await axios.post(`${import.meta.env.VITE_API_URL}/rhythm-game/submit`, {
+        const apiUrl = import.meta.env.VITE_API_URL || '';
+        const url = `${apiUrl}/api/rhythm-game/submit`;
+        await axios.post(url, {
           teamId,
           playerCardId: playerCardId || null,
           chartId: chart.id,
@@ -263,6 +267,16 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
           <p className="artist">{song.artist}</p>
           <p className="info">♪ {song.bpm} BPM • {chart.note_count} Notes</p>
 
+          {audioError && (
+            <div style={{ color: '#e74c3c', marginBottom: '20px', padding: '10px', backgroundColor: 'rgba(231, 76, 60, 0.2)', borderRadius: '4px' }}>
+              ⚠️ {audioError}
+            </div>
+          )}
+
+          {!audioReady && !audioError && (
+            <p style={{ color: '#f39c12', marginBottom: '20px' }}>🔄 음악 로드 중...</p>
+          )}
+
           <div className="keys-info">
             <p>⌨️ 키 설정</p>
             <div className="keys-grid">
@@ -275,8 +289,8 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
             </div>
           </div>
 
-          <button className="start-btn" onClick={handleGameStart}>
-            게임 시작
+          <button className="start-btn" onClick={handleGameStart} disabled={!audioReady && loadingNotes}>
+            {loadingNotes ? '노트 로드 중...' : !audioReady ? '음악 로드 대기 중...' : '게임 시작'}
           </button>
         </div>
       </div>
@@ -405,7 +419,21 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
       </button>
 
       {/* 오디오 */}
-      <audio ref={audioRef} src={song.music_url} crossOrigin="anonymous" />
+      <audio
+        ref={audioRef}
+        src={song.music_url}
+        crossOrigin="anonymous"
+        onCanPlay={() => {
+          console.log('Audio ready:', song.music_url);
+          setAudioReady(true);
+        }}
+        onError={(e) => {
+          const error = (e.target as HTMLAudioElement).error;
+          const errorMsg = `음악 로드 실패: ${error?.message || 'Unknown error'}`;
+          console.error(errorMsg, 'URL:', song.music_url);
+          setAudioError(errorMsg);
+        }}
+      />
     </div>
   );
 };
