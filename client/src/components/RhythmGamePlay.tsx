@@ -50,6 +50,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
   const [audioReady, setAudioReady] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
   const [actualDuration, setActualDuration] = useState(song.duration);
+  const audioLoadStartTimeRef = useRef<number>(Date.now());
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const gameLoopRef = useRef<number | null>(null);
@@ -483,18 +484,28 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
         onLoadedMetadata={(e) => {
           const audio = e.target as HTMLAudioElement;
           const duration = Math.round(audio.duration);
-          console.log('Audio metadata loaded. Duration:', duration, 'seconds');
+          const loadTime = Date.now() - audioLoadStartTimeRef.current;
+          console.log('🎵 Audio metadata loaded:', {
+            duration: `${duration}초`,
+            loadTime: `${loadTime}ms (${(loadTime/1000).toFixed(2)}초)`,
+            url: song.music_url
+          });
           setActualDuration(duration);
         }}
         onCanPlay={() => {
-          console.log('Audio ready:', song.music_url);
+          const loadTime = Date.now() - audioLoadStartTimeRef.current;
+          console.log('✅ Audio ready to play:', `${loadTime}ms (${(loadTime/1000).toFixed(2)}초)`);
           setAudioReady(true);
         }}
         onError={(e) => {
           const error = (e.target as HTMLAudioElement).error;
           const errorMsg = `음악 로드 실패: ${error?.message || 'Unknown error'}`;
-          console.error(errorMsg, 'URL:', song.music_url);
+          console.error('❌', errorMsg, 'URL:', song.music_url);
           setAudioError(errorMsg);
+        }}
+        onLoadStart={() => {
+          audioLoadStartTimeRef.current = Date.now();
+          console.log('⏳ Audio loading started...');
         }}
       />
     </div>
