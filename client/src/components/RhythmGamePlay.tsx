@@ -94,6 +94,17 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
           : [];
 
         console.log('Parsed notes:', notesData, 'count:', notesData.length);
+
+        // 노트 타입별 집계
+        const typeCount = {
+          NORMAL: notesData.filter((n: any) => n.type === 'NORMAL').length,
+          LONG: notesData.filter((n: any) => n.type === 'LONG').length,
+          SLIDE: notesData.filter((n: any) => n.type === 'SLIDE').length,
+          KEY_4_E: notesData.filter((n: any) => n.key_index === 4).length,
+          KEY_5_I: notesData.filter((n: any) => n.key_index === 5).length,
+        };
+        console.log('Note type breakdown:', typeCount);
+
         setNotes(notesData);
         setLoadingNotes(false);
       } catch (error) {
@@ -165,26 +176,33 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
     if (!gameStarted || gameEnded) return;
 
     let keyIndex = -1;
+    let keyName = '';
     switch (e.key.toLowerCase()) {
       case 'd':
       case 'arrowleft':
         keyIndex = 0;
+        keyName = 'D';
         break;
       case 'f':
         keyIndex = 1;
+        keyName = 'F';
         break;
       case 'j':
         keyIndex = 2;
+        keyName = 'J';
         break;
       case 'k':
       case 'arrowright':
         keyIndex = 3;
+        keyName = 'K';
         break;
       case 'e':
         keyIndex = 4;  // E: DF 연결 (빨간색)
+        keyName = 'E';
         break;
       case 'i':
         keyIndex = 5;  // I: JK 연결 (파란색)
+        keyName = 'I';
         break;
       default:
         return;
@@ -194,6 +212,10 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
     const targetNotes = notes.filter(
       (note) => note.key_index === keyIndex && !judgedNotesRef.current.has(note.id)
     );
+
+    if (keyIndex >= 4) {
+      console.log(`Key pressed: ${keyName} (${keyIndex}), target notes:`, targetNotes.length);
+    }
 
     if (targetNotes.length === 0) return;
 
