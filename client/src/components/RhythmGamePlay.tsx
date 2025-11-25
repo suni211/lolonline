@@ -264,18 +264,22 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
 
     if (targetNotes.length === 0) return;
 
-    // 일반 노트와 롱노트 분리 (type 필드 우선, 없으면 duration으로 판단)
+    // 일반 노트와 롱노트 분리 (type 필드 우선)
     const normalNotes = targetNotes.filter(n => {
+      // type이 LONG이면 제외 (롱노트)
       if (n.type === 'LONG') return false;
+      // type이 NORMAL이거나, type이 없고 duration이 없거나 0이면 일반 노트
       if (n.type === 'NORMAL') return true;
-      // type이 없으면 duration으로 판단
-      return !n.duration || n.duration === 0;
+      // type이 없으면 duration으로 판단 (정확히 0 또는 undefined/null)
+      return n.duration === 0 || n.duration === undefined || n.duration === null;
     });
     const longNotes = targetNotes.filter(n => {
+      // type이 LONG이면 롱노트
       if (n.type === 'LONG') return true;
+      // type이 NORMAL이면 일반 노트
       if (n.type === 'NORMAL') return false;
-      // type이 없으면 duration으로 판단
-      return n.duration > 0;
+      // type이 없으면 duration > 0이면 롱노트
+      return n.duration && n.duration > 0;
     });
 
     // 일반 노트 판정
