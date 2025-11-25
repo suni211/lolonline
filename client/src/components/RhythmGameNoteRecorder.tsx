@@ -50,7 +50,10 @@ const RhythmGameNoteRecorder = () => {
 
   const fetchSongs = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/rhythm-game/songs`);
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const url = `${apiUrl}/api/rhythm-game/songs`;
+      console.log('Fetching songs from:', url);
+      const response = await axios.get(url);
       // API는 배열을 직접 반환
       const songsData = Array.isArray(response.data) ? response.data : [];
       setSongs(songsData);
@@ -231,7 +234,11 @@ const RhythmGameNoteRecorder = () => {
       setLoading(true);
       console.log('Saving chart:', { songId: selectedSong.id, difficulty: selectedDifficulty, noteCount: recordedNotes.length });
 
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/rhythm-game/charts`, {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const url = `${apiUrl}/api/rhythm-game/charts`;
+      console.log('Saving to:', url);
+
+      const response = await axios.post(url, {
         songId: selectedSong.id,
         difficulty: selectedDifficulty,
         notes: recordedNotes
