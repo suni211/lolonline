@@ -566,20 +566,39 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
             // 노트가 판정선에 도달할 때까지 남은 시간 (밀리초)
             const msUntilJudgment = note.timing - currentTime;
             // 판정선에서의 노트 위치
-            // bottom: 120 = 판정선 (keys-area 위)
-            // bottom > 120 = 판정선 위에 있음 (아직 떨어지는 중)
-            // 낙하 속도: pixelsPerSecond px/초
             const noteBottom = JUDGMENT_LINE_Y + (msUntilJudgment / 1000) * pixelsPerSecond;
 
-            return (
-              <div
-                key={note.id}
-                className={`note note-key-${note.key_index}`}
-                style={{
-                  bottom: `${noteBottom}px`
-                }}
-              />
-            );
+            // 롱노트 여부 (duration > 0이면 롱노트)
+            const isLongNote = note.duration > 0;
+
+            if (isLongNote) {
+              // 롱노트: 길이가 duration에 비례
+              const longNoteHeight = (note.duration / 1000) * pixelsPerSecond;
+              // 롱노트의 끝 위치 (시작점 - 높이)
+              const longNoteBottom = noteBottom - longNoteHeight;
+
+              return (
+                <div
+                  key={note.id}
+                  className={`note long-note note-key-${note.key_index}`}
+                  style={{
+                    bottom: `${longNoteBottom}px`,
+                    height: `${longNoteHeight}px`
+                  }}
+                />
+              );
+            } else {
+              // 일반 노트
+              return (
+                <div
+                  key={note.id}
+                  className={`note note-key-${note.key_index}`}
+                  style={{
+                    bottom: `${noteBottom}px`
+                  }}
+                />
+              );
+            }
           })}
         </div>
 
@@ -592,18 +611,23 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
         <div className="keys-area">
           <div className={`key key-0 ${pressedKeys.has(0) ? 'pressed' : ''}`} style={{backgroundColor: pressedKeys.has(0) ? 'rgba(52, 152, 219, 0.8)' : ''}}>D</div>
           <div className={`key key-1 ${pressedKeys.has(1) ? 'pressed' : ''}`} style={{backgroundColor: pressedKeys.has(1) ? 'rgba(155, 89, 182, 0.8)' : ''}}>F</div>
-          <div className={`key key-4 slide-key-red ${pressedKeys.has(4) ? 'pressed' : ''}`} style={{backgroundColor: pressedKeys.has(4) ? 'rgba(231, 76, 60, 0.8)' : ''}}>E</div>
           <div className={`key key-2 ${pressedKeys.has(2) ? 'pressed' : ''}`} style={{backgroundColor: pressedKeys.has(2) ? 'rgba(230, 126, 34, 0.8)' : ''}}>J</div>
           <div className={`key key-3 ${pressedKeys.has(3) ? 'pressed' : ''}`} style={{backgroundColor: pressedKeys.has(3) ? 'rgba(243, 156, 18, 0.8)' : ''}}>K</div>
-          <div className={`key key-5 slide-key-blue ${pressedKeys.has(5) ? 'pressed' : ''}`} style={{backgroundColor: pressedKeys.has(5) ? 'rgba(52, 152, 219, 0.8)' : ''}}>I</div>
         </div>
       </div>
 
       {/* 판정 피드백 */}
       {recentJudgment && (
-        <div className={`judgment-feedback ${recentJudgment.type.toLowerCase()}`}>
-          {recentJudgment.type}
-        </div>
+        <>
+          <div className={`judgment-feedback ${recentJudgment.type.toLowerCase()}`}>
+            {recentJudgment.type}
+          </div>
+          {combo > 0 && (
+            <div className="combo-feedback">
+              Combo: {combo}
+            </div>
+          )}
+        </>
       )}
 
       {/* 조기 종료 버튼 */}
