@@ -180,6 +180,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
                 // 여전히 누르고 있음 → 판정 처리
                 const judgmentType = getJudgment(endTimingDiff);
                 const points = getScoreForJudgment(judgmentType);
+                console.log(`🟡 롱노트 끝 판정: ID=${note.id}, 판정=${judgmentType}, 점수=${points}, 끝시간=${holdEndTime}ms, 현재=${currentMs}ms`);
 
                 setScore((prev) => prev + points);
                 if (judgmentType === 'MISS') {
@@ -432,8 +433,9 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
 
       const timingDiff = closestLongNote.timing - currentTime;
 
-      // 롱노트 시작 근처에 있으면 잡음
+      // 롱노트 시작 근처에 있으면 잡음 (시작점에서 누르기)
       if (Math.abs(timingDiff) <= 300) {
+        console.log(`🟢 롱노트 시작 누르기: ID=${closestLongNote.id}, 시작=${closestLongNote.timing}, 끝=${closestLongNote.timing + closestLongNote.duration}, 현재=${currentTime}`);
         heldLongNotesRef.current.add(closestLongNote.id);
         setHeldLongNotes(prev => new Set(prev).add(closestLongNote.id));
         // 처음 누를 때 콤보 타이머 초기화
@@ -488,6 +490,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
       const note = notesRef.current.find(n => n.id === noteId);
       if (note && !longNoteJudgedRef.current.has(noteId)) {
         // 아직 판정 안 된 롱노트를 중간에 뗌 → MISS
+        console.log(`🔴 롱노트 중간에 뗌 (MISS): ID=${noteId}, 예상끝시간=${note.timing + note.duration}ms, 현재=${currentTime}ms`);
         setCombo(0);
         setJudgments((prev) => ({ ...prev, miss: prev.miss + 1 }));
         setRecentJudgment({ type: 'MISS', timing: currentTime });
