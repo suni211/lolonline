@@ -73,9 +73,16 @@ export default function Matches() {
 
   const fetchAllMatches = async () => {
     try {
-      // 일반 경기 (리그전, 친선전)
-      const matchesResponse = await axios.get('/api/matches');
-      const regularMatches = matchesResponse.data.map((m: Match) => ({
+      // 모든 리그 경기 (SCHEDULED, LIVE 만)
+      const upcomingResponse = await axios.get('/api/leagues/all-matches/recent');
+      const upcomingMatches = upcomingResponse.data.map((m: Match) => ({
+        ...m,
+        source: 'matches'
+      }));
+
+      // 지난 경기 (FINISHED)
+      const finishedResponse = await axios.get('/api/matches?status=FINISHED');
+      const finishedMatches = finishedResponse.data.map((m: Match) => ({
         ...m,
         source: 'matches'
       }));
@@ -107,6 +114,7 @@ export default function Matches() {
       }
 
       // 모든 경기 병합 및 시간순 정렬
+      const regularMatches = [...upcomingMatches, ...finishedMatches];
       const allMatches = [...regularMatches, ...cupMatches].sort((a, b) => {
         const dateA = a.scheduled_at ? new Date(a.scheduled_at.replace(' ', 'T')) : new Date(0);
         const dateB = b.scheduled_at ? new Date(b.scheduled_at.replace(' ', 'T')) : new Date(0);
