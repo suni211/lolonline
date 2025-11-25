@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import RhythmGameNoteEditor from '../components/RhythmGameNoteEditor';
+import RhythmGameNoteRecorder from '../components/RhythmGameNoteRecorder';
 import './Admin.css';
 
 interface League {
@@ -63,7 +64,7 @@ export default function Admin() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [activeTab, setActiveTab] = useState<'leagues' | 'users' | 'players' | 'rhythmGame'>('leagues');
+  const [activeTab, setActiveTab] = useState<'leagues' | 'users' | 'players' | 'rhythmGameRecorder' | 'rhythmGameEditor'>('leagues');
   const [uploadingPlayerId, setUploadingPlayerId] = useState<number | null>(null);
   const [lpoStatus, setLpoStatus] = useState<LPOStatus | null>(null);
   const [statAdjustment, setStatAdjustment] = useState<number>(-20);
@@ -463,10 +464,16 @@ export default function Admin() {
           선수 이미지
         </button>
         <button
-          className={activeTab === 'rhythmGame' ? 'active' : ''}
-          onClick={() => setActiveTab('rhythmGame')}
+          className={activeTab === 'rhythmGameRecorder' ? 'active' : ''}
+          onClick={() => setActiveTab('rhythmGameRecorder')}
         >
-          🎵 리듬게임 설정
+          🎵 리듬게임 - 노트 녹음
+        </button>
+        <button
+          className={activeTab === 'rhythmGameEditor' ? 'active' : ''}
+          onClick={() => setActiveTab('rhythmGameEditor')}
+        >
+          🎵 리듬게임 - 노트 편집
         </button>
       </div>
 
@@ -854,7 +861,13 @@ export default function Admin() {
         </div>
       )}
 
-      {activeTab === 'rhythmGame' && (
+      {activeTab === 'rhythmGameRecorder' && (
+        <div className="admin-section">
+          <RhythmGameNoteRecorder />
+        </div>
+      )}
+
+      {activeTab === 'rhythmGameEditor' && (
         <div className="admin-section">
           <RhythmGameNoteEditor />
         </div>
