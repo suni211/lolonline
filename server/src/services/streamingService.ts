@@ -31,19 +31,31 @@ export class StreamingService {
         throw new Error('오늘 이미 스트리밍을 했습니다');
       }
 
-      // 시청자 수 계산 (OVR 기반, 100~1000명대)
+      // 팀의 민심 조회 (fan_morale: 0~100)
+      const teamData = await pool.query(
+        `SELECT fan_morale FROM teams WHERE id = ?`,
+        [teamId]
+      );
+
+      const fanMorale = teamData[0]?.fan_morale || 50;
+      const moralMultiplier = fanMorale / 100;  // 0.5 = 50%, 1.0 = 100%
+
+      // 시청자 수 계산 (OVR 기반, 100~1000명대, 민심 반영)
       const baseViewers = 100;
       const overallBonus = (player.ovr || 70) * 3;  // OVR 70 = 210
       const randomBonus = Math.floor(Math.random() * 500);
-      const viewers = baseViewers + overallBonus + randomBonus;  // 100~810명
+      let viewers = Math.floor((baseViewers + overallBonus + randomBonus) * moralMultiplier);
+      viewers = Math.max(10, viewers);  // 최소 10명
 
       // 수익 계산 (시청자당 500~2000원으로 상향)
       const incomePerViewer = 500 + Math.floor(Math.random() * 1500);
       const income = viewers * incomePerViewer * durationHours;
 
-      // 팬 증가 계산 (기존의 1/3 수준으로 조정)
-      const maleFansGained = Math.floor(viewers * 0.002 * (0.5 + Math.random() * 0.5));
-      const femaleFansGained = Math.floor(viewers * 0.003 * (0.5 + Math.random() * 0.5));
+      // 팬 증가 계산 (민심 반영)
+      const baseMaleFans = viewers * 0.002 * (0.5 + Math.random() * 0.5);
+      const baseFemalesFans = viewers * 0.003 * (0.5 + Math.random() * 0.5);
+      const maleFansGained = Math.floor(baseMaleFans * moralMultiplier);
+      const femaleFansGained = Math.floor(baseFemalesFans * moralMultiplier);
 
       // 스트리밍 기록 저장
       await pool.query(
