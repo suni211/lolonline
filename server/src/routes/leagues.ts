@@ -319,8 +319,19 @@ router.get('/all-matches/recent', async (req, res) => {
        JOIN leagues l ON m.league_id = l.id
        WHERE m.status IN ('SCHEDULED', 'LIVE')
        ORDER BY m.scheduled_at ASC
-       LIMIT 20`
+       LIMIT 100`
     );
+
+    console.log(`📊 /all-matches/recent - 반환된 경기 수: ${matches.length}`);
+    console.log('📊 첫 3개 경기:', matches.slice(0, 3).map((m: any) => ({
+      id: m.id,
+      league: m.league_name,
+      status: m.status,
+      home: m.home_team_name,
+      away: m.away_team_name,
+      scheduled: m.scheduled_at
+    })));
+
     res.json(matches);
   } catch (error) {
     console.error('Get next matches error:', error);
