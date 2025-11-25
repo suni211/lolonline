@@ -37,11 +37,13 @@ const RhythmGame = () => {
   const fetchSongs = async () => {
     try {
       const response = await axios.get(`${import.meta.env.VITE_API_URL}/rhythm-game/songs`);
-      setSongs(response.data.songs);
+      const songsData = Array.isArray(response.data) ? response.data : response.data.songs || [];
+      setSongs(songsData);
       setLoading(false);
     } catch (error) {
       console.error('곡 목록 조회 실패:', error);
       setLoading(false);
+      setSongs([]);
     }
   };
 
@@ -49,10 +51,12 @@ const RhythmGame = () => {
     setSelectedSong(song);
     try {
       const response = await axios.get(`${import.meta.env.VITE_API_URL}/rhythm-game/songs/${song.id}`);
-      setCharts(response.data.data.charts);
+      const chartsData = response.data.data?.charts || response.data.charts || [];
+      setCharts(Array.isArray(chartsData) ? chartsData : []);
       setGameState('difficultySelect');
     } catch (error) {
       console.error('악보 조회 실패:', error);
+      setCharts([]);
     }
   };
 

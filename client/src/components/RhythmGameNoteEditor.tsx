@@ -42,9 +42,12 @@ const RhythmGameNoteEditor = () => {
   const fetchSongs = async () => {
     try {
       const response = await axios.get('/api/rhythm-game/songs');
-      setSongs(response.data.songs);
+      const songsData = Array.isArray(response.data) ? response.data : response.data.songs || [];
+      setSongs(songsData);
     } catch (error) {
+      console.error('fetchSongs error:', error);
       setMessage('곡 목록 로드 실패');
+      setSongs([]);
     }
   };
 
