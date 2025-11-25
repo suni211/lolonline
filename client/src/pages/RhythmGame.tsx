@@ -70,6 +70,8 @@ const RhythmGame = () => {
   };
 
   const handleChartSelect = (chart: Chart) => {
+    console.log('📊 Chart selected:', chart);
+    console.log('🎵 Current selectedSong:', selectedSong);
     setSelectedChart(chart);
     setGameState('playing');
   };
