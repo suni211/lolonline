@@ -15,70 +15,80 @@ export class CupService {
 
       const cupId = cupResult.insertId;
 
-      // 각 리그 팀 조회
-      const superTeams = await pool.query(
+      // 각 리그 팀 조회 (SOUTH, NORTH, AMATEUR)
+      const southTeams = await pool.query(
         `SELECT lp.team_id FROM league_participants lp
          JOIN leagues l ON lp.league_id = l.id
-         WHERE l.region = 'SUPER' AND l.season = ?
+         WHERE l.region = 'SOUTH' AND l.season = ?
          ORDER BY lp.points DESC, lp.goal_difference DESC`,
         [season]
       );
 
-      const firstTeams = await pool.query(
+      const northTeams = await pool.query(
         `SELECT lp.team_id FROM league_participants lp
          JOIN leagues l ON lp.league_id = l.id
-         WHERE l.region = 'FIRST' AND l.season = ?
+         WHERE l.region = 'NORTH' AND l.season = ?
          ORDER BY lp.points DESC, lp.goal_difference DESC`,
         [season]
       );
 
-      const secondTeams = await pool.query(
+      const amateurTeams = await pool.query(
         `SELECT lp.team_id FROM league_participants lp
          JOIN leagues l ON lp.league_id = l.id
-         WHERE l.region = 'SECOND' AND l.season = ?
+         WHERE l.region = 'AMATEUR' AND l.season = ?
          ORDER BY lp.points DESC, lp.goal_difference DESC`,
         [season]
       );
 
-      console.log(`Teams found - SUPER: ${superTeams.length}, FIRST: ${firstTeams.length}, SECOND: ${secondTeams.length}`);
+      console.log(`Teams found - SOUTH: ${southTeams.length}, NORTH: ${northTeams.length}, AMATEUR: ${amateurTeams.length}`);
 
-      if (superTeams.length === 0 || firstTeams.length === 0 || secondTeams.length === 0) {
-        throw new Error(`팀이 부족합니다. SUPER: ${superTeams.length}, FIRST: ${firstTeams.length}, SECOND: ${secondTeams.length}`);
+      if (southTeams.length === 0 || northTeams.length === 0 || amateurTeams.length === 0) {
+        throw new Error(`팀이 부족합니다. SOUTH: ${southTeams.length}, NORTH: ${northTeams.length}, AMATEUR: ${amateurTeams.length}`);
       }
 
       // 32강 대진표 생성
-      // 1부(SUPER) 10팀 vs 3부(SECOND) 10팀
-      // 2부(FIRST) 10팀 vs 3부(SECOND) 나머지 2팀
+      // SOUTH(1부) vs AMATEUR (16경기)
+      // NORTH(1부) vs AMATEUR (16경기)
+      // 남은 팀끼리 (SOUTH, NORTH 각각)
 
       const matches: { home: number; away: number }[] = [];
 
-      // 1부 vs 3부 (1부가 홈)
-      for (let i = 0; i < Math.min(superTeams.length, 10); i++) {
-        if (i < secondTeams.length) {
+      // SOUTH vs AMATEUR (최대 16경기)
+      for (let i = 0; i < Math.min(southTeams.length, 16); i++) {
+        const amateurIndex = i % amateurTeams.length;
+        matches.push({
+          home: southTeams[i].team_id,
+          away: amateurTeams[amateurIndex].team_id
+        });
+      }
+
+      // NORTH vs AMATEUR (최대 16경기)
+      for (let i = 0; i < Math.min(northTeams.length, 16); i++) {
+        const amateurIndex = (i + Math.min(southTeams.length, 16)) % amateurTeams.length;
+        matches.push({
+          home: northTeams[i].team_id,
+          away: amateurTeams[amateurIndex].team_id
+        });
+      }
+
+      // 남은 SOUTH 팀끼리 (상위 시드가 홈)
+      const remainingSouthTeams = southTeams.slice(16);
+      for (let i = 0; i < remainingSouthTeams.length; i += 2) {
+        if (i + 1 < remainingSouthTeams.length) {
           matches.push({
-            home: superTeams[i].team_id,
-            away: secondTeams[i].team_id
+            home: remainingSouthTeams[i].team_id,
+            away: remainingSouthTeams[i + 1].team_id
           });
         }
       }
 
-      // 2부 vs 3부 나머지 (2부가 홈)
-      const remainingSecondTeams = secondTeams.slice(10);
-      for (let i = 0; i < remainingSecondTeams.length && i < firstTeams.length; i++) {
-        matches.push({
-          home: firstTeams[i].team_id,
-          away: remainingSecondTeams[i].team_id
-        });
-      }
-
-      // 나머지 2부 팀끼리 (상위 시드가 홈)
-      const usedFirstTeams = remainingSecondTeams.length;
-      const remainingFirstTeams = firstTeams.slice(usedFirstTeams);
-      for (let i = 0; i < remainingFirstTeams.length; i += 2) {
-        if (i + 1 < remainingFirstTeams.length) {
+      // 남은 NORTH 팀끼리 (상위 시드가 홈)
+      const remainingNorthTeams = northTeams.slice(16);
+      for (let i = 0; i < remainingNorthTeams.length; i += 2) {
+        if (i + 1 < remainingNorthTeams.length) {
           matches.push({
-            home: remainingFirstTeams[i].team_id,
-            away: remainingFirstTeams[i + 1].team_id
+            home: remainingNorthTeams[i].team_id,
+            away: remainingNorthTeams[i + 1].team_id
           });
         }
       }
