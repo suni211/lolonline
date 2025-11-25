@@ -6,7 +6,7 @@ export class StreamingService {
     try {
       // 선수 확인 (pro_players와 조인)
       const players = await pool.query(
-        `SELECT pc.id, pc.team_id, pc.ovr, pc.condition,
+        `SELECT pc.id, pc.team_id, pc.ovr,
                 COALESCE(pp.name, pc.ai_player_name) as name
          FROM player_cards pc
          LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
@@ -31,11 +31,6 @@ export class StreamingService {
         throw new Error('오늘 이미 스트리밍을 했습니다');
       }
 
-      // 컨디션 확인
-      if (player.condition < 30) {
-        throw new Error('컨디션이 너무 낮아 스트리밍을 할 수 없습니다');
-      }
-
       // 시청자 수 계산 (OVR 기반)
       const baseViewers = 1000;
       const overallBonus = (player.ovr || 70) * 50;
@@ -50,29 +45,20 @@ export class StreamingService {
       const maleFansGained = Math.floor(viewers * 0.01 * (0.5 + Math.random() * 0.5));
       const femaleFansGained = Math.floor(viewers * 0.015 * (0.5 + Math.random() * 0.5));
 
-      // 컨디션 감소
-      const conditionLoss = 5 + durationHours * 3;
-
       // 스트리밍 기록 저장
       await pool.query(
         `INSERT INTO player_streams
          (player_card_id, team_id, stream_date, duration_hours, viewers, income,
-          male_fans_gained, female_fans_gained, condition_loss)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          male_fans_gained, female_fans_gained)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [playerCardId, teamId, today, durationHours, viewers, income,
-         maleFansGained, femaleFansGained, conditionLoss]
+         maleFansGained, femaleFansGained]
       );
 
       // 팀 골드 증가
       await pool.query(
         'UPDATE teams SET gold = gold + ?, male_fans = male_fans + ?, female_fans = female_fans + ? WHERE id = ?',
         [income, maleFansGained, femaleFansGained, teamId]
-      );
-
-      // 선수 컨디션 감소
-      await pool.query(
-        'UPDATE player_cards SET `condition` = GREATEST(0, `condition` - ?) WHERE id = ?',
-        [conditionLoss, playerCardId]
       );
 
       // 재정 기록
@@ -88,7 +74,6 @@ export class StreamingService {
         income,
         maleFansGained,
         femaleFansGained,
-        conditionLoss,
         message: `${player.name}의 스트리밍 완료! ${viewers.toLocaleString()}명 시청, ${income.toLocaleString()} 골드 획득`
       };
     } catch (error) {
