@@ -5,12 +5,12 @@ export class CoachService {
   static async getAvailableCoaches(teamId: number) {
     try {
       const coaches = await pool.query(
-        `SELECT c.*,
-                (SELECT COUNT(*) FROM team_coaches tc
-                 WHERE tc.coach_id = c.id AND tc.status = 'ACTIVE') as is_hired
+        `SELECT c.id, c.name, c.nationality, c.role as coach_type, c.scouting_ability as skill_level,
+                c.salary,
+                (SELECT COUNT(*) FROM coach_ownership co WHERE co.coach_id = c.id) as is_hired,
+                '특화' as specialty
          FROM coaches c
-         WHERE c.is_available = true
-         ORDER BY c.skill_level DESC, c.salary ASC`
+         ORDER BY c.scouting_ability DESC, c.salary ASC`
       );
 
       return coaches;
@@ -24,11 +24,13 @@ export class CoachService {
   static async getTeamCoaches(teamId: number) {
     try {
       const coaches = await pool.query(
-        `SELECT tc.*, c.name, c.nationality, c.coach_type, c.skill_level, c.specialty
-         FROM team_coaches tc
-         JOIN coaches c ON tc.coach_id = c.id
-         WHERE tc.team_id = ? AND tc.status = 'ACTIVE'
-         ORDER BY c.coach_type`,
+        `SELECT co.id, co.coach_id, c.name, c.nationality, c.role as coach_type, c.scouting_ability as skill_level,
+                c.training_boost, c.salary as monthly_salary, co.acquired_at as contract_start,
+                DATE_ADD(co.acquired_at, INTERVAL 12 MONTH) as contract_end
+         FROM coach_ownership co
+         JOIN coaches c ON co.coach_id = c.id
+         WHERE co.team_id = ?
+         ORDER BY c.role`,
         [teamId]
       );
 
@@ -154,14 +156,14 @@ export class CoachService {
 
       // 같은 타입의 코치가 이미 있는지 확인
       const existing = await pool.query(
-        `SELECT tc.id FROM team_coaches tc
-         JOIN coaches c ON tc.coach_id = c.id
-         WHERE tc.team_id = ? AND tc.status = 'ACTIVE' AND c.coach_type = ?`,
-        [teamId, coach.coach_type]
+        `SELECT co.id FROM coach_ownership co
+         JOIN coaches c ON co.coach_id = c.id
+         WHERE co.team_id = ? AND c.role = ?`,
+        [teamId, coach.role]
       );
 
       if (existing.length > 0) {
-        throw new Error(`이미 ${coach.coach_type} 코치가 있습니다`);
+        throw new Error(`이미 ${coach.role} 코치가 있습니다`);
       }
 
       // 팀 골드 확인 (첫 달 급여)
@@ -177,13 +179,10 @@ export class CoachService {
       );
 
       // 계약 생성
-      const contractEnd = new Date();
-      contractEnd.setMonth(contractEnd.getMonth() + contractMonths);
-
       await pool.query(
-        `INSERT INTO team_coaches (team_id, coach_id, contract_start, contract_end, monthly_salary)
-         VALUES (?, ?, CURDATE(), ?, ?)`,
-        [teamId, coachId, contractEnd, finalSalary]
+        `INSERT INTO coach_ownership (team_id, coach_id, acquired_at)
+         VALUES (?, ?, CURDATE())`,
+        [teamId, coachId]
       );
 
       // 재정 기록
@@ -206,13 +205,13 @@ export class CoachService {
   }
 
   // 코치 해고
-  static async fireCoach(teamId: number, teamCoachId: number) {
+  static async fireCoach(teamId: number, coachOwnershipId: number) {
     try {
       const coaches = await pool.query(
-        `SELECT tc.*, c.name, c.salary FROM team_coaches tc
-         JOIN coaches c ON tc.coach_id = c.id
-         WHERE tc.id = ? AND tc.team_id = ? AND tc.status = 'ACTIVE'`,
-        [teamCoachId, teamId]
+        `SELECT co.*, c.name, c.salary FROM coach_ownership co
+         JOIN coaches c ON co.coach_id = c.id
+         WHERE co.id = ? AND co.team_id = ?`,
+        [coachOwnershipId, teamId]
       );
 
       if (coaches.length === 0) {
@@ -223,9 +222,10 @@ export class CoachService {
 
       // 위약금 계산 (남은 기간의 50%)
       const now = new Date();
-      const contractEnd = new Date(coach.contract_end);
+      const contractEnd = new Date(coach.acquired_at);
+      contractEnd.setMonth(contractEnd.getMonth() + 12);
       const remainingMonths = Math.max(0, Math.ceil((contractEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30)));
-      const penaltyFee = Math.floor(coach.monthly_salary * remainingMonths * 0.5);
+      const penaltyFee = Math.floor(coach.salary * remainingMonths * 0.5);
 
       // 골드 확인
       const teams = await pool.query('SELECT gold FROM teams WHERE id = ?', [teamId]);
@@ -249,8 +249,8 @@ export class CoachService {
 
       // 계약 종료
       await pool.query(
-        `UPDATE team_coaches SET status = 'TERMINATED' WHERE id = ?`,
-        [teamCoachId]
+        `DELETE FROM coach_ownership WHERE id = ?`,
+        [coachOwnershipId]
       );
 
       return {
@@ -268,10 +268,10 @@ export class CoachService {
   static async getCoachEffects(teamId: number) {
     try {
       const coaches = await pool.query(
-        `SELECT c.coach_type, c.skill_level, c.specialty
-         FROM team_coaches tc
-         JOIN coaches c ON tc.coach_id = c.id
-         WHERE tc.team_id = ? AND tc.status = 'ACTIVE'`,
+        `SELECT c.role as coach_type, c.scouting_ability as skill_level, '특화' as specialty
+         FROM coach_ownership co
+         JOIN coaches c ON co.coach_id = c.id
+         WHERE co.team_id = ?`,
         [teamId]
       );
 
@@ -324,10 +324,9 @@ export class CoachService {
   static async payMonthlySalaries() {
     try {
       const activeContracts = await pool.query(
-        `SELECT tc.team_id, tc.monthly_salary, c.name
-         FROM team_coaches tc
-         JOIN coaches c ON tc.coach_id = c.id
-         WHERE tc.status = 'ACTIVE'`
+        `SELECT co.team_id, c.salary as monthly_salary, c.name
+         FROM coach_ownership co
+         JOIN coaches c ON co.coach_id = c.id`
       );
 
       for (const contract of activeContracts) {
