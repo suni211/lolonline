@@ -305,6 +305,9 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
     }
   };
 
+  // 판정선 위치 (CSS의 .judgment-line bottom 값과 동일해야 함, px)
+  const JUDGMENT_LINE_Y = 120;
+
   // 활성 노트 (현재 떨어지는 노트들)
   // noteSpeed를 고려하여 표시 범위 조정: 빠를수록 더 많은 노트를 미리 표시
   const lookAheadTime = 3000 * noteSpeed; // noteSpeed가 빠를수록 더 먼 미래의 노트를 표시
@@ -493,7 +496,9 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
         {/* 노트 떨어지는 영역 */}
         <div className="notes-container">
           {activeNotes.map((note) => {
-            const notePosition = ((note.timing - currentTime) / 1000) * 100 * noteSpeed; // noteSpeed를 적용한 픽셀 단위
+            // 판정선에 도달할 때까지의 거리를 계산
+            // timing = currentTime일 때, 노트는 판정선(JUDGMENT_LINE_Y)에 위치해야 함
+            const notePosition = JUDGMENT_LINE_Y + ((note.timing - currentTime) / 1000) * 100 * noteSpeed;
             return (
               <div
                 key={note.id}
