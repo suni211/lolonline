@@ -365,22 +365,16 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
     }
   };
 
-  // 판정선 위치 (notes-container가 top: -500, bottom: -500으로 확장되어 있으므로)
-  // 판정선 = 500 + 120 = 620px (notes-container 내에서)
-  const JUDGMENT_LINE_Y = 620;
+  // 단순한 노트 위치 계산
+  // 노트의 낙하 속도 (픽셀/초)
+  const BASE_FALL_SPEED = 400; // 400px/초 (1.0x 속도일 때)
+  const pixelsPerSecond = BASE_FALL_SPEED * noteSpeed;
 
-  // 활성 노트 (현재 떨어지는 노트들)
-  // 화면 위쪽 밖에서부터 아래쪽 밖까지 충분히 길게 표시
-  const lookAheadTime = 5000 * noteSpeed; // 미래 노트 (위쪽에서 떨어지는 중)
-  // lookBehindTime을 곡의 전체 길이에 기반해서 설정
-  // 이렇게 하면 모든 노트가 게임 내내 끝까지 표시됨 (아래로 완전히 떨어질 때까지)
-  const lookBehindTime = (actualDuration * 1000) + 5000; // 곡의 전체 길이 + 추가 시간
-  const activeNotes = notes.filter(
-    (note) =>
-      note.timing >= currentTime - lookBehindTime && // 과거 노트 (곡 길이 범위 내)
-      note.timing <= currentTime + lookAheadTime && // 미래 노트도 충분히 길게
-      !judgedNotesRef.current.has(note.id)
-  );
+  // 판정선 위치 (게임 필드 하단에서 120px 위)
+  const JUDGMENT_LINE_Y = 120;
+
+  // 모든 노트를 항상 표시 (간단하게)
+  const activeNotes = notes.filter(note => !judgedNotesRef.current.has(note.id));
 
   if (loadingNotes) {
     return <div className="rhythm-game-play">노트 로딩 중...</div>;
@@ -569,16 +563,20 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
         {/* 노트 떨어지는 영역 */}
         <div className="notes-container">
           {activeNotes.map((note) => {
-            // 판정선에 도달할 때까지의 거리를 계산
-            // timing = currentTime일 때, 노트는 판정선(JUDGMENT_LINE_Y)에 위치해야 함
-            const notePosition = JUDGMENT_LINE_Y + ((note.timing - currentTime) / 1000) * 100 * noteSpeed;
+            // 노트가 판정선에 도달할 때까지 남은 시간 (밀리초)
+            const msUntilJudgment = note.timing - currentTime;
+            // 판정선에서의 노트 위치
+            // bottom: 120 = 판정선 (keys-area 위)
+            // bottom > 120 = 판정선 위에 있음 (아직 떨어지는 중)
+            // 낙하 속도: pixelsPerSecond px/초
+            const noteBottom = JUDGMENT_LINE_Y + (msUntilJudgment / 1000) * pixelsPerSecond;
+
             return (
               <div
                 key={note.id}
                 className={`note note-key-${note.key_index}`}
                 style={{
-                  bottom: `${notePosition}px`,
-                  animation: 'none'
+                  bottom: `${noteBottom}px`
                 }}
               />
             );
