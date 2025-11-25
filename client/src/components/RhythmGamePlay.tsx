@@ -37,6 +37,8 @@ interface RhythmGamePlayProps {
 
 const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayProps) => {
   console.log('🎮 RhythmGamePlay received song:', song);
+  console.log('🎵 song.music_url:', song?.music_url);
+  console.log('📋 All song keys:', Object.keys(song || {}));
   const [notes, setNotes] = useState<Note[]>([]);
   const [gameStarted, setGameStarted] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
