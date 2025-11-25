@@ -14,6 +14,7 @@ interface Song {
 interface Chart {
   id: number;
   note_count: number;
+  difficulty?: string;
 }
 
 interface Note {
@@ -21,6 +22,7 @@ interface Note {
   key_index: number;
   timing: number;
   duration: number;
+  type?: 'NORMAL' | 'LONG';
 }
 
 interface Judgment {
@@ -50,6 +52,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
   const [accuracy, setAccuracy] = useState(100);
   const [judgments, setJudgments] = useState({ perfect: 0, good: 0, bad: 0, miss: 0 });
   const [recentJudgment, setRecentJudgment] = useState<Judgment | null>(null);
+  const [grade, setGrade] = useState<string>('D');
   const [loadingNotes, setLoadingNotes] = useState(true);
   const [audioReady, setAudioReady] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
@@ -85,6 +88,18 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
     if (absDiff <= 100) return 'GOOD';    // ±100ms
     if (absDiff <= 200) return 'BAD';     // ±200ms
     return 'MISS';
+  };
+
+  // 등급 계산 함수
+  const calculateGrade = (currentScore: number, totalNotes: number): string => {
+    const maxScore = totalNotes * 100;
+    const scorePercentage = (currentScore / maxScore) * 100;
+
+    if (scorePercentage >= 90) return 'S';
+    if (scorePercentage >= 80) return 'A';
+    if (scorePercentage >= 70) return 'B';
+    if (scorePercentage >= 60) return 'C';
+    return 'D';
   };
 
   useEffect(() => {
@@ -249,9 +264,19 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
 
     if (targetNotes.length === 0) return;
 
-    // 일반 노트와 롱노트 분리
-    const normalNotes = targetNotes.filter(n => n.duration === 0 || n.duration === undefined);
-    const longNotes = targetNotes.filter(n => n.duration > 0);
+    // 일반 노트와 롱노트 분리 (type 필드 우선, 없으면 duration으로 판단)
+    const normalNotes = targetNotes.filter(n => {
+      if (n.type === 'LONG') return false;
+      if (n.type === 'NORMAL') return true;
+      // type이 없으면 duration으로 판단
+      return !n.duration || n.duration === 0;
+    });
+    const longNotes = targetNotes.filter(n => {
+      if (n.type === 'LONG') return true;
+      if (n.type === 'NORMAL') return false;
+      // type이 없으면 duration으로 판단
+      return n.duration > 0;
+    });
 
     // 일반 노트 판정
     if (normalNotes.length > 0) {
@@ -404,6 +429,10 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
       audioRef.current.pause();
     }
 
+    // 등급 계산
+    const calculatedGrade = calculateGrade(score, chart.note_count);
+    setGrade(calculatedGrade);
+
     // 결과 제출
     try {
       const teamId = parseInt(localStorage.getItem('teamId') || '0');
@@ -419,7 +448,9 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
           judgments,
           maxCombo,
           score,
-          accuracy
+          accuracy,
+          grade: calculatedGrade,
+          difficulty: chart.difficulty
         });
       }
     } catch (error) {
@@ -549,6 +580,10 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
         <div className="game-result-screen">
           <h2>게임 종료</h2>
 
+          <div style={{ fontSize: '64px', fontWeight: 'bold', color: grade === 'S' ? '#f39c12' : '#3498db', marginBottom: '20px' }}>
+            등급: {grade}
+          </div>
+
           <div className="result-score">
             <div className="score-item">
               <span className="label">점수</span>
@@ -630,8 +665,8 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
             // 판정선에서의 노트 위치
             const noteBottom = JUDGMENT_LINE_Y + (msUntilJudgment / 1000) * pixelsPerSecond;
 
-            // 롱노트 여부 (duration > 0이면 롱노트)
-            const isLongNote = note.duration > 0;
+            // 롱노트 여부 (type 필드 우선, 없으면 duration으로 판단)
+            const isLongNote = note.type === 'LONG' || (note.type !== 'NORMAL' && note.duration > 0);
 
             if (isLongNote) {
               // 롱노트: 길이가 duration에 비례
