@@ -66,6 +66,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
   const notesRef = useRef<Note[]>([]);
   const heldLongNotesRef = useRef<Set<number>>(new Set()); // 현재 누르고 있는 롱노트
   const longNoteJudgedRef = useRef<Set<number>>(new Set()); // 판정된 롱노트
+  const longNoteComboTimesRef = useRef<Map<number, number>>(new Map()); // 각 롱노트별 마지막 콤보 부여 시간
 
   // 현재 누르고 있는 키들 (시각적 피드백)
   const [pressedKeys, setPressedKeys] = useState<Set<number>>(new Set());
@@ -154,6 +155,17 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
         const currentMs = currentSec * 1000;
         setCurrentTime(currentMs); // 밀리초 단위
 
+        // 롱노트 유지 중 콤보 증가 처리 (16비트마다)
+        const comboInterval = 15000 / song.bpm; // 16분음표 간격 (ms)
+        heldLongNotesRef.current.forEach(noteId => {
+          const lastComboTime = longNoteComboTimesRef.current.get(noteId) ?? 0;
+          if (currentMs - lastComboTime >= comboInterval) {
+            setCombo((prev) => prev + 1);
+            setMaxCombo((prev) => Math.max(prev, combo + 1));
+            longNoteComboTimesRef.current.set(noteId, currentMs);
+          }
+        });
+
         // 롱노트 판정 처리: 끝 부분이 판정 범위에 도달했을 때
         notesRef.current.forEach(note => {
           const isLongNote = note.type === 'LONG' || (note.duration && note.duration > 0);
@@ -193,6 +205,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
 
                 longNoteJudgedRef.current.add(note.id);
                 heldLongNotesRef.current.delete(note.id);
+                longNoteComboTimesRef.current.delete(note.id);
                 setHeldLongNotes(prev => {
                   const newSet = new Set(prev);
                   newSet.delete(note.id);
@@ -217,6 +230,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
 
                 longNoteJudgedRef.current.add(note.id);
                 heldLongNotesRef.current.delete(note.id);
+                longNoteComboTimesRef.current.delete(note.id);
                 setHeldLongNotes(prev => {
                   const newSet = new Set(prev);
                   newSet.delete(note.id);
@@ -296,6 +310,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
     judgedNotesRef.current.clear();
     heldLongNotesRef.current.clear();
     longNoteJudgedRef.current.clear();
+    longNoteComboTimesRef.current.clear();
 
     setGameStarted(true);
 
@@ -421,6 +436,8 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
       if (Math.abs(timingDiff) <= 300) {
         heldLongNotesRef.current.add(closestLongNote.id);
         setHeldLongNotes(prev => new Set(prev).add(closestLongNote.id));
+        // 처음 누를 때 콤보 타이머 초기화
+        longNoteComboTimesRef.current.set(closestLongNote.id, currentTime);
         judgedNotesRef.current.add(closestLongNote.id);
       }
     }
@@ -487,6 +504,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
       }
 
       heldLongNotesRef.current.delete(noteId);
+      longNoteComboTimesRef.current.delete(noteId);
     });
 
     setHeldLongNotes(prev => {
