@@ -67,10 +67,19 @@ export class StreamingService {
          maleFansGained, femaleFansGained]
       );
 
-      // 팀 골드 증가
+      // 팀 골드 및 팬 증감
+      // 민심이 낮으면 기존 팬도 떠남
+      let fanLossMultiplier = 0;
+      if (fanMorale < 30) {
+        fanLossMultiplier = Math.floor(10000 * ((30 - fanMorale) / 100));  // 낮을수록 더 많이 떠남
+      }
+
+      const netMaleFans = maleFansGained - fanLossMultiplier;
+      const netFemaleFans = femaleFansGained - fanLossMultiplier;
+
       await pool.query(
-        'UPDATE teams SET gold = gold + ?, male_fans = male_fans + ?, female_fans = female_fans + ? WHERE id = ?',
-        [income, maleFansGained, femaleFansGained, teamId]
+        'UPDATE teams SET gold = gold + ?, male_fans = GREATEST(0, male_fans + ?), female_fans = GREATEST(0, female_fans + ?) WHERE id = ?',
+        [income, netMaleFans, netFemaleFans, teamId]
       );
 
       // 재정 기록
@@ -80,13 +89,22 @@ export class StreamingService {
         [teamId, income, `${player.name} 스트리밍 수익 (${viewers.toLocaleString()}명 시청)`]
       );
 
+      let message = `${player.name}의 스트리밍 완료! ${viewers.toLocaleString()}명 시청, ${income.toLocaleString()} 골드 획득`;
+
+      if (fanLossMultiplier > 0) {
+        message += ` (⚠️ 민심 저하로 팬 ${fanLossMultiplier.toLocaleString()}명 떠남)`;
+      } else if (maleFansGained + femaleFansGained > 0) {
+        message += ` 👥 팬 ${(maleFansGained + femaleFansGained).toLocaleString()}명 증가`;
+      }
+
       return {
         success: true,
         viewers,
         income,
         maleFansGained,
         femaleFansGained,
-        message: `${player.name}의 스트리밍 완료! ${viewers.toLocaleString()}명 시청, ${income.toLocaleString()} 골드 획득`
+        fanLossMultiplier,
+        message
       };
     } catch (error) {
       console.error('Start stream error:', error);
