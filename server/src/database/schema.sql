@@ -851,9 +851,11 @@ CREATE TABLE IF NOT EXISTS rhythm_charts (
 CREATE TABLE IF NOT EXISTS rhythm_notes (
     id INT PRIMARY KEY AUTO_INCREMENT,
     chart_id INT NOT NULL,
-    key_index INT NOT NULL CHECK (key_index >= 0 AND key_index <= 3),  -- 0=좌, 1=좌중앙, 2=우중앙, 3=우
+    key_index INT NOT NULL CHECK (key_index >= 0 AND key_index <= 5),  -- 0-3: 일반키 (D,F,J,K), 4-5: 슬라이드키 (E,I)
     timing INT NOT NULL,  -- 밀리초 단위
     duration INT DEFAULT 0,  -- 롱노트인 경우 지속 시간
+    type ENUM('NORMAL', 'LONG', 'SLIDE') DEFAULT 'NORMAL',  -- 노트 타입
+    slide_path JSON,  -- 슬라이드 경로 (키 순서 배열)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (chart_id) REFERENCES rhythm_charts(id) ON DELETE CASCADE,
     INDEX idx_note_chart (chart_id),

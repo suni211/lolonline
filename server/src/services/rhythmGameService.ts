@@ -255,8 +255,15 @@ export class RhythmGameService {
       // 노트 추가
       for (const note of notes) {
         await pool.query(
-          'INSERT INTO rhythm_notes (chart_id, key_index, timing, duration) VALUES (?, ?, ?, ?)',
-          [chartId, note.key_index, note.timing, note.duration || 0]
+          'INSERT INTO rhythm_notes (chart_id, key_index, timing, duration, type, slide_path) VALUES (?, ?, ?, ?, ?, ?)',
+          [
+            chartId,
+            note.key_index,
+            note.timing,
+            note.duration || 0,
+            note.type || 'NORMAL',
+            note.slide_path ? JSON.stringify(note.slide_path) : null
+          ]
         );
       }
 
