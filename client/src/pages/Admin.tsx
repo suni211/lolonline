@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import RhythmGameNoteEditor from '../components/RhythmGameNoteEditor';
 import './Admin.css';
 
 interface League {
@@ -62,7 +63,7 @@ export default function Admin() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [activeTab, setActiveTab] = useState<'leagues' | 'users' | 'players'>('leagues');
+  const [activeTab, setActiveTab] = useState<'leagues' | 'users' | 'players' | 'rhythmGame'>('leagues');
   const [uploadingPlayerId, setUploadingPlayerId] = useState<number | null>(null);
   const [lpoStatus, setLpoStatus] = useState<LPOStatus | null>(null);
   const [statAdjustment, setStatAdjustment] = useState<number>(-20);
@@ -461,6 +462,12 @@ export default function Admin() {
         >
           선수 이미지
         </button>
+        <button
+          className={activeTab === 'rhythmGame' ? 'active' : ''}
+          onClick={() => setActiveTab('rhythmGame')}
+        >
+          🎵 리듬게임 설정
+        </button>
       </div>
 
       {activeTab === 'leagues' && (
@@ -844,6 +851,12 @@ export default function Admin() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {activeTab === 'rhythmGame' && (
+        <div className="admin-section">
+          <RhythmGameNoteEditor />
         </div>
       )}
     </div>

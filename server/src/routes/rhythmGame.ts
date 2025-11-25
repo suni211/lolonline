@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import RhythmGameService from '../services/rhythmGameService.js';
-import authMiddleware from '../middleware/authMiddleware.js';
+import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -41,7 +41,7 @@ router.get('/charts/:chartId/notes', async (req: Request, res: Response) => {
 });
 
 // 리듬게임 플레이 결과 제출
-router.post('/submit', authMiddleware, async (req: Request, res: Response) => {
+router.post('/submit', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { teamId, playerCardId, chartId, judgments, maxCombo, score, accuracy } = req.body;
 
@@ -92,7 +92,7 @@ router.get('/stats/:teamId', async (req: Request, res: Response) => {
 });
 
 // 악보 생성 (관리자용)
-router.post('/charts', authMiddleware, async (req: Request, res: Response) => {
+router.post('/charts', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { songId, difficulty, notes } = req.body;
     const creatorId = (req as any).user.id;
@@ -116,7 +116,7 @@ router.post('/charts', authMiddleware, async (req: Request, res: Response) => {
 });
 
 // 악보 삭제 (관리자용)
-router.delete('/charts/:chartId', authMiddleware, async (req: Request, res: Response) => {
+router.delete('/charts/:chartId', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const chartId = parseInt(req.params.chartId);
     const result = await RhythmGameService.deleteChart(chartId);
