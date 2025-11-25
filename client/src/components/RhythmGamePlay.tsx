@@ -65,6 +65,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
   const judgedNotesRef = useRef<Set<number>>(new Set());
   const notesRef = useRef<Note[]>([]);
   const heldLongNotesRef = useRef<Set<number>>(new Set()); // 현재 누르고 있는 롱노트
+  const longNoteJudgedRef = useRef<Set<number>>(new Set()); // 판정된 롱노트
 
   // 현재 누르고 있는 키들 (시각적 피드백)
   const [pressedKeys, setPressedKeys] = useState<Set<number>>(new Set());
@@ -153,9 +154,85 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
         const currentMs = currentSec * 1000;
         setCurrentTime(currentMs); // 밀리초 단위
 
-        // 자동 미스 처리: 판정선을 지난 노트들 (timingDiff <= -300ms 이상)
+        // 롱노트 판정 처리: 끝 부분이 판정 범위에 도달했을 때
         notesRef.current.forEach(note => {
-          if (!judgedNotesRef.current.has(note.id)) {
+          const isLongNote = note.type === 'LONG' || (note.duration && note.duration > 0);
+
+          if (isLongNote && !longNoteJudgedRef.current.has(note.id)) {
+            const holdEndTime = note.timing + note.duration;
+            const endTimingDiff = holdEndTime - currentMs;
+
+            // 끝 부분이 판정 범위에 도달했을 때 (±200ms)
+            if (Math.abs(endTimingDiff) <= 200 && endTimingDiff >= -200) {
+              if (heldLongNotesRef.current.has(note.id)) {
+                // 여전히 누르고 있음 → 판정 처리
+                const judgmentType = getJudgment(endTimingDiff);
+                const points = getScoreForJudgment(judgmentType);
+
+                setScore((prev) => prev + points);
+                if (judgmentType === 'MISS') {
+                  setCombo(0);
+                  setJudgments((prev) => ({ ...prev, miss: prev.miss + 1 }));
+                } else {
+                  setCombo((prev) => prev + 1);
+                  setJudgments((prev) => ({
+                    ...prev,
+                    [judgmentType.toLowerCase()]: prev[judgmentType.toLowerCase() as keyof typeof prev] + 1
+                  }));
+                  setMaxCombo((prev) => Math.max(prev, combo + 1));
+                }
+
+                setRecentJudgment({ type: judgmentType as any, timing: currentMs });
+                setTimeout(() => setRecentJudgment(null), 200);
+
+                // 정확도 계산
+                const totalJudgments = Object.values(judgments).reduce((a, b) => a + b, 0) + 1;
+                const totalScore = score + points;
+                const newAccuracy = (totalScore / (totalJudgments * 100)) * 100;
+                setAccuracy(Math.min(100, newAccuracy));
+
+                longNoteJudgedRef.current.add(note.id);
+                heldLongNotesRef.current.delete(note.id);
+                setHeldLongNotes(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(note.id);
+                  return newSet;
+                });
+                judgedNotesRef.current.add(note.id);
+              }
+            }
+            // 끝 부분이 판정 범위를 완전히 벗어났을 때 (200ms 이상 경과)
+            else if (endTimingDiff < -200) {
+              if (heldLongNotesRef.current.has(note.id)) {
+                // 여전히 누르고 있지만 판정 범위를 놓침 → MISS
+                setCombo(0);
+                setJudgments((prev) => ({ ...prev, miss: prev.miss + 1 }));
+                setRecentJudgment({ type: 'MISS', timing: currentMs });
+                setTimeout(() => setRecentJudgment(null), 200);
+
+                const totalJudgments = Object.values(judgments).reduce((a, b) => a + b, 0) + 1;
+                const totalScore = score;
+                const newAccuracy = (totalScore / (totalJudgments * 100)) * 100;
+                setAccuracy(Math.min(100, newAccuracy));
+
+                longNoteJudgedRef.current.add(note.id);
+                heldLongNotesRef.current.delete(note.id);
+                setHeldLongNotes(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(note.id);
+                  return newSet;
+                });
+              }
+              judgedNotesRef.current.add(note.id);
+            }
+          }
+        });
+
+        // 자동 미스 처리: 판정선을 지난 일반 노트들 (timingDiff <= -300ms 이상)
+        notesRef.current.forEach(note => {
+          const isLongNote = note.type === 'LONG' || (note.duration && note.duration > 0);
+
+          if (!isLongNote && !judgedNotesRef.current.has(note.id)) {
             const timingDiff = note.timing - currentMs;
             // 판정 범위를 완전히 벗어난 경우 (300ms 이상 경과)
             if (timingDiff <= -300) {
@@ -214,6 +291,12 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
     }
 
     console.log('게임 시작: audioReady=', audioReady, 'loadingNotes=', loadingNotes);
+
+    // Ref 초기화
+    judgedNotesRef.current.clear();
+    heldLongNotesRef.current.clear();
+    longNoteJudgedRef.current.clear();
+
     setGameStarted(true);
 
     // 게임 필드에 focus를 주어 키 입력 활성화 (useEffect에서 음악 재생)
@@ -378,7 +461,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
       return newSet;
     });
 
-    // 롱노트 종료 처리
+    // 롱노트 종료 처리 (아직 판정 안 된 롱노트는 MISS 처리)
     const releasedLongNotes = Array.from(heldLongNotesRef.current).filter(noteId => {
       const note = notesRef.current.find(n => n.id === noteId);
       return note && note.key_index === keyIndex;
@@ -386,34 +469,21 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
 
     releasedLongNotes.forEach(noteId => {
       const note = notesRef.current.find(n => n.id === noteId);
-      if (note) {
-        const holdEndTime = note.timing + note.duration; // 롱노트 종료 시간
-        const timingDiff = holdEndTime - currentTime;
-
-        const judgmentType = getJudgment(timingDiff);
-        const points = getScoreForJudgment(judgmentType);
-        setScore((prev) => prev + points);
-
-        if (judgmentType === 'MISS') {
-          setCombo(0);
-          setJudgments((prev) => ({ ...prev, miss: prev.miss + 1 }));
-        } else {
-          setCombo((prev) => prev + 1);
-          setJudgments((prev) => ({
-            ...prev,
-            [judgmentType.toLowerCase()]: prev[judgmentType.toLowerCase() as keyof typeof prev] + 1
-          }));
-          setMaxCombo((prev) => Math.max(prev, combo + 1));
-        }
-
-        setRecentJudgment({ type: judgmentType as any, timing: currentTime });
+      if (note && !longNoteJudgedRef.current.has(noteId)) {
+        // 아직 판정 안 된 롱노트를 중간에 뗌 → MISS
+        setCombo(0);
+        setJudgments((prev) => ({ ...prev, miss: prev.miss + 1 }));
+        setRecentJudgment({ type: 'MISS', timing: currentTime });
         setTimeout(() => setRecentJudgment(null), 200);
 
         // 정확도 계산
         const totalJudgments = Object.values(judgments).reduce((a, b) => a + b, 0) + 1;
-        const totalScore = score + points;
+        const totalScore = score;
         const newAccuracy = (totalScore / (totalJudgments * 100)) * 100;
         setAccuracy(Math.min(100, newAccuracy));
+
+        longNoteJudgedRef.current.add(noteId);
+        judgedNotesRef.current.add(noteId);
       }
 
       heldLongNotesRef.current.delete(noteId);
