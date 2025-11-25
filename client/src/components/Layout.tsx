@@ -43,6 +43,7 @@ export default function Layout() {
     { path: '/sponsors', label: '스폰서' },
     { path: '/finance', label: '재정현황' },
     { path: '/fans-streaming', label: '팬/스트리밍' },
+    { path: '/rhythm-game', label: '🎵 리듬게임' },
     { path: '/matches', label: '경기' },
     { path: '/friendly', label: '친선전' },
     { path: '/leagues', label: '리그' },

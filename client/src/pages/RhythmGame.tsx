@@ -1,0 +1,156 @@
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import '../styles/RhythmGame.css';
+import RhythmGamePlay from '../components/RhythmGamePlay';
+
+interface Song {
+  id: number;
+  title: string;
+  artist: string;
+  bpm: number;
+  duration: number;
+  difficulty: string;
+  cover_image_url?: string;
+  description?: string;
+}
+
+interface Chart {
+  id: number;
+  song_id: number;
+  difficulty: string;
+  note_count: number;
+}
+
+const RhythmGame = () => {
+  const [gameState, setGameState] = useState<'songSelect' | 'difficultySelect' | 'playing'>('songSelect');
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
+  const [selectedChart, setSelectedChart] = useState<Chart | null>(null);
+  const [charts, setCharts] = useState<Chart[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [bgmEnabled, setBgmEnabled] = useState(true);
+
+  useEffect(() => {
+    fetchSongs();
+  }, []);
+
+  const fetchSongs = async () => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/rhythm-game/songs`);
+      setSongs(response.data.songs);
+      setLoading(false);
+    } catch (error) {
+      console.error('곡 목록 조회 실패:', error);
+      setLoading(false);
+    }
+  };
+
+  const handleSongSelect = async (song: Song) => {
+    setSelectedSong(song);
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/rhythm-game/songs/${song.id}`);
+      setCharts(response.data.data.charts);
+      setGameState('difficultySelect');
+    } catch (error) {
+      console.error('악보 조회 실패:', error);
+    }
+  };
+
+  const handleChartSelect = (chart: Chart) => {
+    setSelectedChart(chart);
+    setGameState('playing');
+  };
+
+  const handleGameEnd = () => {
+    setGameState('songSelect');
+    setSelectedSong(null);
+    setSelectedChart(null);
+  };
+
+  if (loading) {
+    return <div className="rhythm-game-container">로딩 중...</div>;
+  }
+
+  return (
+    <div className="rhythm-game-container">
+      {/* 배경음악 토글 */}
+      <div className="bgm-control">
+        <button
+          className={`bgm-toggle ${bgmEnabled ? 'on' : 'off'}`}
+          onClick={() => setBgmEnabled(!bgmEnabled)}
+        >
+          🔊 배경음악 {bgmEnabled ? 'ON' : 'OFF'}
+        </button>
+      </div>
+
+      {gameState === 'songSelect' && (
+        <div className="song-select-screen">
+          <h1>🎵 리듬게임</h1>
+          <p className="subtitle">즐길 곡을 선택하세요</p>
+          <div className="songs-grid">
+            {songs.map((song) => (
+              <div
+                key={song.id}
+                className="song-card"
+                onClick={() => handleSongSelect(song)}
+              >
+                {song.cover_image_url ? (
+                  <img src={song.cover_image_url} alt={song.title} className="song-cover" />
+                ) : (
+                  <div className="song-cover-placeholder">🎵</div>
+                )}
+                <div className="song-info">
+                  <h3>{song.title}</h3>
+                  <p className="artist">{song.artist}</p>
+                  <p className="meta">♪ {song.bpm} BPM • {Math.round(song.duration / 60)}:{(song.duration % 60).toString().padStart(2, '0')}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {gameState === 'difficultySelect' && selectedSong && (
+        <div className="difficulty-select-screen">
+          <h2>{selectedSong.title}</h2>
+          <p className="artist">{selectedSong.artist}</p>
+          <p className="subtitle">난이도를 선택하세요</p>
+
+          <div className="difficulty-buttons">
+            {charts.map((chart) => (
+              <button
+                key={chart.id}
+                className={`difficulty-btn difficulty-${chart.difficulty.toLowerCase()}`}
+                onClick={() => handleChartSelect(chart)}
+              >
+                <span className="difficulty-name">{chart.difficulty}</span>
+                <span className="note-count">{chart.note_count} Notes</span>
+              </button>
+            ))}
+          </div>
+
+          <button
+            className="back-btn"
+            onClick={() => {
+              setGameState('songSelect');
+              setSelectedSong(null);
+            }}
+          >
+            ← 돌아가기
+          </button>
+        </div>
+      )}
+
+      {gameState === 'playing' && selectedSong && selectedChart && (
+        <RhythmGamePlay
+          song={selectedSong}
+          chart={selectedChart}
+          bgmEnabled={bgmEnabled}
+          onGameEnd={handleGameEnd}
+        />
+      )}
+    </div>
+  );
+};
+
+export default RhythmGame;

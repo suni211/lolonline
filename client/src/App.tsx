@@ -33,6 +33,7 @@ import Awards from './pages/Awards';
 import Worlds from './pages/Worlds';
 import Finance from './pages/Finance';
 import Community from './pages/Community';
+import RhythmGame from './pages/RhythmGame';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import GlobalChat from './components/GlobalChat';
@@ -94,6 +95,7 @@ function App() {
             <Route path="awards" element={<Awards />} />
             <Route path="worlds" element={<Worlds />} />
             <Route path="finance" element={<Finance />} />
+            <Route path="rhythm-game" element={<RhythmGame />} />
           </Route>
         </Routes>
       </Router>
