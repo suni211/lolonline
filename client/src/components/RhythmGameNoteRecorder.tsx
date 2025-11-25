@@ -40,8 +40,8 @@ const RhythmGameNoteRecorder = () => {
     { index: 1, label: 'F', key: 'f', color: '#9b59b6', type: 'normal' },
     { index: 2, label: 'J', key: 'j', color: '#e74c3c', type: 'normal' },
     { index: 3, label: 'K / →', key: 'k', color: '#f39c12', type: 'normal' },
-    { index: 4, label: 'E', key: 'e', color: '#1abc9c', type: 'slide' },
-    { index: 5, label: 'I', key: 'i', color: '#e67e22', type: 'slide' }
+    { index: 4, label: 'E (DF)', key: 'e', color: '#e74c3c', type: 'slide' },  // 빨간색 - DF 연결
+    { index: 5, label: 'I (JK)', key: 'i', color: '#3498db', type: 'slide' }   // 파란색 - JK 연결
   ];
 
   useEffect(() => {
