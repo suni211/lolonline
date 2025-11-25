@@ -354,6 +354,46 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
             </button>
           )}
         </div>
+
+        {/* 오디오 - 항상 렌더링되어야 함 */}
+        <audio
+          ref={audioRef}
+          src={song.music_url && song.music_url.startsWith('http')
+            ? song.music_url
+            : song.music_url && song.music_url.startsWith('/')
+              ? window.location.origin + song.music_url
+              : song.music_url}
+          crossOrigin="anonymous"
+          onLoadedMetadata={(e) => {
+            const audio = e.target as HTMLAudioElement;
+            const duration = Math.round(audio.duration);
+            const loadTime = Date.now() - audioLoadStartTimeRef.current;
+            console.log('🎵 Audio metadata loaded:', {
+              duration: `${duration}초`,
+              loadTime: `${loadTime}ms (${(loadTime/1000).toFixed(2)}초)`,
+              url: song.music_url
+            });
+            setActualDuration(duration);
+          }}
+          onCanPlay={() => {
+            const loadTime = Date.now() - audioLoadStartTimeRef.current;
+            console.log('✅ Audio ready to play:', `${loadTime}ms (${(loadTime/1000).toFixed(2)}초)`);
+            setAudioReady(true);
+          }}
+          onError={(e) => {
+            const error = (e.target as HTMLAudioElement).error;
+            const errorMsg = `음악 로드 실패: ${error?.message || 'Unknown error'}`;
+            console.error('❌', errorMsg, 'URL:', song.music_url);
+            setAudioError(errorMsg);
+          }}
+          onLoadStart={() => {
+            audioLoadStartTimeRef.current = Date.now();
+            console.log('⏳ Audio loading started...', 'src:', (audioRef.current as any)?.src);
+          }}
+          onLoad={() => {
+            console.log('📦 Audio load event');
+          }}
+        />
       </div>
     );
   }
@@ -402,6 +442,9 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
             곡 선택으로 돌아가기
           </button>
         </div>
+
+        {/* 오디오 - 항상 렌더링 */}
+        <audio ref={audioRef} />
       </div>
     );
   }
@@ -512,7 +555,10 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
         }}
         onLoadStart={() => {
           audioLoadStartTimeRef.current = Date.now();
-          console.log('⏳ Audio loading started...');
+          console.log('⏳ Audio loading started...', 'src:', (audioRef.current as any)?.src);
+        }}
+        onLoad={() => {
+          console.log('📦 Audio load event');
         }}
       />
     </div>
