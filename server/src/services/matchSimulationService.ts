@@ -908,16 +908,30 @@ async function generateEvents(
       });
       winningState.kills++;
       winningState.gold += 300;
-      // DB 업데이트 - 킬
-      await pool.query('UPDATE match_stats SET kills = kills + 1 WHERE match_id = ? AND player_id = ?', [match.id, killer.id]);
-      await pool.query('UPDATE match_stats SET deaths = deaths + 1 WHERE match_id = ? AND player_id = ?', [match.id, victim.id]);
+
+      // DB 업데이트 - 킬/데스 (데드락 방지용 try-catch)
+      try {
+        await pool.query('UPDATE match_stats SET kills = kills + 1 WHERE match_id = ? AND player_id = ?', [match.id, killer.id]);
+      } catch (error: any) {
+        console.error(`Failed to update kill for player ${killer.id}:`, error.message);
+      }
+
+      try {
+        await pool.query('UPDATE match_stats SET deaths = deaths + 1 WHERE match_id = ? AND player_id = ?', [match.id, victim.id]);
+      } catch (error: any) {
+        console.error(`Failed to update death for player ${victim.id}:`, error.message);
+      }
 
       // 어시스트 (킬러 제외 1-2명에게 랜덤 부여)
       const assistCandidates = winningPlayers.filter(p => p.id !== killer.id);
       const assistCount = Math.min(assistCandidates.length, 1 + Math.floor(Math.random() * 2)); // 1-2명
       const shuffled = assistCandidates.sort(() => Math.random() - 0.5);
       for (let i = 0; i < assistCount; i++) {
-        await pool.query('UPDATE match_stats SET assists = assists + 1 WHERE match_id = ? AND player_id = ?', [match.id, shuffled[i].id]);
+        try {
+          await pool.query('UPDATE match_stats SET assists = assists + 1 WHERE match_id = ? AND player_id = ?', [match.id, shuffled[i].id]);
+        } catch (error: any) {
+          console.error(`Failed to update assist for player ${shuffled[i].id}:`, error.message);
+        }
       }
 
       // 죽은 선수를 deadPlayers에 추가
@@ -1366,6 +1380,10 @@ async function generateEvents(
 // 롤 스타일 선수 통계 업데이트
 async function updatePlayerStatsLOL(matchId: number, homePlayers: any[], awayPlayers: any[], gameTime: number) {
   const allPlayers = [...homePlayers, ...awayPlayers];
+
+  // 데드락 방지: player_id 순서로 정렬하여 락 순서를 일관되게 유지
+  allPlayers.sort((a, b) => a.id - b.id);
+
   const gameMinutes = gameTime / 60;
 
   for (const player of allPlayers) {
@@ -1413,13 +1431,31 @@ async function updatePlayerStatsLOL(matchId: number, homePlayers: any[], awayPla
     const damageTakenPerMin = 400 + Math.random() * 400;
     const damageTakenIncrease = Math.floor(damageTakenPerMin / 10);
 
-    await pool.query(
-      `UPDATE match_stats
-       SET cs = cs + ?, gold_earned = gold_earned + ?,
-           damage_dealt = damage_dealt + ?, damage_taken = damage_taken + ?
-       WHERE match_id = ? AND player_id = ?`,
-      [csIncrease, goldIncrease, damageIncrease, damageTakenIncrease, matchId, player.id]
-    );
+    // 데드락 재시도 로직
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        await pool.query(
+          `UPDATE match_stats
+           SET cs = cs + ?, gold_earned = gold_earned + ?,
+               damage_dealt = damage_dealt + ?, damage_taken = damage_taken + ?
+           WHERE match_id = ? AND player_id = ?`,
+          [csIncrease, goldIncrease, damageIncrease, damageTakenIncrease, matchId, player.id]
+        );
+        break; // 성공하면 루프 탈출
+      } catch (error: any) {
+        if (error.errno === 1213 && retries > 1) {
+          // 데드락 발생 시 재시도
+          retries--;
+          await new Promise(resolve => setTimeout(resolve, 50)); // 50ms 대기
+          continue;
+        } else {
+          // 재시도 횟수 초과 또는 다른 에러 - 로그만 남기고 계속 진행
+          console.error(`Failed to update stats for player ${player.id}:`, error.message);
+          break;
+        }
+      }
+    }
   }
 }
 
