@@ -211,7 +211,7 @@ export class RhythmGameService {
     }
   }
 
-  // 악보 생성 (관리자용)
+  // 악보 생성 또는 업데이트 (관리자용)
   static async createChart(
     songId: number,
     difficulty: string,
@@ -219,13 +219,38 @@ export class RhythmGameService {
     notes: Array<{ keyIndex: number; timing: number; duration?: number }>
   ) {
     try {
-      const chartResult = await pool.query(
-        `INSERT INTO rhythm_charts (song_id, difficulty, creator_id, note_count)
-         VALUES (?, ?, ?, ?)`,
-        [songId, difficulty, creatorId, notes.length]
+      // 기존 악보 확인
+      const existingCharts = await pool.query(
+        `SELECT id FROM rhythm_charts WHERE song_id = ? AND difficulty = ?`,
+        [songId, difficulty]
       );
 
-      const chartId = chartResult.insertId;
+      let chartId: number;
+
+      if (existingCharts.length > 0) {
+        // 기존 악보 업데이트
+        chartId = existingCharts[0].id;
+
+        // 기존 노트 삭제
+        await pool.query(
+          `DELETE FROM rhythm_notes WHERE chart_id = ?`,
+          [chartId]
+        );
+
+        // 악보 정보 업데이트
+        await pool.query(
+          `UPDATE rhythm_charts SET creator_id = ?, note_count = ? WHERE id = ?`,
+          [creatorId, notes.length, chartId]
+        );
+      } else {
+        // 새 악보 생성
+        const chartResult = await pool.query(
+          `INSERT INTO rhythm_charts (song_id, difficulty, creator_id, note_count)
+           VALUES (?, ?, ?, ?)`,
+          [songId, difficulty, creatorId, notes.length]
+        );
+        chartId = chartResult.insertId;
+      }
 
       // 노트 추가
       for (const note of notes) {
@@ -239,7 +264,7 @@ export class RhythmGameService {
         success: true,
         chartId,
         noteCount: notes.length,
-        message: `악보 생성 완료 (노트: ${notes.length}개)`
+        message: `악보 ${existingCharts.length > 0 ? '업데이트' : '생성'} 완료 (노트: ${notes.length}개)`
       };
     } catch (error) {
       console.error('Create chart error:', error);
