@@ -76,10 +76,11 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
     // 악보 노트 로드
     const fetchNotes = async () => {
       try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/rhythm-game/charts/${chart.id}/notes`
-        );
-        setNotes(response.data.notes);
+        const apiUrl = import.meta.env.VITE_API_URL || '';
+        const url = `${apiUrl}/api/rhythm-game/charts/${chart.id}/notes`;
+        console.log('Fetching notes from:', url);
+        const response = await axios.get(url);
+        setNotes(response.data.notes || response.data);
         setLoadingNotes(false);
       } catch (error) {
         console.error('노트 로드 실패:', error);

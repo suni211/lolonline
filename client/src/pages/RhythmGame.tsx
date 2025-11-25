@@ -36,7 +36,10 @@ const RhythmGame = () => {
 
   const fetchSongs = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/rhythm-game/songs`);
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const url = `${apiUrl}/api/rhythm-game/songs`;
+      console.log('Fetching songs from:', url);
+      const response = await axios.get(url);
       const songsData = Array.isArray(response.data) ? response.data : response.data.songs || [];
       setSongs(songsData);
       setLoading(false);
@@ -50,7 +53,10 @@ const RhythmGame = () => {
   const handleSongSelect = async (song: Song) => {
     setSelectedSong(song);
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/rhythm-game/songs/${song.id}`);
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const url = `${apiUrl}/api/rhythm-game/songs/${song.id}`;
+      console.log('Fetching charts from:', url);
+      const response = await axios.get(url);
       // API는 { song, charts } 형식으로 반환
       const chartsData = response.data?.charts || [];
       setCharts(Array.isArray(chartsData) ? chartsData : []);
