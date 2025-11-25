@@ -61,9 +61,11 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
   const gameFieldRef = useRef<HTMLDivElement>(null);
   const judgedNotesRef = useRef<Set<number>>(new Set());
   const notesRef = useRef<Note[]>([]);
+  const heldLongNotesRef = useRef<Set<number>>(new Set()); // 현재 누르고 있는 롱노트
 
   // 현재 누르고 있는 키들 (시각적 피드백)
   const [pressedKeys, setPressedKeys] = useState<Set<number>>(new Set());
+  const [heldLongNotes, setHeldLongNotes] = useState<Set<number>>(new Set());
 
   // 점수 계산 공식
   const getScoreForJudgment = (type: string) => {
@@ -212,33 +214,26 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
     if (!gameStarted || gameEnded) return;
 
     let keyIndex = -1;
-    let keyName = '';
     switch (e.key.toLowerCase()) {
       case 'd':
       case 'arrowleft':
         keyIndex = 0;
-        keyName = 'D';
         break;
       case 'f':
         keyIndex = 1;
-        keyName = 'F';
         break;
       case 'j':
         keyIndex = 2;
-        keyName = 'J';
         break;
       case 'k':
       case 'arrowright':
         keyIndex = 3;
-        keyName = 'K';
         break;
       case 'e':
-        keyIndex = 4;  // E: DF 연결 (빨간색)
-        keyName = 'E';
+        keyIndex = 4;
         break;
       case 'i':
-        keyIndex = 5;  // I: JK 연결 (파란색)
-        keyName = 'I';
+        keyIndex = 5;
         break;
       default:
         return;
@@ -248,55 +243,75 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
     setPressedKeys(prev => new Set(prev).add(keyIndex));
 
     // 해당 키의 노트 찾기
-    const targetNotes = notes.filter(
+    const targetNotes = notesRef.current.filter(
       (note) => note.key_index === keyIndex && !judgedNotesRef.current.has(note.id)
     );
 
-    if (keyIndex >= 4) {
-      console.log(`Key pressed: ${keyName} (${keyIndex}), target notes:`, targetNotes.length);
-    }
-
     if (targetNotes.length === 0) return;
 
-    // 가장 가까운 노트 판정
-    const closestNote = targetNotes.reduce((closest, note) => {
-      const currentDiff = Math.abs(note.timing - currentTime);
-      const closestDiff = Math.abs(closest.timing - currentTime);
-      return currentDiff < closestDiff ? note : closest;
-    });
+    // 일반 노트와 롱노트 분리
+    const normalNotes = targetNotes.filter(n => n.duration === 0 || n.duration === undefined);
+    const longNotes = targetNotes.filter(n => n.duration > 0);
 
-    const timingDiff = closestNote.timing - currentTime;
+    // 일반 노트 판정
+    if (normalNotes.length > 0) {
+      const closestNote = normalNotes.reduce((closest, note) => {
+        const currentDiff = Math.abs(note.timing - currentTime);
+        const closestDiff = Math.abs(closest.timing - currentTime);
+        return currentDiff < closestDiff ? note : closest;
+      });
 
-    // 너무 먼 노트는 무시
-    if (Math.abs(timingDiff) > 300) return;
+      const timingDiff = closestNote.timing - currentTime;
 
-    const judgmentType = getJudgment(timingDiff);
-    judgedNotesRef.current.add(closestNote.id);
+      // 너무 먼 노트는 무시
+      if (Math.abs(timingDiff) <= 300) {
+        const judgmentType = getJudgment(timingDiff);
+        judgedNotesRef.current.add(closestNote.id);
 
-    // 점수 및 판정 업데이트
-    const points = getScoreForJudgment(judgmentType);
-    setScore((prev) => prev + points);
+        // 점수 및 판정 업데이트
+        const points = getScoreForJudgment(judgmentType);
+        setScore((prev) => prev + points);
 
-    if (judgmentType === 'MISS') {
-      setCombo(0);
-      setJudgments((prev) => ({ ...prev, miss: prev.miss + 1 }));
-    } else {
-      setCombo((prev) => prev + 1);
-      setJudgments((prev) => ({
-        ...prev,
-        [judgmentType.toLowerCase()]: prev[judgmentType.toLowerCase() as keyof typeof prev] + 1
-      }));
-      setMaxCombo((prev) => Math.max(prev, combo + 1));
+        if (judgmentType === 'MISS') {
+          setCombo(0);
+          setJudgments((prev) => ({ ...prev, miss: prev.miss + 1 }));
+        } else {
+          setCombo((prev) => prev + 1);
+          setJudgments((prev) => ({
+            ...prev,
+            [judgmentType.toLowerCase()]: prev[judgmentType.toLowerCase() as keyof typeof prev] + 1
+          }));
+          setMaxCombo((prev) => Math.max(prev, combo + 1));
+        }
+
+        setRecentJudgment({ type: judgmentType as any, timing: currentTime });
+        setTimeout(() => setRecentJudgment(null), 200);
+
+        // 정확도 계산
+        const totalJudgments = Object.values(judgments).reduce((a, b) => a + b, 0) + 1;
+        const totalScore = score + points;
+        const newAccuracy = (totalScore / (totalJudgments * 100)) * 100;
+        setAccuracy(Math.min(100, newAccuracy));
+      }
     }
 
-    setRecentJudgment({ type: judgmentType as any, timing: currentTime });
-    setTimeout(() => setRecentJudgment(null), 200);
+    // 롱노트 처리
+    if (longNotes.length > 0) {
+      const closestLongNote = longNotes.reduce((closest, note) => {
+        const currentDiff = Math.abs(note.timing - currentTime);
+        const closestDiff = Math.abs(closest.timing - currentTime);
+        return currentDiff < closestDiff ? note : closest;
+      });
 
-    // 정확도 계산
-    const totalJudgments = Object.values(judgments).reduce((a, b) => a + b, 0) + 1;
-    const totalScore = score + points;
-    const newAccuracy = (totalScore / (totalJudgments * 100)) * 100;
-    setAccuracy(Math.min(100, newAccuracy));
+      const timingDiff = closestLongNote.timing - currentTime;
+
+      // 롱노트 시작 근처에 있으면 잡음
+      if (Math.abs(timingDiff) <= 300) {
+        heldLongNotesRef.current.add(closestLongNote.id);
+        setHeldLongNotes(prev => new Set(prev).add(closestLongNote.id));
+        judgedNotesRef.current.add(closestLongNote.id);
+      }
+    }
   };
 
   // 키 해제 처리
@@ -331,6 +346,53 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
     setPressedKeys(prev => {
       const newSet = new Set(prev);
       newSet.delete(keyIndex);
+      return newSet;
+    });
+
+    // 롱노트 종료 처리
+    const releasedLongNotes = Array.from(heldLongNotesRef.current).filter(noteId => {
+      const note = notesRef.current.find(n => n.id === noteId);
+      return note && note.key_index === keyIndex;
+    });
+
+    releasedLongNotes.forEach(noteId => {
+      const note = notesRef.current.find(n => n.id === noteId);
+      if (note) {
+        const holdEndTime = note.timing + note.duration; // 롱노트 종료 시간
+        const timingDiff = holdEndTime - currentTime;
+
+        const judgmentType = getJudgment(timingDiff);
+        const points = getScoreForJudgment(judgmentType);
+        setScore((prev) => prev + points);
+
+        if (judgmentType === 'MISS') {
+          setCombo(0);
+          setJudgments((prev) => ({ ...prev, miss: prev.miss + 1 }));
+        } else {
+          setCombo((prev) => prev + 1);
+          setJudgments((prev) => ({
+            ...prev,
+            [judgmentType.toLowerCase()]: prev[judgmentType.toLowerCase() as keyof typeof prev] + 1
+          }));
+          setMaxCombo((prev) => Math.max(prev, combo + 1));
+        }
+
+        setRecentJudgment({ type: judgmentType as any, timing: currentTime });
+        setTimeout(() => setRecentJudgment(null), 200);
+
+        // 정확도 계산
+        const totalJudgments = Object.values(judgments).reduce((a, b) => a + b, 0) + 1;
+        const totalScore = score + points;
+        const newAccuracy = (totalScore / (totalJudgments * 100)) * 100;
+        setAccuracy(Math.min(100, newAccuracy));
+      }
+
+      heldLongNotesRef.current.delete(noteId);
+    });
+
+    setHeldLongNotes(prev => {
+      const newSet = new Set(prev);
+      releasedLongNotes.forEach(id => newSet.delete(id));
       return newSet;
     });
   };
@@ -576,14 +638,18 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
               const longNoteHeight = (note.duration / 1000) * pixelsPerSecond;
               // 롱노트의 끝 위치 (시작점 - 높이)
               const longNoteBottom = noteBottom - longNoteHeight;
+              // 롱노트 눌림 상태
+              const isHeld = heldLongNotes.has(note.id);
 
               return (
                 <div
                   key={note.id}
-                  className={`note long-note note-key-${note.key_index}`}
+                  className={`note long-note note-key-${note.key_index} ${isHeld ? 'held' : ''}`}
                   style={{
                     bottom: `${longNoteBottom}px`,
-                    height: `${longNoteHeight}px`
+                    height: `${longNoteHeight}px`,
+                    opacity: isHeld ? 1 : 0.8,
+                    boxShadow: isHeld ? `inset 0 0 20px rgba(255, 255, 255, 0.5), 0 0 20px currentColor` : undefined
                   }}
                 />
               );
