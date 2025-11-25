@@ -27,6 +27,7 @@ const RhythmGameNoteEditor = () => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [keyMapping, setKeyMapping] = useState<number[]>([0, 1, 2, 3]); // 키 매핑 (랜덤화 가능)
+  const [showKeyHighlight, setShowKeyHighlight] = useState(false); // 키 배치 하이라이트 표시
 
   const DIFFICULTIES = ['EASY', 'NORMAL', 'HARD', 'INSANE'];
   const BASE_KEYS = [
@@ -55,7 +56,13 @@ const RhythmGameNoteEditor = () => {
         }
         setKeyMapping(shuffled);
         setMessage(`🔀 키 배치 랜덤화: ${shuffled.map(i => BASE_KEYS[i].label.split(' ')[0]).join(' → ')}`);
-        setTimeout(() => setMessage(''), 2000);
+        setShowKeyHighlight(true);
+
+        // 5초 후 효과 제거
+        setTimeout(() => {
+          setMessage('');
+          setShowKeyHighlight(false);
+        }, 5000);
       }
     };
 
@@ -220,8 +227,16 @@ const RhythmGameNoteEditor = () => {
                 {KEYS.map((key) => (
                   <div
                     key={key.index}
-                    className="key-lane"
-                    style={{ backgroundColor: `${key.color}15` }}
+                    className={`key-lane ${showKeyHighlight ? 'key-randomized' : ''}`}
+                    style={{
+                      backgroundColor: `${key.color}15`,
+                      ...(showKeyHighlight && {
+                        boxShadow: `0 0 15px ${key.color}`,
+                        borderColor: key.color,
+                        borderWidth: '2px',
+                        borderStyle: 'solid'
+                      })
+                    }}
                     onClick={(e) => {
                       const rect = e.currentTarget.getBoundingClientRect();
                       const percent = (e.clientX - rect.left) / rect.width;
@@ -229,7 +244,15 @@ const RhythmGameNoteEditor = () => {
                       addNote(key.index, timing);
                     }}
                   >
-                    <div className="lane-label" style={{ color: key.color }}>
+                    <div
+                      className="lane-label"
+                      style={{
+                        color: key.color,
+                        fontWeight: showKeyHighlight ? 'bold' : 'normal',
+                        fontSize: showKeyHighlight ? '1.2em' : '1em',
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
                       {key.label}
                     </div>
 

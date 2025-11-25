@@ -100,8 +100,8 @@ export async function generateMatchPosts(
 ): Promise<void> {
   try {
     // 팀 정보 가져오기
-    const [homeTeam] = await pool.query('SELECT name FROM teams WHERE id = ?', [homeTeamId]);
-    const [awayTeam] = await pool.query('SELECT name FROM teams WHERE id = ?', [awayTeamId]);
+    const homeTeam = await pool.query('SELECT name FROM teams WHERE id = ?', [homeTeamId]);
+    const awayTeam = await pool.query('SELECT name FROM teams WHERE id = ?', [awayTeamId]);
 
     if (homeTeam.length === 0 || awayTeam.length === 0) return;
 
@@ -110,7 +110,7 @@ export async function generateMatchPosts(
     const scoreText = `${homeScore}-${awayScore}`;
 
     // 경기 MVP 선수 찾기 (가장 많이 득점한 선수)
-    const [topPlayer] = await pool.query(
+    const topPlayer = await pool.query(
       `SELECT COALESCE(pp.nickname, pc.ai_player_name, '선수') as name
        FROM match_stats ms
        JOIN player_cards pc ON ms.player_id = pc.id
