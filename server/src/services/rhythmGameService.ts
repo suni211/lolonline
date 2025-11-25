@@ -216,7 +216,7 @@ export class RhythmGameService {
     songId: number,
     difficulty: string,
     creatorId: number | null,
-    notes: Array<{ keyIndex: number; timing: number; duration?: number }>
+    notes: Array<{ key_index: number; timing: number; duration?: number }>
   ) {
     try {
       // 기존 악보 확인
@@ -256,7 +256,7 @@ export class RhythmGameService {
       for (const note of notes) {
         await pool.query(
           'INSERT INTO rhythm_notes (chart_id, key_index, timing, duration) VALUES (?, ?, ?, ?)',
-          [chartId, note.keyIndex, note.timing, note.duration || 0]
+          [chartId, note.key_index, note.timing, note.duration || 0]
         );
       }
 
