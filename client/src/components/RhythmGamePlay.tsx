@@ -126,6 +126,12 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
 
   // 게임 시작
   const handleGameStart = () => {
+    // 음악이 준비되지 않았으면 시작하지 않음
+    if (!audioReady || loadingNotes) {
+      console.warn('게임 시작 불가: audioReady=', audioReady, 'loadingNotes=', loadingNotes);
+      return;
+    }
+
     setGameStarted(true);
     // 게임 필드에 focus를 주어 키 입력 활성화
     setTimeout(() => {
@@ -289,7 +295,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
             </div>
           </div>
 
-          <button className="start-btn" onClick={handleGameStart} disabled={!audioReady && loadingNotes}>
+          <button className="start-btn" onClick={handleGameStart} disabled={!audioReady || loadingNotes}>
             {loadingNotes ? '노트 로드 중...' : !audioReady ? '음악 로드 대기 중...' : '게임 시작'}
           </button>
         </div>
