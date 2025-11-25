@@ -29,6 +29,7 @@ const RhythmGameNoteRecorder = () => {
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const gameLoopRef = useRef<number | null>(null);
+  const keyPressRef = useRef<{ [key: number]: number | null }>({ 0: null, 1: null, 2: null, 3: null });
 
   const DIFFICULTIES = ['EASY', 'NORMAL', 'HARD', 'INSANE'];
   const KEYS = [
@@ -101,23 +102,51 @@ const RhythmGameNoteRecorder = () => {
     setTimeout(() => setMessage(''), 3000);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  const getKeyIndex = (key: string): number | null => {
+    const keyConfig = KEYS.find(k => k.key === key || (key === 'arrowleft' && k.index === 0) || (key === 'arrowright' && k.index === 3));
+    return keyConfig ? keyConfig.index : null;
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (!isRecording) return;
 
     const key = e.key.toLowerCase();
-    const keyConfig = KEYS.find(k => k.key === key || (key === 'arrowleft' && k.index === 0) || (key === 'arrowright' && k.index === 3));
+    const keyIndex = getKeyIndex(key);
 
-    if (!keyConfig) return;
+    if (keyIndex === null) return;
+
+    // 이미 이 키가 눌려있으면 무시 (동시 눌림 방지)
+    if (keyPressRef.current[keyIndex] !== null) return;
+
+    e.preventDefault();
+    // 이 키의 누르기 시작 시간 기록
+    keyPressRef.current[keyIndex] = currentTime;
+  };
+
+  const handleKeyUp = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!isRecording) return;
+
+    const key = e.key.toLowerCase();
+    const keyIndex = getKeyIndex(key);
+
+    if (keyIndex === null || keyPressRef.current[keyIndex] === null) return;
 
     e.preventDefault();
 
+    const startTime = keyPressRef.current[keyIndex]!;
+    const endTime = currentTime;
+    const duration = Math.max(0, endTime - startTime);
+
     const newNote: RecordedNote = {
-      key_index: keyConfig.index,
-      timing: Math.round(currentTime),
-      duration: 0
+      key_index: keyIndex,
+      timing: Math.round(startTime),
+      duration: Math.round(duration)
     };
 
     setRecordedNotes([...recordedNotes, newNote].sort((a, b) => a.timing - b.timing));
+
+    // 키 누르기 상태 초기화
+    keyPressRef.current[keyIndex] = null;
   };
 
   const removeNote = (index: number) => {
@@ -163,7 +192,7 @@ const RhythmGameNoteRecorder = () => {
   };
 
   return (
-    <div className="rhythm-game-note-recorder" onKeyDown={handleKeyPress} tabIndex={0}>
+    <div className="rhythm-game-note-recorder" onKeyDown={handleKeyDown} onKeyUp={handleKeyUp} tabIndex={0}>
       <h2>🎵 리듬게임 노트 녹음기</h2>
 
       <div className="recorder-layout">
