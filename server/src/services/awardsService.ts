@@ -8,11 +8,10 @@ export class AwardsService {
 
       // 1. MVP - 가장 높은 승리 기여도
       const mvp = await pool.query(
-        `SELECT pc.id as player_card_id, pc.team_id, p.name,
-                (pc.overall * 0.3 + COALESCE(ms.total_kills, 0) * 0.2 +
+        `SELECT pc.id as player_card_id, pc.team_id, pc.ai_player_name as name,
+                (pc.ovr * 0.3 + COALESCE(ms.total_kills, 0) * 0.2 +
                  COALESCE(ms.total_assists, 0) * 0.3 - COALESCE(ms.total_deaths, 0) * 0.1) as mvp_score
          FROM player_cards pc
-         JOIN players p ON pc.player_id = p.id
          LEFT JOIN (
            SELECT player_card_id,
                   SUM(kills) as total_kills,
@@ -34,28 +33,26 @@ export class AwardsService {
 
       // 2. ROOKIE - 가장 어린 선수 중 높은 성적
       const rookie = await pool.query(
-        `SELECT pc.id as player_card_id, pc.team_id, p.name, p.age, pc.overall
+        `SELECT pc.id as player_card_id, pc.team_id, pc.ai_player_name as name, pc.ovr
          FROM player_cards pc
-         JOIN players p ON pc.player_id = p.id
-         WHERE pc.team_id IS NOT NULL AND p.age <= 19
-         ORDER BY pc.overall DESC
+         WHERE pc.team_id IS NOT NULL
+         ORDER BY pc.ovr DESC
          LIMIT 1`
       );
 
       if (rookie.length > 0) {
         await this.createAward(season, 'ROOKIE', rookie[0].player_card_id, rookie[0].team_id,
-          rookie[0].overall, 20000000);
+          rookie[0].ovr, 20000000);
         awards.push({ type: 'ROOKIE', player: rookie[0].name });
       }
 
       // 3. TOP_SCORER - 가장 많은 킬
       const topScorer = await pool.query(
-        `SELECT pc.id as player_card_id, pc.team_id, p.name, SUM(mps.kills) as total_kills
+        `SELECT pc.id as player_card_id, pc.team_id, pc.ai_player_name as name, SUM(mps.kills) as total_kills
          FROM player_cards pc
-         JOIN players p ON pc.player_id = p.id
          JOIN match_player_stats mps ON pc.id = mps.player_card_id
          WHERE pc.team_id IS NOT NULL
-         GROUP BY pc.id, pc.team_id, p.name
+         GROUP BY pc.id, pc.team_id, pc.ai_player_name
          ORDER BY total_kills DESC
          LIMIT 1`
       );
@@ -68,12 +65,11 @@ export class AwardsService {
 
       // 4. ASSIST_KING - 가장 많은 어시스트
       const assistKing = await pool.query(
-        `SELECT pc.id as player_card_id, pc.team_id, p.name, SUM(mps.assists) as total_assists
+        `SELECT pc.id as player_card_id, pc.team_id, pc.ai_player_name as name, SUM(mps.assists) as total_assists
          FROM player_cards pc
-         JOIN players p ON pc.player_id = p.id
          JOIN match_player_stats mps ON pc.id = mps.player_card_id
          WHERE pc.team_id IS NOT NULL
-         GROUP BY pc.id, pc.team_id, p.name
+         GROUP BY pc.id, pc.team_id, pc.ai_player_name
          ORDER BY total_assists DESC
          LIMIT 1`
       );
@@ -86,39 +82,37 @@ export class AwardsService {
 
       // 5. BEST_SUPPORT - 서포터 중 가장 높은 성적
       const bestSupport = await pool.query(
-        `SELECT pc.id as player_card_id, pc.team_id, p.name, pc.overall,
+        `SELECT pc.id as player_card_id, pc.team_id, pc.ai_player_name as name, pc.ovr,
                 (COALESCE(SUM(mps.assists), 0) - COALESCE(SUM(mps.deaths), 0)) as support_score
          FROM player_cards pc
-         JOIN players p ON pc.player_id = p.id
          LEFT JOIN match_player_stats mps ON pc.id = mps.player_card_id
-         WHERE pc.team_id IS NOT NULL AND pc.position = 'SUPPORT'
-         GROUP BY pc.id, pc.team_id, p.name, pc.overall
-         ORDER BY support_score DESC, pc.overall DESC
+         WHERE pc.team_id IS NOT NULL AND pc.player_role = 'SUPPORT'
+         GROUP BY pc.id, pc.team_id, pc.ai_player_name, pc.ovr
+         ORDER BY support_score DESC, pc.ovr DESC
          LIMIT 1`
       );
 
       if (bestSupport.length > 0) {
         await this.createAward(season, 'BEST_SUPPORT', bestSupport[0].player_card_id, bestSupport[0].team_id,
-          bestSupport[0].support_score || bestSupport[0].overall, 20000000);
+          bestSupport[0].support_score || bestSupport[0].ovr, 20000000);
         awards.push({ type: 'BEST_SUPPORT', player: bestSupport[0].name });
       }
 
       // 6. BEST_JUNGLER - 정글러 중 가장 높은 성적
       const bestJungler = await pool.query(
-        `SELECT pc.id as player_card_id, pc.team_id, p.name, pc.overall,
+        `SELECT pc.id as player_card_id, pc.team_id, pc.ai_player_name as name, pc.ovr,
                 (COALESCE(SUM(mps.kills), 0) + COALESCE(SUM(mps.assists), 0)) as jungle_score
          FROM player_cards pc
-         JOIN players p ON pc.player_id = p.id
          LEFT JOIN match_player_stats mps ON pc.id = mps.player_card_id
-         WHERE pc.team_id IS NOT NULL AND pc.position = 'JUNGLE'
-         GROUP BY pc.id, pc.team_id, p.name, pc.overall
-         ORDER BY jungle_score DESC, pc.overall DESC
+         WHERE pc.team_id IS NOT NULL AND pc.player_role = 'JUNGLE'
+         GROUP BY pc.id, pc.team_id, pc.ai_player_name, pc.ovr
+         ORDER BY jungle_score DESC, pc.ovr DESC
          LIMIT 1`
       );
 
       if (bestJungler.length > 0) {
         await this.createAward(season, 'BEST_JUNGLER', bestJungler[0].player_card_id, bestJungler[0].team_id,
-          bestJungler[0].jungle_score || bestJungler[0].overall, 20000000);
+          bestJungler[0].jungle_score || bestJungler[0].ovr, 20000000);
         awards.push({ type: 'BEST_JUNGLER', player: bestJungler[0].name });
       }
 
@@ -169,10 +163,9 @@ export class AwardsService {
   static async getSeasonAwards(season: number) {
     try {
       const awards = await pool.query(
-        `SELECT sa.*, p.name as player_name, t.name as team_name
+        `SELECT sa.*, pc.ai_player_name as player_name, t.name as team_name
          FROM season_awards sa
          JOIN player_cards pc ON sa.player_card_id = pc.id
-         JOIN players p ON pc.player_id = p.id
          JOIN teams t ON sa.team_id = t.id
          WHERE sa.season = ?
          ORDER BY sa.prize_gold DESC`,
@@ -209,10 +202,9 @@ export class AwardsService {
   static async getTeamAwards(teamId: number) {
     try {
       const awards = await pool.query(
-        `SELECT sa.*, p.name as player_name
+        `SELECT sa.*, pc.ai_player_name as player_name
          FROM season_awards sa
          JOIN player_cards pc ON sa.player_card_id = pc.id
-         JOIN players p ON pc.player_id = p.id
          WHERE sa.team_id = ?
          ORDER BY sa.season DESC, sa.prize_gold DESC`,
         [teamId]
@@ -239,11 +231,10 @@ export class AwardsService {
 
       // 선수별 어워드 수
       const playerStats = await pool.query(
-        `SELECT p.name, COUNT(*) as award_count, SUM(sa.prize_gold) as total_prize
+        `SELECT pc.ai_player_name as name, COUNT(*) as award_count, SUM(sa.prize_gold) as total_prize
          FROM season_awards sa
          JOIN player_cards pc ON sa.player_card_id = pc.id
-         JOIN players p ON pc.player_id = p.id
-         GROUP BY p.name
+         GROUP BY pc.ai_player_name
          ORDER BY award_count DESC
          LIMIT 10`
       );
