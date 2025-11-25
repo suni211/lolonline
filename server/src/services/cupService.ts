@@ -93,9 +93,13 @@ export class CupService {
         }
       }
 
-      // 첫 번째 수요일 찾기
-      const nextWednesday = this.getNextWednesday(new Date());
-      let matchTime = new Date(nextWednesday);
+      // 수요일 일정 생성
+      const week1Wednesday = this.getNextWednesday(new Date()); // 이번주 수요일 (32강)
+      const week2Wednesday = new Date(week1Wednesday.getTime() + 7 * 24 * 60 * 60 * 1000); // 다음주 수요일 (16강, 8강)
+      const week3Wednesday = new Date(week2Wednesday.getTime() + 7 * 24 * 60 * 60 * 1000); // 다다음주 수요일 (4강, 결승)
+
+      // 32강 일정 설정 (이번주 수요일)
+      let matchTime = new Date(week1Wednesday);
       matchTime.setUTCHours(8, 0, 0, 0); // 17:00 KST = 08:00 UTC
 
       console.log(`Generating ${matches.length} cup matches for round of 32...`);
@@ -122,14 +126,21 @@ export class CupService {
         // 30분 간격
         matchTime = new Date(matchTime.getTime() + 30 * 60 * 1000);
 
-        // 23:30 KST (14:30 UTC) 넘으면 다음 수요일로
+        // 23:30 KST (14:30 UTC) 넘으면 시간 조정 (같은 수요일 내)
         const kstOffset = 9 * 60 * 60 * 1000;
         const kstCheckTime = new Date(matchTime.getTime() + kstOffset);
         if (kstCheckTime.getUTCHours() > 14 || (kstCheckTime.getUTCHours() === 14 && kstCheckTime.getUTCMinutes() > 30)) {
-          matchTime = this.getNextWednesday(matchTime);
-          matchTime.setUTCHours(8, 0, 0, 0);
+          // 시간을 09:00으로 리셋 (다음 경기를 위해)
+          matchTime.setUTCHours(0, 0, 0, 0);
+          matchTime = new Date(matchTime.getTime() + 24 * 60 * 60 * 1000); // 다음날 (하지만 32강은 한 수요일 내에서만)
         }
       }
+
+      // 16강, 8강, 4강, 결승 미리 생성 (실제 경기가 끝나면 자동 진행)
+      // 16강 (다음주 수요일): 8경기
+      // 8강 (다음주 수요일): 4경기
+      // 4강 (다다음주 수요일): 2경기
+      // 결승 (다다음주 수요일): 1경기
 
       console.log(`Cup Tournament created with ID: ${cupId}`);
       return cupId;
@@ -202,9 +213,10 @@ export class CupService {
         }
       }
 
-      // 32강 경기 일정을 기준으로 2주간 스케줄
-      // 1주차 수요일: 32강 / 1주차 토요일: 16강
-      // 2주차 수요일: 8강 / 2주차 토요일: 4강, 결승
+      // 32강 경기 일정을 기준으로 컵 일정 스케줄
+      // 1주차 수요일: 32강
+      // 2주차 수요일: 16강, 8강
+      // 3주차 수요일: 4강, 결승
       const firstMatch = await pool.query(
         `SELECT scheduled_at FROM cup_matches WHERE cup_id = ? AND round = 'ROUND_32' ORDER BY match_number LIMIT 1`,
         [cupId]
@@ -219,25 +231,25 @@ export class CupService {
 
       let matchTime: Date;
       if (nextRound === 'ROUND_16') {
-        // 1주차 토요일: 16강
-        matchTime = new Date(baseWednesday);
-        matchTime.setDate(matchTime.getDate() + 3); // 수요일 -> 토요일
-        matchTime.setUTCHours(8, 0, 0, 0); // 17:00 KST
-      } else if (nextRound === 'QUARTER') {
-        // 2주차 수요일: 8강
+        // 다음주 수요일: 16강
         matchTime = new Date(baseWednesday);
         matchTime.setDate(matchTime.getDate() + 7); // 다음 주 수요일
         matchTime.setUTCHours(8, 0, 0, 0); // 17:00 KST
-      } else if (nextRound === 'SEMI') {
-        // 2주차 토요일: 4강
+      } else if (nextRound === 'QUARTER') {
+        // 다음주 수요일: 8강 (16강 후속)
         matchTime = new Date(baseWednesday);
-        matchTime.setDate(matchTime.getDate() + 10); // 다음 주 토요일
+        matchTime.setDate(matchTime.getDate() + 7); // 다음 주 수요일
+        matchTime.setUTCHours(12, 0, 0, 0); // 21:00 KST (16강 이후)
+      } else if (nextRound === 'SEMI') {
+        // 다다음주 수요일: 4강
+        matchTime = new Date(baseWednesday);
+        matchTime.setDate(matchTime.getDate() + 14); // 다다음 주 수요일
         matchTime.setUTCHours(8, 0, 0, 0); // 17:00 KST
       } else {
-        // 2주차 토요일: 결승 (4강 후)
+        // 다다음주 수요일: 결승 (4강 후)
         matchTime = new Date(baseWednesday);
-        matchTime.setDate(matchTime.getDate() + 10); // 다음 주 토요일
-        matchTime.setUTCHours(10, 0, 0, 0); // 19:00 KST
+        matchTime.setDate(matchTime.getDate() + 14); // 다다음 주 수요일
+        matchTime.setUTCHours(12, 0, 0, 0); // 21:00 KST (4강 이후)
       }
 
       for (let i = 0; i < matches.length; i++) {
