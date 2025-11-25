@@ -274,7 +274,7 @@ export default function Finance() {
             {/* 수입 분석 파이 차트 */}
             <div className="chart-card">
               <h3>수입 구성</h3>
-              <ResponsiveContainer width="100%" height={250}>
+              <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
                     data={incomeBreakdown.filter(item => item.value > 0)}
@@ -282,11 +282,12 @@ export default function Finance() {
                     nameKey="name"
                     cx="50%"
                     cy="50%"
-                    outerRadius={80}
+                    outerRadius={70}
                     label={({ name, percent }) =>
                       `${name} ${(percent * 100).toFixed(0)}%`
                     }
-                    labelLine={false}
+                    labelLine={true}
+                    style={{ fontSize: '12px', fill: '#fff' }}
                   >
                     {incomeBreakdown.map((_, index) => (
                       <Cell
@@ -308,7 +309,7 @@ export default function Finance() {
             {/* 지출 분석 파이 차트 */}
             <div className="chart-card">
               <h3>지출 구성</h3>
-              <ResponsiveContainer width="100%" height={250}>
+              <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
                     data={expenseBreakdown.filter(item => item.value > 0)}
@@ -316,11 +317,12 @@ export default function Finance() {
                     nameKey="name"
                     cx="50%"
                     cy="50%"
-                    outerRadius={80}
+                    outerRadius={70}
                     label={({ name, percent }) =>
                       `${name} ${(percent * 100).toFixed(0)}%`
                     }
-                    labelLine={false}
+                    labelLine={true}
+                    style={{ fontSize: '12px', fill: '#fff' }}
                   >
                     {expenseBreakdown.map((_, index) => (
                       <Cell
