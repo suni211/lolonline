@@ -125,14 +125,19 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
   }, [gameStarted, gameEnded]);
 
   // 게임 시작
-  const handleGameStart = () => {
+  const handleGameStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     // 음악이 준비되지 않았으면 시작하지 않음
-    if (!audioReady || loadingNotes) {
-      console.warn('게임 시작 불가: audioReady=', audioReady, 'loadingNotes=', loadingNotes);
+    if (!audioReady || loadingNotes || audioError) {
+      console.warn('게임 시작 불가: audioReady=', audioReady, 'loadingNotes=', loadingNotes, 'audioError=', audioError);
       return;
     }
 
+    console.log('게임 시작: audioReady=', audioReady, 'loadingNotes=', loadingNotes);
     setGameStarted(true);
+
     // 게임 필드에 focus를 주어 키 입력 활성화
     setTimeout(() => {
       if (gameFieldRef.current) {
@@ -141,6 +146,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
     }, 0);
 
     if (audioRef.current && bgmEnabled) {
+      audioRef.current.currentTime = 0;
       audioRef.current.play().catch(err => console.error('음악 재생 실패:', err));
     }
   };
@@ -295,9 +301,23 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
             </div>
           </div>
 
-          <button className="start-btn" onClick={handleGameStart} disabled={!audioReady || loadingNotes}>
-            {loadingNotes ? '노트 로드 중...' : !audioReady ? '음악 로드 대기 중...' : '게임 시작'}
-          </button>
+          {loadingNotes ? (
+            <button className="start-btn" disabled={true} style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+              노트 로드 중...
+            </button>
+          ) : !audioReady ? (
+            <button className="start-btn" disabled={true} style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+              음악 로드 대기 중...
+            </button>
+          ) : audioError ? (
+            <button className="start-btn" disabled={true} style={{ opacity: 0.5, cursor: 'not-allowed', color: '#e74c3c' }}>
+              음악 로드 실패
+            </button>
+          ) : (
+            <button className="start-btn" onClick={handleGameStart} style={{ opacity: 1, cursor: 'pointer' }}>
+              게임 시작
+            </button>
+          )}
         </div>
       </div>
     );
