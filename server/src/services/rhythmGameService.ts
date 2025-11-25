@@ -216,7 +216,7 @@ export class RhythmGameService {
     songId: number,
     difficulty: string,
     creatorId: number | null,
-    notes: Array<{ key_index: number; timing: number; duration?: number }>
+    notes: Array<{ key_index: number; timing: number; duration?: number; type?: 'NORMAL' | 'LONG' | 'SLIDE'; slide_path?: number[] }>
   ) {
     try {
       // 기존 악보 확인
