@@ -52,14 +52,15 @@ const RhythmGame = () => {
   };
 
   const handleSongSelect = async (song: Song) => {
-    setSelectedSong(song);
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '';
       const url = `${apiUrl}/api/rhythm-game/songs/${song.id}`;
       console.log('Fetching charts from:', url);
       const response = await axios.get(url);
       // API는 { song, charts } 형식으로 반환
+      const songData = response.data?.song || song;
       const chartsData = response.data?.charts || [];
+      setSelectedSong(songData);  // 서버에서 받은 song 정보 사용 (music_url 포함)
       setCharts(Array.isArray(chartsData) ? chartsData : []);
       setGameState('difficultySelect');
     } catch (error) {
