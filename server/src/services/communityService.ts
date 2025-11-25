@@ -109,14 +109,14 @@ export async function generateMatchPosts(
     const awayTeamName = awayTeam[0].name;
     const scoreText = `${homeScore}-${awayScore}`;
 
-    // 경기 MVP 선수 찾기 (가장 많이 득점한 선수)
+    // 경기 MVP 선수 찾기 (가장 많이 킬/어시스트한 선수)
     const topPlayer = await pool.query(
       `SELECT COALESCE(pp.name, pc.ai_player_name, '선수') as name
        FROM match_stats ms
        JOIN player_cards pc ON ms.player_id = pc.id
        LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
        WHERE ms.match_id = ?
-       ORDER BY ms.goals DESC, ms.assists DESC
+       ORDER BY ms.kills DESC, ms.assists DESC
        LIMIT 1`,
       [matchId]
     );

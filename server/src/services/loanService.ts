@@ -6,9 +6,11 @@ export class LoanService {
     try {
       // 다른 팀의 선수들 중 임대 가능한 선수
       const players = await pool.query(
-        `SELECT pc.*, p.name, p.position, p.nationality, t.name as team_name, t.id as owner_team_id
+        `SELECT pc.*, COALESCE(pp.name, pc.ai_player_name) as name,
+                COALESCE(pp.position, pc.ai_position) as position,
+                t.name as team_name, t.id as owner_team_id
          FROM player_cards pc
-         JOIN players p ON pc.player_id = p.id
+         LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
          JOIN teams t ON pc.team_id = t.id
          WHERE pc.team_id != ?
            AND pc.is_starter = false
@@ -16,7 +18,7 @@ export class LoanService {
              SELECT 1 FROM player_loans pl
              WHERE pl.player_card_id = pc.id AND pl.status = 'ACTIVE'
            )
-         ORDER BY pc.overall DESC`,
+         ORDER BY pc.ovr DESC`,
         [teamId]
       );
 
@@ -37,9 +39,10 @@ export class LoanService {
     try {
       // 선수 정보 확인
       const players = await pool.query(
-        `SELECT pc.*, p.name, p.salary, t.name as team_name
+        `SELECT pc.*, COALESCE(pp.name, pc.ai_player_name) as name,
+                pc.annual_salary, t.name as team_name
          FROM player_cards pc
-         JOIN players p ON pc.player_id = p.id
+         LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
          JOIN teams t ON pc.team_id = t.id
          WHERE pc.id = ?`,
         [playerCardId]
@@ -66,8 +69,9 @@ export class LoanService {
         throw new Error('자신의 팀 선수는 임대할 수 없습니다');
       }
 
-      // 임대료 계산 (오버롤과 월급 기반)
-      const loanFee = Math.floor(player.salary * loanMonths * 0.3);
+      // 임대료 계산 (연봉 기반)
+      const monthlySalary = Math.floor(player.annual_salary / 12);
+      const loanFee = Math.floor(monthlySalary * loanMonths * 0.3);
 
       // 골드 확인
       const team = await pool.query('SELECT gold FROM teams WHERE id = ?', [toTeamId]);
@@ -102,14 +106,14 @@ export class LoanService {
       // 재정 기록 (임대 팀)
       await pool.query(
         `INSERT INTO financial_records (team_id, record_type, category, amount, description)
-         VALUES (?, 'EXPENSE', 'LOAN_FEE', ?, ?)`,
+         VALUES (?, 'EXPENSE', 'OTHER', ?, ?)`,
         [toTeamId, loanFee, `${player.name} 임대료`]
       );
 
       // 재정 기록 (원 소속팀)
       await pool.query(
         `INSERT INTO financial_records (team_id, record_type, category, amount, description)
-         VALUES (?, 'INCOME', 'LOAN_FEE', ?, ?)`,
+         VALUES (?, 'INCOME', 'OTHER', ?, ?)`,
         [player.team_id, loanFee, `${player.name} 임대료 수입`]
       );
 
@@ -128,10 +132,13 @@ export class LoanService {
   static async getIncomingLoans(teamId: number) {
     try {
       const loans = await pool.query(
-        `SELECT pl.*, pc.overall, p.name, p.position, t.name as from_team_name
+        `SELECT pl.*, pc.ovr,
+                COALESCE(pp.name, pc.ai_player_name) as name,
+                COALESCE(pp.position, pc.ai_position) as position,
+                t.name as from_team_name
          FROM player_loans pl
          JOIN player_cards pc ON pl.player_card_id = pc.id
-         JOIN players p ON pc.player_id = p.id
+         LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
          JOIN teams t ON pl.from_team_id = t.id
          WHERE pl.to_team_id = ? AND pl.status = 'ACTIVE'`,
         [teamId]
@@ -148,10 +155,13 @@ export class LoanService {
   static async getOutgoingLoans(teamId: number) {
     try {
       const loans = await pool.query(
-        `SELECT pl.*, pc.overall, p.name, p.position, t.name as to_team_name
+        `SELECT pl.*, pc.ovr,
+                COALESCE(pp.name, pc.ai_player_name) as name,
+                COALESCE(pp.position, pc.ai_position) as position,
+                t.name as to_team_name
          FROM player_loans pl
          JOIN player_cards pc ON pl.player_card_id = pc.id
-         JOIN players p ON pc.player_id = p.id
+         LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
          JOIN teams t ON pl.to_team_id = t.id
          WHERE pl.from_team_id = ? AND pl.status = 'ACTIVE'`,
         [teamId]
@@ -232,18 +242,18 @@ export class LoanService {
   static async processMonthlySalaryShare() {
     try {
       const activeLoans = await pool.query(
-        `SELECT pl.*, p.salary
+        `SELECT pl.*, pc.annual_salary
          FROM player_loans pl
          JOIN player_cards pc ON pl.player_card_id = pc.id
-         JOIN players p ON pc.player_id = p.id
          WHERE pl.status = 'ACTIVE'`
       );
 
       for (const loan of activeLoans) {
+        const monthlySalary = Math.floor(loan.annual_salary / 12);
         // 임대팀이 부담하는 월급
-        const toTeamShare = Math.floor(loan.salary * loan.salary_share_percent / 100);
+        const toTeamShare = Math.floor(monthlySalary * loan.salary_share_percent / 100);
         // 원소속팀이 부담하는 월급
-        const fromTeamShare = loan.salary - toTeamShare;
+        const fromTeamShare = monthlySalary - toTeamShare;
 
         // 임대팀 월급 차감
         await pool.query(
