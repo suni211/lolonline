@@ -12,6 +12,7 @@ interface Song {
   difficulty: string;
   cover_image_url?: string;
   description?: string;
+  music_url?: string;
 }
 
 interface Chart {
