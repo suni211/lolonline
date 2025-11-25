@@ -47,6 +47,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, bgmVolume, bgaOpac
   console.log('🎬 song.bga_url:', song?.bga_url);
   console.log('📋 All song keys:', Object.keys(song || {}));
   const [notes, setNotes] = useState<Note[]>([]);
+  const [countdown, setCountdown] = useState<number | null>(null); // 3초 카운트다운
   const [gameStarted, setGameStarted] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -321,7 +322,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, bgmVolume, bgaOpac
       return;
     }
 
-    console.log('게임 시작: audioReady=', audioReady, 'loadingNotes=', loadingNotes);
+    console.log('3초 카운트다운 시작');
 
     // Ref 초기화
     judgedNotesRef.current.clear();
@@ -329,7 +330,21 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, bgmVolume, bgaOpac
     longNoteJudgedRef.current.clear();
     longNoteComboTimesRef.current.clear();
 
-    setGameStarted(true);
+    // 3초 카운트다운 시작
+    setCountdown(3);
+
+    const countdownInterval = setInterval(() => {
+      setCountdown(prev => {
+        if (prev === null || prev <= 1) {
+          clearInterval(countdownInterval);
+          // 카운트다운 끝나면 게임 시작
+          setCountdown(null);
+          setGameStarted(true);
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
 
     // 게임 필드에 focus를 주어 키 입력 활성화 (useEffect에서 음악 재생)
     setTimeout(() => {
@@ -585,6 +600,36 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, bgmVolume, bgaOpac
 
   if (loadingNotes) {
     return <div className="rhythm-game-play">노트 로딩 중...</div>;
+  }
+
+  // 카운트다운 화면
+  if (countdown !== null) {
+    return (
+      <div className="rhythm-game-play">
+        <div className="game-countdown-screen" style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          backgroundColor: 'rgba(0, 0, 0, 0.9)'
+        }}>
+          <h1 style={{
+            fontSize: '200px',
+            fontWeight: 'bold',
+            color: countdown === 3 ? '#e74c3c' : countdown === 2 ? '#f39c12' : '#2ecc71',
+            textShadow: '0 0 30px currentColor',
+            margin: 0,
+            animation: 'pulse 0.5s ease-in-out'
+          }}>
+            {countdown}
+          </h1>
+          <p style={{ fontSize: '24px', color: '#ecf0f1', marginTop: '20px' }}>
+            준비하세요!
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (!gameStarted) {
