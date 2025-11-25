@@ -837,29 +837,31 @@ async function generateEvents(
       eventPool.push('KILL', 'GANK', 'NOTHING', 'NOTHING');
     }
   } else if (currentPhase === 'MID') {
-    // 중반 (15-25분): 스커미시, 오브젝트 싸움
-    eventPool.push('KILL', 'SKIRMISH', 'TURRET');
+    // 중반 (15-25분): 스커미시, 팀파이트, 오브젝트 싸움
+    eventPool.push('KILL', 'SKIRMISH', 'TEAMFIGHT');
     if (totalKills < 15) eventPool.push('KILL', 'TEAMFIGHT'); // 킬 부족하면 추가
   } else {
-    // 후반 (25분+): 바론/소울 싸움, 대규모 한타
-    eventPool.push('TEAMFIGHT', 'TURRET', 'INHIBITOR');
+    // 후반 (25분+): 바론/소울 싸움, 대규모 한타, 포탑 파괴
+    eventPool.push('TEAMFIGHT', 'TURRET');
     if (totalKills < 20) eventPool.push('KILL', 'TEAMFIGHT'); // 킬 목표 달성
+    if (gameMinutes >= 35) eventPool.push('INHIBITOR'); // 억제기는 35분 이후
   }
 
   // 오브젝트 이벤트
   if (gameMinutes >= 5 && matchData.dragon_alive) eventPool.push('DRAGON');
   if (gameMinutes >= 8 && matchData.herald_alive) eventPool.push('HERALD');
-  if (gameMinutes >= 15) eventPool.push('TURRET'); // 포탑은 15분부터
-  if (gameMinutes >= 20) eventPool.push('INHIBITOR'); // 억제기는 20분부터
+  if (gameMinutes >= 25) eventPool.push('TURRET'); // 포탑은 25분부터 (게임 중반 이후)
+  if (gameMinutes >= 30) eventPool.push('INHIBITOR'); // 억제기는 30분부터 (후반 이후)
   if (gameMinutes >= 20 && matchData.baron_alive) eventPool.push('BARON');
   if (matchData.elder_available && matchData.dragon_alive) eventPool.push('ELDER_DRAGON');
 
-  // 바론/장로 버프가 있으면 포탑/억제기 파괴 이벤트 대폭 증가
+  // 바론 버프가 있으면 포탑 파괴 이벤트 증가 (1-2개)
   if (matchData.baron_buff_team) {
-    eventPool.push('TURRET', 'TURRET', 'TURRET', 'INHIBITOR', 'INHIBITOR');
+    eventPool.push('TURRET', 'TURRET');
   }
+  // 장로 버프가 있으면 포탑 파괴 이벤트 증가 (1-3개)
   if (matchData.elder_buff_team) {
-    eventPool.push('TURRET', 'TURRET', 'INHIBITOR', 'INHIBITOR', 'TEAMFIGHT');
+    eventPool.push('TURRET', 'TURRET', 'TURRET');
   }
 
   const eventType = eventPool[Math.floor(Math.random() * eventPool.length)];
@@ -1209,25 +1211,22 @@ async function generateEvents(
           matchData.elder_available = true;
         }
       } else {
-        // 포탑 1-3개 파괴
-        const turretsToDestroy = 1 + Math.floor(Math.random() * 3);
-        for (let t = 0; t < turretsToDestroy; t++) {
-          const tfLanes = ['top', 'mid', 'bot'] as const;
-          const tfLane = tfLanes[Math.floor(Math.random() * tfLanes.length)];
-          const tfTurrets = losingState.turrets[tfLane];
-          if (tfTurrets.t1) {
-            tfTurrets.t1 = false;
-            winningState.gold += 250;
-          } else if (tfTurrets.t2) {
-            tfTurrets.t2 = false;
-            winningState.gold += 250;
-          } else if (tfTurrets.t3) {
-            tfTurrets.t3 = false;
-            winningState.gold += 250;
-          } else if (tfTurrets.inhib) {
-            tfTurrets.inhib = false;
-            winningState.gold += 50;
-          }
+        // 포탑 1개 파괴 (현실적인 게임 진행을 위해 1개만)
+        const tfLanes = ['top', 'mid', 'bot'] as const;
+        const tfLane = tfLanes[Math.floor(Math.random() * tfLanes.length)];
+        const tfTurrets = losingState.turrets[tfLane];
+        if (tfTurrets.t1) {
+          tfTurrets.t1 = false;
+          winningState.gold += 250;
+        } else if (tfTurrets.t2) {
+          tfTurrets.t2 = false;
+          winningState.gold += 250;
+        } else if (tfTurrets.t3) {
+          tfTurrets.t3 = false;
+          winningState.gold += 250;
+        } else if (tfTurrets.inhib) {
+          tfTurrets.inhib = false;
+          winningState.gold += 50;
         }
       }
       break;

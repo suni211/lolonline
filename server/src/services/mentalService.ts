@@ -33,7 +33,8 @@ export class MentalService {
   static async getTeamMental(teamId: number) {
     try {
       const players = await pool.query(
-        `SELECT pc.id as player_card_id, COALESCE(pp.name, pc.ai_player_name) as name, COALESCE(pp.position, pc.ai_position) as position, pms.*
+        `SELECT pc.id as player_card_id, COALESCE(pp.name, pc.ai_player_name) as name, COALESCE(pp.position, pc.ai_position) as position,
+                pms.morale, pms.stress, pms.confidence, pms.team_satisfaction
          FROM player_cards pc
          LEFT JOIN pro_players pp ON pc.pro_player_id = pp.id
          LEFT JOIN player_mental_states pms ON pc.id = pms.player_card_id
