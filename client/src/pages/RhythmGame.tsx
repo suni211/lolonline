@@ -51,7 +51,8 @@ const RhythmGame = () => {
     setSelectedSong(song);
     try {
       const response = await axios.get(`${import.meta.env.VITE_API_URL}/rhythm-game/songs/${song.id}`);
-      const chartsData = response.data.data?.charts || response.data.charts || [];
+      // API는 { song, charts } 형식으로 반환
+      const chartsData = response.data?.charts || [];
       setCharts(Array.isArray(chartsData) ? chartsData : []);
       setGameState('difficultySelect');
     } catch (error) {
