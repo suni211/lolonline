@@ -1267,6 +1267,8 @@ router.post('/players/sync-ovr', authenticateToken, adminMiddleware, async (req:
 });
 
 // 월급 지급 (게임 시간 1개월 경과)
+// ⭐ 정책: 월급은 선수의 능력치(OVR)에만 의존하며, 선수 등급(주전/일반/후보/2군)은 영향을 미치지 않음
+// 선수 등급은 경기 성과와 멘탈에만 영향을 미킴
 router.post('/salary/pay-monthly', authenticateToken, adminMiddleware, async (req: AuthRequest, res) => {
   try {
     // 모든 팀의 계약된 선수들의 월급 차감
@@ -1276,6 +1278,7 @@ router.post('/salary/pay-monthly', authenticateToken, adminMiddleware, async (re
 
     for (const team of teams) {
       // 해당 팀의 계약된 선수들
+      // 주의: 선수 등급(player_role)은 월급 계산에 포함되지 않음
       const cards = await pool.query(
         'SELECT pc.id, pc.ovr, pp.name FROM player_cards pc JOIN pro_players pp ON pc.pro_player_id = pp.id WHERE pc.team_id = ? AND pc.is_contracted = true',
         [team.id]
@@ -1283,7 +1286,7 @@ router.post('/salary/pay-monthly', authenticateToken, adminMiddleware, async (re
 
       if (cards.length === 0) continue;
 
-      // 총 월급 계산 (OVR * 10만원)
+      // 총 월급 계산 (OVR * 10만원) - 선수 등급 무관
       const totalSalary = cards.reduce((sum: number, card: any) => sum + (card.ovr * 100000), 0);
 
       if (team.gold >= totalSalary) {

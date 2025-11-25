@@ -298,7 +298,8 @@ export class EventService {
       const starterAvgOvr = starters[0]?.avg_ovr || 50;
 
       for (const player of benchedPlayers) {
-        // 후보(BACKUP)나 2군(RESERVE) 선수는 벤치에 있어도 불만이 적음
+        // ⭐ 선수 등급(player_role)은 멘탈에만 영향: 후보/2군 선수는 벤치에 있어도 불만이 적음
+        // 선수 등급은 월급이나 경기 성과에는 영향을 미치지 않음
         const playerRole = player.player_role || 'REGULAR';
         if (playerRole === 'BACKUP' || playerRole === 'RESERVE') {
           // 후보/2군은 10% 확률로만 불만

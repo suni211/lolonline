@@ -515,7 +515,8 @@ router.get('/player/:playerId', async (req, res) => {
       } : null,  // 계약 정보 (없으면 FA)
       stats: { mental, teamfight, focus, laning },
       personality: personalityInfo,
-      monthly_salary: ovr * 100000,  // 월급
+      // ⭐ 월급은 선수의 능력치(OVR)에만 의존. 선수 등급(player_role)은 월급에 영향을 미치지 않음
+      monthly_salary: ovr * 100000,  // 월급 = OVR * 10만원 (선수 등급 무관)
       annual_salary: ovr * 100000 * 12,  // 연봉 = 월급 × 12
       level,
       experience,
