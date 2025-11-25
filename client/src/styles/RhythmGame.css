@@ -422,34 +422,35 @@
 /* 판정 피드백 */
 .judgment-feedback {
   position: fixed;
-  top: 50%;
+  top: 45%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 60px;
+  font-size: 120px;
   font-weight: bold;
   pointer-events: none;
   z-index: 20;
-  animation: judgmentFade 0.3s ease-out forwards;
+  animation: judgmentFade 0.4s ease-out forwards;
+  letter-spacing: 5px;
 }
 
 .judgment-feedback.perfect {
   color: #f39c12;
-  text-shadow: 0 0 20px rgba(243, 156, 18, 0.8);
+  text-shadow: 0 0 40px rgba(243, 156, 18, 1), 0 0 60px rgba(243, 156, 18, 0.6);
 }
 
 .judgment-feedback.good {
   color: #3498db;
-  text-shadow: 0 0 20px rgba(52, 152, 219, 0.8);
+  text-shadow: 0 0 40px rgba(52, 152, 219, 1), 0 0 60px rgba(52, 152, 219, 0.6);
 }
 
 .judgment-feedback.bad {
   color: #e74c3c;
-  text-shadow: 0 0 20px rgba(231, 76, 60, 0.8);
+  text-shadow: 0 0 40px rgba(231, 76, 60, 1), 0 0 60px rgba(231, 76, 60, 0.6);
 }
 
 .judgment-feedback.miss {
   color: #95a5a6;
-  text-shadow: 0 0 20px rgba(149, 165, 166, 0.8);
+  text-shadow: 0 0 40px rgba(149, 165, 166, 1), 0 0 60px rgba(149, 165, 166, 0.6);
 }
 
 /* 게임 시작 화면 */

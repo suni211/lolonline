@@ -61,6 +61,9 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
   const gameFieldRef = useRef<HTMLDivElement>(null);
   const judgedNotesRef = useRef<Set<number>>(new Set());
 
+  // 현재 누르고 있는 키들 (시각적 피드백)
+  const [pressedKeys, setPressedKeys] = useState<Set<number>>(new Set());
+
   // 점수 계산 공식
   const getScoreForJudgment = (type: string) => {
     switch (type) {
@@ -128,7 +131,28 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
     const gameLoop = () => {
       if (audioRef.current) {
         const currentSec = audioRef.current.currentTime;
-        setCurrentTime(currentSec * 1000); // 밀리초 단위
+        const currentMs = currentSec * 1000;
+        setCurrentTime(currentMs); // 밀리초 단위
+
+        // 자동 미스 처리: 판정선을 지난 노트들 (timingDiff <= -300ms 이상)
+        notes.forEach(note => {
+          if (!judgedNotesRef.current.has(note.id)) {
+            const timingDiff = note.timing - currentMs;
+            // 판정 범위를 완전히 벗어난 경우 (300ms 이상 경과)
+            if (timingDiff <= -300) {
+              judgedNotesRef.current.add(note.id);
+              setCombo(0);
+              setJudgments((prev) => ({ ...prev, miss: prev.miss + 1 }));
+              setRecentJudgment({ type: 'MISS', timing: currentMs });
+              setTimeout(() => setRecentJudgment(null), 200);
+
+              // 정확도 재계산
+              const totalJudgments = Object.values(judgments).reduce((a, b) => a + b, 0) + 1;
+              const newAccuracy = (Object.values(judgments).reduce((a, b) => a + b, 0) * 100 / (totalJudgments * 100)) * 100;
+              setAccuracy(Math.min(100, newAccuracy));
+            }
+          }
+        });
 
         // 곡이 끝났으면 게임 종료
         if (currentSec >= actualDuration) {
@@ -147,7 +171,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
         cancelAnimationFrame(gameLoopRef.current);
       }
     };
-  }, [gameStarted, gameEnded, actualDuration]);
+  }, [gameStarted, gameEnded, actualDuration, notes, judgments]);
 
   // 게임 시작 후 음악 재생
   useEffect(() => {
@@ -223,6 +247,9 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
         return;
     }
 
+    // 키 누름 표시
+    setPressedKeys(prev => new Set(prev).add(keyIndex));
+
     // 해당 키의 노트 찾기
     const targetNotes = notes.filter(
       (note) => note.key_index === keyIndex && !judgedNotesRef.current.has(note.id)
@@ -273,6 +300,42 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
     const totalScore = score + points;
     const newAccuracy = (totalScore / (totalJudgments * 100)) * 100;
     setAccuracy(Math.min(100, newAccuracy));
+  };
+
+  // 키 해제 처리
+  const handleKeyUp = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    let keyIndex = -1;
+    switch (e.key.toLowerCase()) {
+      case 'd':
+      case 'arrowleft':
+        keyIndex = 0;
+        break;
+      case 'f':
+        keyIndex = 1;
+        break;
+      case 'j':
+        keyIndex = 2;
+        break;
+      case 'k':
+      case 'arrowright':
+        keyIndex = 3;
+        break;
+      case 'e':
+        keyIndex = 4;
+        break;
+      case 'i':
+        keyIndex = 5;
+        break;
+      default:
+        return;
+    }
+
+    // 키 해제 표시
+    setPressedKeys(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(keyIndex);
+      return newSet;
+    });
   };
 
   // 게임 종료
@@ -329,6 +392,15 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
           <h2>{song.title}</h2>
           <p className="artist">{song.artist}</p>
           <p className="info">♪ {song.bpm} BPM • {chart.note_count} Notes</p>
+
+          {/* 타이밍 설명 */}
+          <div style={{ marginTop: '20px', padding: '15px', backgroundColor: 'rgba(52, 152, 219, 0.2)', borderRadius: '8px', marginBottom: '20px' }}>
+            <p style={{ fontSize: '14px', marginBottom: '10px' }}>⏱️ <strong>타이밍 판정</strong></p>
+            <p style={{ fontSize: '12px', color: '#f39c12', marginBottom: '5px' }}>🟡 PERFECT: ±50ms (정확한 타이밍)</p>
+            <p style={{ fontSize: '12px', color: '#3498db', marginBottom: '5px' }}>🔵 GOOD: ±100ms (거의 정확)</p>
+            <p style={{ fontSize: '12px', color: '#e67e22', marginBottom: '5px' }}>🟠 BAD: ±200ms (늦음)</p>
+            <p style={{ fontSize: '12px', color: '#e74c3c' }}>❌ MISS: 300ms 초과 (대실)</p>
+          </div>
 
           {audioError && (
             <div style={{ color: '#e74c3c', marginBottom: '20px', padding: '10px', backgroundColor: 'rgba(231, 76, 60, 0.2)', borderRadius: '4px' }}>
@@ -466,7 +538,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
   }
 
   return (
-    <div ref={gameFieldRef} className="rhythm-game-play" onKeyDown={handleKeyPress} tabIndex={0}>
+    <div ref={gameFieldRef} className="rhythm-game-play" onKeyDown={handleKeyPress} onKeyUp={handleKeyUp} tabIndex={0}>
       {/* HUD */}
       <div className="game-hud">
         <div className="hud-item">
@@ -519,12 +591,12 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
 
         {/* 키 영역 */}
         <div className="keys-area">
-          <div className="key key-0">D</div>
-          <div className="key key-1">F</div>
-          <div className="key key-4 slide-key-red">E</div>
-          <div className="key key-2">J</div>
-          <div className="key key-3">K</div>
-          <div className="key key-5 slide-key-blue">I</div>
+          <div className={`key key-0 ${pressedKeys.has(0) ? 'pressed' : ''}`} style={{backgroundColor: pressedKeys.has(0) ? 'rgba(52, 152, 219, 0.8)' : ''}}>D</div>
+          <div className={`key key-1 ${pressedKeys.has(1) ? 'pressed' : ''}`} style={{backgroundColor: pressedKeys.has(1) ? 'rgba(155, 89, 182, 0.8)' : ''}}>F</div>
+          <div className={`key key-4 slide-key-red ${pressedKeys.has(4) ? 'pressed' : ''}`} style={{backgroundColor: pressedKeys.has(4) ? 'rgba(231, 76, 60, 0.8)' : ''}}>E</div>
+          <div className={`key key-2 ${pressedKeys.has(2) ? 'pressed' : ''}`} style={{backgroundColor: pressedKeys.has(2) ? 'rgba(230, 126, 34, 0.8)' : ''}}>J</div>
+          <div className={`key key-3 ${pressedKeys.has(3) ? 'pressed' : ''}`} style={{backgroundColor: pressedKeys.has(3) ? 'rgba(243, 156, 18, 0.8)' : ''}}>K</div>
+          <div className={`key key-5 slide-key-blue ${pressedKeys.has(5) ? 'pressed' : ''}`} style={{backgroundColor: pressedKeys.has(5) ? 'rgba(52, 152, 219, 0.8)' : ''}}>I</div>
         </div>
       </div>
 
