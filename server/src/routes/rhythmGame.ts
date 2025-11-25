@@ -42,7 +42,7 @@ router.get('/charts/:chartId/notes', async (req: Request, res: Response) => {
 // 리듬게임 플레이 결과 제출
 router.post('/submit', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const { teamId, playerCardId, chartId, judgments, maxCombo, score, accuracy } = req.body;
+    const { teamId, playerCardId, chartId, judgments, maxCombo, score, accuracy, grade, difficulty } = req.body;
 
     if (!teamId || !chartId || !judgments || score === undefined || accuracy === undefined) {
       return res.status(400).json({ success: false, error: '필수 정보가 없습니다' });
@@ -55,7 +55,9 @@ router.post('/submit', authenticateToken, async (req: AuthRequest, res: Response
       judgments,
       maxCombo,
       score,
-      accuracy
+      accuracy,
+      grade,
+      difficulty
     );
 
     res.json(result);

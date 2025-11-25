@@ -77,7 +77,9 @@ export class RhythmGameService {
     },
     maxCombo: number,
     score: number,
-    accuracy: number
+    accuracy: number,
+    grade?: string,
+    difficulty?: string
   ) {
     try {
       // 차트 정보 조회
@@ -100,11 +102,17 @@ export class RhythmGameService {
       const expGained = Math.floor(baseExp * (accuracyPercent / 100));
 
       // 골드: 점수와 정확도 기반 (1점 = 1원)
-      const goldGained = Math.floor(score * (accuracyPercent / 100) * 10);
+      let goldGained = Math.floor(score * (accuracyPercent / 100) * 10);
 
       // 팬: 1~50명 (정확도에 따라 다름)
       // 100% = 50명, 50% = 25명, 0% = 0명
-      const fansGained = Math.floor(50 * (accuracyPercent / 100));
+      let fansGained = Math.floor(50 * (accuracyPercent / 100));
+
+      // S 등급 INSANE 난이도 보너스: 팬 100명 + 골드 10만원
+      if (grade === 'S' && difficulty && difficulty.toUpperCase() === 'INSANE') {
+        fansGained += 100;
+        goldGained += 100000;
+      }
 
       // 플레이 기록 저장
       const result = await pool.query(
