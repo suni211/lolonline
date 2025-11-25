@@ -30,6 +30,7 @@ const RhythmGame = () => {
   const [charts, setCharts] = useState<Chart[]>([]);
   const [loading, setLoading] = useState(true);
   const [bgmEnabled, setBgmEnabled] = useState(true);
+  const [noteSpeed, setNoteSpeed] = useState(1.0);  // 노트 내려오는 속도 (1.0 = 기본, 최대 9.0)
 
   useEffect(() => {
     fetchSongs();
@@ -144,6 +145,23 @@ const RhythmGame = () => {
             ))}
           </div>
 
+          {/* 노트 속도 조정 */}
+          <div style={{ marginTop: '30px', padding: '20px', backgroundColor: 'rgba(0, 0, 0, 0.3)', borderRadius: '8px' }}>
+            <p style={{ marginBottom: '10px', fontSize: '14px' }}>⚡ 노트 속도: <strong>{noteSpeed.toFixed(1)}x</strong></p>
+            <input
+              type="range"
+              min="1"
+              max="9"
+              step="0.1"
+              value={noteSpeed}
+              onChange={(e) => setNoteSpeed(parseFloat(e.target.value))}
+              style={{ width: '100%', cursor: 'pointer' }}
+            />
+            <p style={{ marginTop: '10px', fontSize: '12px', color: '#f39c12' }}>
+              1.0 = 느림 | 5.0 = 보통 | 9.0 = 매우 빠름
+            </p>
+          </div>
+
           <button
             className="back-btn"
             onClick={() => {
@@ -161,6 +179,7 @@ const RhythmGame = () => {
           song={selectedSong}
           chart={selectedChart}
           bgmEnabled={bgmEnabled}
+          noteSpeed={noteSpeed}
           onGameEnd={handleGameEnd}
         />
       )}

@@ -32,10 +32,11 @@ interface RhythmGamePlayProps {
   song: Song;
   chart: Chart;
   bgmEnabled: boolean;
+  noteSpeed: number;
   onGameEnd: () => void;
 }
 
-const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayProps) => {
+const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: RhythmGamePlayProps) => {
   console.log('🎮 RhythmGamePlay received song:', song);
   console.log('🎵 song.music_url:', song?.music_url);
   console.log('📋 All song keys:', Object.keys(song || {}));
@@ -305,11 +306,12 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
   };
 
   // 활성 노트 (현재 떨어지는 노트들)
-  // currentTime이 음수가 될 수 없으므로, 최대 3초 앞의 노트들만 표시
+  // noteSpeed를 고려하여 표시 범위 조정: 빠를수록 더 많은 노트를 미리 표시
+  const lookAheadTime = 3000 * noteSpeed; // noteSpeed가 빠를수록 더 먼 미래의 노트를 표시
   const activeNotes = notes.filter(
     (note) =>
       note.timing >= Math.max(0, currentTime - 500) && // 500ms 이전 (최소 0)
-      note.timing <= currentTime + 3000 && // 3초 이후
+      note.timing <= currentTime + lookAheadTime && // noteSpeed에 따른 앞 미리 보기
       !judgedNotesRef.current.has(note.id)
   );
 
@@ -491,7 +493,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
         {/* 노트 떨어지는 영역 */}
         <div className="notes-container">
           {activeNotes.map((note) => {
-            const notePosition = ((note.timing - currentTime) / 1000) * 100; // 픽셀 단위
+            const notePosition = ((note.timing - currentTime) / 1000) * 100 * noteSpeed; // noteSpeed를 적용한 픽셀 단위
             return (
               <div
                 key={note.id}
