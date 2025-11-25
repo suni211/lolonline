@@ -23,7 +23,8 @@
       "Bash(copy \"C:\\Users\\hisam\\Downloads\\icon\\magong.png\" \"C:\\Users\\hisam\\OneDrive\\바탕 화면\\LOLONLINE\\client\\public\\dragons\"\" && copy \"C:UsershisamDownloadsiconhwagong.png\" \"C:UsershisamOneDrive바탕 화면LOLONLINEclientpublicdragons\"\")",
       "Bash(powershell -Command:*)",
       "Bash(npm start)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []

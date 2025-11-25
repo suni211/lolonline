@@ -571,15 +571,20 @@ export class LPOLeagueService {
       // 플레이어 팀의 tier를 실제 배정된 리전으로 변경
       await pool.query('UPDATE teams SET league = ?, region = ? WHERE id = ?', [actualRegion, actualRegion, playerTeamId]);
 
+      // AI 팀의 선수 모두 삭제
+      await pool.query('DELETE FROM player_cards WHERE team_id = ?', [targetAI.id]);
+
       // AI 팀을 리그에서 제거
       await pool.query('DELETE FROM league_participants WHERE team_id = ?', [targetAI.id]);
 
-      // 플레이어 팀을 리그에 추가 (AI 팀의 성적 그대로)
+      // AI 팀 완전 삭제
+      await pool.query('DELETE FROM teams WHERE id = ?', [targetAI.id]);
+
+      // 플레이어 팀을 리그에 추가 (0-0-0 신규 팀으로 시작)
       await pool.query(
         `INSERT INTO league_participants (league_id, team_id, wins, losses, draws, points, goal_difference)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [targetAI.league_id, playerTeamId,
-         targetAI.wins, targetAI.losses, targetAI.draws, targetAI.points, targetAI.goal_difference]
+         VALUES (?, ?, 0, 0, 0, 0, 0)`,
+        [targetAI.league_id, playerTeamId]
       );
 
       const redirected = actualRegion !== region;
