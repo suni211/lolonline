@@ -168,7 +168,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
 
         // 롱노트 판정 처리: 끝 부분이 판정 범위에 도달했을 때
         notesRef.current.forEach(note => {
-          const isLongNote = note.type === 'LONG' || (note.duration && note.duration > 0);
+          const isLongNote = note.type === 'LONG' || (note.type !== 'NORMAL' && note.duration && note.duration > 0);
 
           if (isLongNote && !longNoteJudgedRef.current.has(note.id)) {
             const holdEndTime = note.timing + note.duration;
@@ -244,7 +244,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
 
         // 자동 미스 처리: 판정선을 지난 일반 노트들 (timingDiff <= -300ms 이상)
         notesRef.current.forEach(note => {
-          const isLongNote = note.type === 'LONG' || (note.duration && note.duration > 0);
+          const isLongNote = note.type === 'LONG' || (note.type !== 'NORMAL' && note.duration && note.duration > 0);
 
           if (!isLongNote && !judgedNotesRef.current.has(note.id)) {
             const timingDiff = note.timing - currentMs;
@@ -364,19 +364,19 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
 
     // 일반 노트와 롱노트 분리 (type 필드 우선)
     const normalNotes = targetNotes.filter(n => {
-      // type이 LONG이면 제외 (롱노트)
+      // type이 명시적으로 LONG이면 제외
       if (n.type === 'LONG') return false;
-      // type이 NORMAL이거나, type이 없고 duration이 없거나 0이면 일반 노트
+      // type이 NORMAL이거나 duration이 없거나 0 이하면 일반 노트
       if (n.type === 'NORMAL') return true;
-      // type이 없으면 duration으로 판단 (정확히 0 또는 undefined/null)
-      return n.duration === 0 || n.duration === undefined || n.duration === null;
+      // duration 값으로 판단 (0 이하 또는 없으면 일반노트)
+      return !n.duration || n.duration <= 0;
     });
     const longNotes = targetNotes.filter(n => {
-      // type이 LONG이면 롱노트
+      // type이 명시적으로 LONG이면 롱노트
       if (n.type === 'LONG') return true;
-      // type이 NORMAL이면 일반 노트
+      // type이 NORMAL이면 제외
       if (n.type === 'NORMAL') return false;
-      // type이 없으면 duration > 0이면 롱노트
+      // duration > 0이면 롱노트
       return n.duration && n.duration > 0;
     });
 
@@ -438,7 +438,7 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, noteSpeed, onGameEnd }: Rhyth
         setHeldLongNotes(prev => new Set(prev).add(closestLongNote.id));
         // 처음 누를 때 콤보 타이머 초기화
         longNoteComboTimesRef.current.set(closestLongNote.id, currentTime);
-        judgedNotesRef.current.add(closestLongNote.id);
+        // 주의: judgedNotesRef에 추가하지 않음! 롱노트 판정 때 추가해야 함
       }
     }
   };
