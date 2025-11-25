@@ -148,6 +148,21 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
     };
   }, [gameStarted, gameEnded, actualDuration]);
 
+  // 게임 시작 후 음악 재생
+  useEffect(() => {
+    if (!gameStarted || gameEnded || !bgmEnabled) return;
+
+    // 약간의 지연 후 재생 (DOM 업데이트 후)
+    const timer = setTimeout(() => {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(err => console.error('음악 재생 실패:', err));
+      }
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [gameStarted, bgmEnabled]);
+
   // 게임 시작
   const handleGameStart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -160,22 +175,14 @@ const RhythmGamePlay = ({ song, chart, bgmEnabled, onGameEnd }: RhythmGamePlayPr
     }
 
     console.log('게임 시작: audioReady=', audioReady, 'loadingNotes=', loadingNotes);
+    setGameStarted(true);
 
-    // 게임 필드에 focus를 주어 키 입력 활성화
+    // 게임 필드에 focus를 주어 키 입력 활성화 (useEffect에서 음악 재생)
     setTimeout(() => {
       if (gameFieldRef.current) {
         gameFieldRef.current.focus();
       }
-    }, 0);
-
-    // audio 준비 완료 후 gameStarted 설정 (audio 제거 방지)
-    setTimeout(() => {
-      if (audioRef.current && bgmEnabled) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(err => console.error('음악 재생 실패:', err));
-      }
-      setGameStarted(true);
-    }, 10);
+    }, 50);
   };
 
   // 키 입력 처리

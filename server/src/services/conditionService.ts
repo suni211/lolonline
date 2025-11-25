@@ -24,12 +24,23 @@ const POSITION_CONDITION_DRAIN = {
 async function processConditionRecovery() {
   try {
     // 컨디션이 100 미만인 선수들 (부상자 제외)
-    const players = await pool.query(
-      `SELECT pc.*, t.id as team_id
-       FROM player_cards pc
-       JOIN teams t ON pc.team_id = t.id
-       WHERE pc.condition < 100 AND pc.injury_status = 'NONE'`
-    );
+    // NOTE: player_cards 테이블에 condition 컬럼이 없으면 체크를 스킵
+    let players: any[] = [];
+
+    try {
+      players = await pool.query(
+        `SELECT pc.*, t.id as team_id
+         FROM player_cards pc
+         JOIN teams t ON pc.team_id = t.id
+         WHERE pc.condition < 100 AND pc.injury_status = 'NONE'`
+      );
+    } catch (err: any) {
+      if (err.code === 'ER_BAD_FIELD_ERROR') {
+        console.log('Skipping condition recovery: condition column not found in player_cards');
+        return;
+      }
+      throw err;
+    }
 
     for (const player of players) {
       // 의료 시설 레벨 확인
